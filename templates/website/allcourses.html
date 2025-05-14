@@ -1,7 +1,7 @@
 {% extends 'main/base.html' %} {% load static %} {% block head %} {% endblock %}
 {% block title %} {% endblock %} {% block content %}
 
-<div class="mb-2">
+<!-- <div class="mb-2">
   <div
     class="w-100 d-flex justify-content-center align-items-center flex-column py-5"
     style="background-color: #1d3b53"
@@ -70,6 +70,229 @@
       </div>
     </div>
   </div>
+</div> -->
+
+
+
+<div class="search-hero" style="background: linear-gradient(135deg, #1d3b53 0%, #0e2439 100%);">
+  <div class="container py-5">
+    <div class="row justify-content-center text-center">
+      <div class="col-lg-8">
+        <h2 class="display-4 text-white mb-4">
+          What Do You Want To 
+          <span class="text-gradient-primary">Learn Today?</span>
+        </h2>
+        <div class="search-container position-relative w-100">
+          <input 
+            type="text" 
+            placeholder="Search courses, topics, or skills..." 
+            class="form-control form-control-lg search-input ps-5"
+          />
+          <i class="fas fa-search search-icon"></i>
+          <button class="btn btn-primary-gradient search-btn">
+            <i class="fas fa-arrow-right me-2"></i> Search
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<div class="container py-5">
+  <div class="row g-4">
+    {% for course in courses %}
+    <div class="col-xl-3 col-lg-4 col-md-6">
+      <a href="{% url 'course_detail' course_id=course.id %}" class="course-card-link">
+        <div class="course-card card border-0 shadow-sm h-100 hover-lift">
+          <div class="course-badge position-absolute top-0 end-0 m-3">
+            {% if course.is_new %}
+            <span class="badge bg-success bg-opacity-90 text-white">NEW</span>
+            {% endif %}
+          </div>
+          
+          <div class="course-img-container">
+            <img
+              src="{{ course.image_course.url }}"
+              class="card-img-top course-img"
+              alt="{{ course.name }}"
+            />
+            <div class="course-overlay"></div>
+          </div>
+
+          <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 mb-3">
+              {% for tag in course.tags.all %}
+              <span class="badge bg-light text-dark bg-opacity-10">{{ tag.name }}</span>
+              {% endfor %}
+            </div>
+            <h5 class="card-title text-dark mb-3">{{ course.name }}</h5>
+            <p class="card-text text-muted mb-4">{{ course.small_description|truncatechars:100 }}</p>
+            
+            <div class="d-flex align-items-center mb-3">
+              <div class="rating-stars me-2">
+                {% for i in "12345" %}
+                  {% if forloop.counter <= course.rating %}
+                  <i class="fas fa-star text-warning"></i>
+                  {% else %}
+                  <i class="far fa-star text-warning"></i>
+                  {% endif %}
+                {% endfor %}
+              </div>
+              <span class="text-dark fw-bold">{{ course.rating }}/5.0</span>
+            </div>
+          </div>
+          
+          <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-muted small">
+                <i class="far fa-clock text-danger me-1"></i>
+                {{ course.videos_time }}
+              </span>
+              <span class="text-muted small">
+                <i class="fas fa-layer-group text-primary me-1"></i>
+                {{ course.total_module }} modules
+              </span>
+              <span class="text-muted small">
+                <i class="fas fa-user-graduate text-info me-1"></i>
+                {{ course.enrolled_students }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<style>
+  /* Custom Styles */
+  .text-gradient-primary {
+    background: linear-gradient(90deg, #ff4d4d 0%, #f95700 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+  }
+  
+  .search-hero {
+    padding: 4rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .search-container {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  
+  .search-input {
+    border-radius: 50px !important;
+    padding-left: 3rem !important;
+    border: none;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    height: 60px;
+  }
+  
+  .search-icon {
+    position: absolute;
+    left: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    z-index: 4;
+  }
+  
+  .search-btn {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    bottom: 5px;
+    border-radius: 50px;
+    padding: 0 1.5rem;
+    font-weight: 600;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border: none;
+  }
+  
+  .btn-primary-gradient {
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+  }
+  
+  .course-card {
+    border-radius: 12px !important;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .course-card-link {
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .course-img-container {
+    position: relative;
+    overflow: hidden;
+    height: 200px;
+  }
+  
+  .course-img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+  }
+  
+  .course-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%);
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15) !important;
+  }
+  
+  .hover-lift:hover .course-img {
+    transform: scale(1.05);
+  }
+  
+  .hover-lift:hover .course-overlay {
+    opacity: 0.5;
+  }
+  
+  .course-badge .badge {
+    font-size: 0.7rem;
+    padding: 0.35em 0.65em;
+    border-radius: 50px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  
+  .rating-stars {
+    letter-spacing: 2px;
+  }
+  
+  @media (max-width: 768px) {
+    .search-hero {
+      padding: 3rem 0;
+    }
+    
+    h2.display-4 {
+      font-size: 2.2rem;
+    }
+    
+    .search-input {
+      height: 50px;
+    }
+  }
+</style>
 
 {% endblock %}

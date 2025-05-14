@@ -66,9 +66,67 @@ def courseviewpagevideo(request, course_id, video_id):
     if is_enrolled:
         quiz = Quiz.objects.filter(video=video).first()
         questions = quiz.question_set.all() if quiz else []
-        return render(request, 'website/courseviewvideo.html', {'course': course, 'video': video, 'questions': questions})
+        return render(request, 'website/courseviewvideo.html', {'course': course, 'video': video, 'questions': questions, 'quiz': quiz})
     else:
         return redirect('course_detail', course_id=course.id)
+
+
+from django.http import JsonResponse
+
+def submit_quiz(request):
+    if request.method == 'POST' and request.user.is_authenticated:
+        # Get all submitted answers
+        submitted_answers = {}
+        for key, value in request.POST.items():
+            # Parse question IDs from form data
+            if key.startswith('question_'):
+                question_id = key.split('_')[1]
+                if question_id not in submitted_answers:
+                    submitted_answers[question_id] = []
+                submitted_answers[question_id].append(value)
+        
+        # Calculate score
+        total_questions = 0
+        correct_answers = 0
+        
+        for question_id, answer_ids in submitted_answers.items():
+            try:
+                question = Question.objects.get(id=question_id)
+                total_questions += 1
+                
+                # Get correct answers for this question
+                correct_answer_ids = [str(answer.id) for answer in question.answer_set.filter(is_correct=True)]
+                
+                # Check if submitted answers match correct answers
+                if set(answer_ids) == set(correct_answer_ids):
+                    correct_answers += 1
+            except Question.DoesNotExist:
+                continue
+        
+        # Calculate percentage score
+        score = 0
+        if total_questions > 0:
+            score = (correct_answers / total_questions) * 100
+        
+        # Determine if passed based on quiz pass mark
+        passed = False
+        quiz_id = request.POST.get('quiz_id')
+        if quiz_id:
+            try:
+                quiz = Quiz.objects.get(id=quiz_id)
+                passed = score >= quiz.pass_mark
+            except Quiz.DoesNotExist:
+                pass
+        
+        # Return JSON response with results
+        return JsonResponse({
+            'score': score,
+            'passed': passed,
+            'correct_answers': correct_answers,
+            'total_questions': total_questions
+        })
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
 

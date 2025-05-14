@@ -48,7 +48,7 @@
 ></script>
 {% endblock %} {% block title %} {% endblock %} {% block content %}
 
-<main class="container">
+<!-- <main class="container">
   <section class="video-and-comments">
     {% for module in course.module_set.all %}
     <section>
@@ -126,8 +126,397 @@ Google App Engine primarily supports Go, PHP, Java, Python, Node.js, .NET, and R
     </div>
   </aside>
   
+</main> -->
+
+<main class="container-fluid px-0">
+  <div class="row g-0">
+    <!-- Main Content Column -->
+    <div class="col-lg-8 px-lg-4 px-3 py-4">
+      {% for module in course.module_set.all %}
+      <section class="mb-5">
+        <div class="card border-0 shadow-sm module-card">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
+            <h3 class="mb-0 text-dark fw-bold">
+              <i class="fas fa-layer-group text-primary me-2"></i>
+              {{ module.name }}
+            </h3>
+            <span class="badge bg-primary bg-opacity-10 text-primary">
+              {{ module.video_set.count }} videos
+            </span>
+          </div>
+          
+          <div class="card-body p-4">
+            <div class="module-content p-4 bg-light bg-opacity-10 rounded-3">
+              <!-- Replace with your actual module content -->
+              <p class="lead text-dark">Welcome to this module! Here you'll learn fundamental concepts.</p>
+              <div class="d-flex align-items-center mt-4">
+                <div class="flex-shrink-0">
+                  <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+                    <i class="fas fa-play text-primary fs-4"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <h5 class="mb-1">Start with the introduction video</h5>
+                  <p class="text-muted mb-0">5 min • Watch first</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      {% endfor %}
+
+      <!-- Comments Section -->
+      <section class="mt-5">
+        <div class="d-flex gap-3 mb-4">
+          <button class="btn btn-outline-primary rounded-pill px-4 d-flex align-items-center">
+            <i class="fas fa-file-alt me-2"></i>Notes
+          </button>
+          <button class="btn btn-outline-secondary rounded-pill px-4 d-flex align-items-center">
+            <i class="fas fa-users me-2"></i>Community Q&A
+          </button>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white py-3 border-bottom">
+            <h4 class="mb-0 d-flex align-items-center">
+              <i class="fas fa-comments text-primary me-2"></i>Discussion Forum
+              <span class="badge bg-primary ms-2">{{ course.comment_set.count }}</span>
+            </h4>
+          </div>
+          
+          <ul class="list-group list-group-flush">
+            {% for comment in course.comment_set.all %}
+            <li class="list-group-item p-4">
+              <div class="d-flex">
+                <div class="flex-shrink-0">
+                  <div class="avatar bg-gradient-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                    <i class="fas fa-user"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                      <h5 class="mb-0">{{ comment.user }}</h5>
+                      <small class="text-muted">Student</small>
+                    </div>
+                    <small class="text-muted">{{ comment.created_at|date:"M d, Y" }}</small>
+                  </div>
+                  <div class="comment-text bg-light bg-opacity-25 p-3 rounded-3 mb-2">
+                    {{ comment.description|safe }}
+                  </div>
+                  <div class="d-flex align-items-center">
+                    <button class="btn btn-sm btn-outline-primary rounded-pill me-2 view-replies">
+                      <i class="fas fa-reply me-1"></i> Reply
+                    </button>
+                    <button class="btn btn-sm btn-link text-decoration-none">
+                      <i class="far fa-thumbs-up me-1"></i> Helpful (24)
+                    </button>
+                  </div>
+                  
+                  <!-- Replies -->
+                  {% if comment.subcomment_set.all %}
+                  <div class="replies mt-3 ps-4 border-start border-3 border-primary">
+                    {% for subcomment in comment.subcomment_set.all %}
+                    <div class="d-flex mt-3">
+                      <div class="flex-shrink-0">
+                        <div class="avatar bg-gradient-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                          <i class="fas fa-user"></i>
+                        </div>
+                      </div>
+                      <div class="flex-grow-1 ms-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <div>
+                            <h6 class="mb-0">{{ subcomment.user }}</h6>
+                            <small class="text-muted">Instructor</small>
+                          </div>
+                          <small class="text-muted">{{ subcomment.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        <div class="comment-text bg-light bg-opacity-10 p-2 rounded-3">
+                          {{ subcomment.description|safe }}
+                        </div>
+                        <div class="d-flex align-items-center mt-2">
+                          <button class="btn btn-sm btn-outline-secondary rounded-pill me-2 view-replies">
+                            <i class="fas fa-reply me-1"></i> Reply
+                          </button>
+                          <button class="btn btn-sm btn-link text-decoration-none">
+                            <i class="far fa-thumbs-up me-1"></i> Helpful (5)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          
+          <div class="card-footer bg-white py-3">
+            <h5 class="mb-3">Add your comment</h5>
+            <form>
+              <div class="form-floating mb-3">
+                <textarea class="form-control" placeholder="Leave a comment here" id="commentTextarea" style="height: 100px"></textarea>
+                <label for="commentTextarea">Your comment...</label>
+              </div>
+              <div class="d-flex justify-content-end">
+                <button class="btn btn-primary rounded-pill px-4 py-2" type="submit">
+                  <i class="fas fa-paper-plane me-2"></i> Post Comment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Sidebar Column -->
+    <div class="col-lg-4 bg-light p-lg-4 p-3">
+      <div class="sticky-sidebar">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-white py-3 border-bottom">
+            <h4 class="mb-0 d-flex align-items-center">
+              <i class="fas fa-list-ul text-primary me-2"></i> Course Content
+            </h4>
+          </div>
+          
+          <div class="card-body p-0">
+            <div class="accordion" id="courseAccordion">
+              {% for module in course.module_set.all %}
+              <div class="accordion-item border-0">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#module{{ module.id }}">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-layer-group text-primary me-3"></i>
+                      <div>
+                        <strong>{{ module.name }}</strong>
+                        <div class="text-muted small mt-1">
+                          {{ module.video_set.count }} videos • {{ module.notes_set.count }} notes
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                </h2>
+                <div id="module{{ module.id }}" class="accordion-collapse collapse" data-bs-parent="#courseAccordion">
+                  <div class="accordion-body p-0">
+                    <!-- Videos -->
+                    <div class="p-3 bg-white">
+                      <h6 class="text-uppercase text-muted small mb-3 d-flex align-items-center">
+                        <i class="fas fa-play-circle me-2"></i>Videos
+                      </h6>
+                      <ul class="list-unstyled">
+                        {% for video in module.video_set.all %}
+                        <li class="mb-2">
+                          <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=video.id %}" class="d-flex align-items-center text-decoration-none text-dark p-2 rounded-3 hover-bg">
+                            <div class="flex-shrink-0 bg-primary bg-opacity-10 p-2 rounded-circle me-3">
+                              <i class="fas fa-play text-primary"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                              <div>{{ video.name }}</div>
+                              <small class="text-muted">5 min</small>
+                            </div>
+                            <div class="flex-shrink-0">
+                              <i class="fas fa-lock text-muted"></i>
+                            </div>
+                          </a>
+                        </li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div class="p-3 border-top">
+                      <h6 class="text-uppercase text-muted small mb-3 d-flex align-items-center">
+                        <i class="fas fa-file-alt me-2"></i>Notes
+                      </h6>
+                      <ul class="list-unstyled">
+                        {% for note in module.notes_set.all %}
+                        <li class="mb-2">
+                          <a href="{% url 'courseviewpagenote' course_id=course.id note_id=note.id %}" class="d-flex align-items-center text-decoration-none text-dark p-2 rounded-3 hover-bg">
+                            <div class="flex-shrink-0 bg-success bg-opacity-10 p-2 rounded-circle me-3">
+                              <i class="fas fa-file-alt text-success"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                              <div>Note {{ forloop.counter }}</div>
+                              <small class="text-muted">PDF • 2 MB</small>
+                            </div>
+                          </a>
+                        </li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Course Progress Widget -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body">
+            <h5 class="mb-3 d-flex align-items-center">
+              <i class="fas fa-chart-line text-primary me-2"></i>
+              Your Progress
+            </h5>
+            <div class="progress mb-3" style="height: 8px;">
+              <div class="progress-bar bg-primary" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="d-flex justify-content-between small text-muted mb-3">
+              <span>25% completed</span>
+              <span>3/12 lessons</span>
+            </div>
+            <button class="btn btn-outline-primary w-100 rounded-pill">
+              <i class="fas fa-certificate me-2"></i>Get Certificate
+            </button>
+          </div>
+        </div>
+
+        <!-- Instructor Widget -->
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <h5 class="mb-3 d-flex align-items-center">
+              <i class="fas fa-user-tie text-primary me-2"></i>
+              Instructor
+            </h5>
+            <div class="d-flex align-items-center mb-3">
+              <div class="flex-shrink-0 me-3">
+                <img src="https://via.placeholder.com/60" class="rounded-circle" width="60" height="60" alt="Instructor">
+              </div>
+              <div class="flex-grow-1">
+                <h6 class="mb-0">Dr. Sarah Johnson</h6>
+                <small class="text-muted">Senior Developer & Educator</small>
+              </div>
+            </div>
+            <p class="small text-muted">10+ years experience in web development and teaching. Passionate about helping students succeed.</p>
+            <button class="btn btn-outline-secondary w-100 rounded-pill">
+              <i class="fas fa-envelope me-2"></i>Message Instructor
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </main>
 
+<style>
+  :root {
+    --primary-color: #5624d0;
+    --secondary-color: #f7f9fa;
+    --accent-color: #cec0fc;
+  }
 
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f7f9fa;
+  }
+
+  .module-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .module-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+  }
+
+  .avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    background: linear-gradient(135deg, var(--primary-color), #9575cd);
+  }
+
+  .comment-text {
+    line-height: 1.6;
+  }
+
+  .view-replies {
+    transition: all 0.2s;
+  }
+
+  .view-replies:hover {
+    background-color: rgba(86, 36, 208, 0.1) !important;
+  }
+
+  .accordion-button {
+    transition: all 0.2s;
+  }
+
+  .accordion-button:not(.collapsed) {
+    background-color: rgba(86, 36, 208, 0.05);
+    color: var(--primary-color);
+  }
+
+  .accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(0,0,0,.125);
+  }
+
+  .sticky-sidebar {
+    position: sticky;
+    top: 20px;
+  }
+
+  .hover-bg {
+    transition: all 0.2s;
+  }
+
+  .hover-bg:hover {
+    background-color: rgba(86, 36, 208, 0.05) !important;
+  }
+
+  .progress {
+    border-radius: 100px;
+    background-color: #e0e0e0;
+  }
+
+  .progress-bar {
+    border-radius: 100px;
+    background: linear-gradient(90deg, var(--primary-color), #9575cd);
+  }
+
+  @media (max-width: 992px) {
+    .sticky-sidebar {
+      position: static;
+    }
+  }
+
+  /* Modern form inputs */
+  .form-control, .form-floating>.form-control {
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    transition: all 0.2s;
+  }
+
+  .form-control:focus, .form-floating>.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(86, 36, 208, 0.1);
+  }
+
+  /* Button styles */
+  .btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+  }
+
+  .btn-primary:hover {
+    background-color: #4a1fc0;
+    border-color: #4a1fc0;
+  }
+
+  .btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+  }
+
+  .btn-outline-primary:hover {
+    background-color: rgba(86, 36, 208, 0.1);
+  }
+</style>
 
 {% endblock %}
