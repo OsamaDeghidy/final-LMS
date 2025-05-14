@@ -21,7 +21,7 @@
     />
   </head>
   <body>
-    <nav
+<!--     <nav
       class="navbar navbar-expand-lg navbar-light bg-light p-0 py-2 w-100"
       style="
         box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 15px -3px,
@@ -136,11 +136,73 @@
           </div>
         </div>
       </div>
-    </nav>
+    </nav> -->
+
+    <nav class="navbar navbar-expand-lg navbar-light py-3 w-100" style="
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    z-index: 1000;
+" dir="rtl">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <img src='{% static 'main/images/logo.png' %}' style="width: 100px; height: auto;">
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <div class="d-flex flex-column flex-lg-row w-100 align-items-lg-center justify-content-lg-center">
+                <!-- روابط التنقل في المنتصف -->
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
+                    <li class="nav-item mx-2">
+                        <a class="nav-link px-3 py-2 fw-semibold" href="/" 
+                           style="color: #495057; border-radius: 8px;">
+                           <i class="fas fa-home me-1" style="color: #6c757d;"></i> الرئيسية
+                        </a>
+                    </li>
+                    <li class="nav-item mx-2">
+                        <a class="nav-link px-3 py-2 fw-semibold" href="/allcourses"
+                           style="color: #495057; border-radius: 8px;">
+                           <i class="fas fa-book me-1" style="color: #6c757d;"></i> الكورسات
+                        </a>
+                    </li>
+                    <li class="nav-item mx-2">
+                        <a class="nav-link px-3 py-2 fw-semibold" href="/contact"
+                           style="color: #495057; border-radius: 8px;">
+                           <i class="fas fa-envelope me-1" style="color: #6c757d;"></i> اتصل بنا
+                        </a>
+                    </li>
+                </ul>
+                
+                <!-- أزرار التسجيل على اليمين -->
+                <div class="d-flex ms-lg-auto">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-primary me-2 px-4 rounded-pill fw-bold">
+                            <i class="fas fa-tachometer-alt me-1"></i> لوحة التحكم
+                        </a>
+                        <a href="{% url 'logout' %}" class="btn btn-primary px-4 rounded-pill fw-bold">
+                            <i class="fas fa-sign-out-alt me-1"></i> تسجيل خروج
+                        </a>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-outline-primary me-2 px-4 rounded-pill fw-bold">
+                            <i class="fas fa-sign-in-alt me-1"></i> تسجيل دخول
+                        </a>
+                        <a href="{% url 'register' %}" class="btn btn-primary px-4 rounded-pill fw-bold">
+                            <i class="fas fa-user-plus me-1"></i> تسجيل جديد
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
 
     {% block content %} {% endblock %}
 
-    <footer class="m-0 border-top" style="height: 187px">
+<!--     <footer class="m-0 border-top" style="height: 187px">
       <div
         class="w-100 d-flex justify-content-between px-5 py-3 flex-wrap gap-5"
       >
@@ -190,7 +252,117 @@
           </p>
         </div>
       </div>
-    </footer>
+    </footer> -->
+
+    <footer class="pt-5 pb-4" style="background-color: #f8f9fa; border-top: 1px solid #e9ecef;" dir="rtl">
+      <div class="container">
+          <div class="row">
+              <!-- الشعار والمعلومات -->
+              <div class="col-lg-4 col-md-6 mb-4 mb-md-0">
+                  <div class="d-flex align-items-center mb-3">
+                      <img src='{% static 'main/images/logo.png' %}' style="width: 80px; height: auto; margin-right: 15px;">
+                  </div>
+                  <p class="mb-4" style="color: #6c757d;">
+                      معهد متخصص في تقديم أعلى مستويات التدريب والتطوير المهني لتحقيق التميز الوظيفي.
+                  </p>
+                  <div class="social-icons">
+                      <a href="#" class="text-secondary me-3"><i class="fab fa-facebook-f fa-lg"></i></a>
+                      <a href="#" class="text-secondary me-3"><i class="fab fa-twitter fa-lg"></i></a>
+                      <a href="#" class="text-secondary me-3"><i class="fab fa-linkedin-in fa-lg"></i></a>
+                      <a href="#" class="text-secondary"><i class="fab fa-instagram fa-lg"></i></a>
+                  </div>
+              </div>
+  
+              <!-- روابط سريعة -->
+              <div class="col-lg-2 col-md-6 mb-4 mb-md-0">
+                  <h5 class="fw-bold mb-4" style="color: #495057;">روابط سريعة</h5>
+                  <ul class="list-unstyled">
+                      <li class="mb-2">
+                          <a href="/" class="text-decoration-none" style="color: #6c757d; transition: 0.3s;">
+                              <i class="fas fa-chevron-left me-2"></i> الرئيسية
+                          </a>
+                      </li>
+                      <li class="mb-2">
+                          <a href="/allcourses" class="text-decoration-none" style="color: #6c757d; transition: 0.3s;">
+                              <i class="fas fa-chevron-left me-2"></i> الكورسات
+                          </a>
+                      </li>
+                      <li class="mb-2">
+                          <a href="/contact" class="text-decoration-none" style="color: #6c757d; transition: 0.3s;">
+                              <i class="fas fa-chevron-left me-2"></i> اتصل بنا
+                          </a>
+                      </li>
+                      <li class="mb-2">
+                          <a href="#" class="text-decoration-none" style="color: #6c757d; transition: 0.3s;">
+                              <i class="fas fa-chevron-left me-2"></i> عن المعهد
+                          </a>
+                      </li>
+                  </ul>
+              </div>
+  
+              <!-- معلومات الاتصال -->
+              <div class="col-lg-3 col-md-6 mb-4 mb-md-0">
+                  <h5 class="fw-bold mb-4" style="color: #495057;">تواصل معنا</h5>
+                  <ul class="list-unstyled">
+                      <li class="mb-3 d-flex">
+                          <i class="fas fa-map-marker-alt me-3 mt-1" style="color: #6c757d;"></i>
+                          <span style="color: #6c757d;">شارع التعليم، مدينة المعرفة، مصر</span>
+                      </li>
+                      <li class="mb-3 d-flex">
+                          <i class="fas fa-envelope me-3 mt-1" style="color: #6c757d;"></i>
+                          <a href="mailto:pilotlearningiitkgp@gmail.com" class="text-decoration-none" style="color: #6c757d;">
+                              pilotlearningiitkgp@gmail.com
+                          </a>
+                      </li>
+                      <li class="mb-3 d-flex">
+                          <i class="fas fa-phone me-3 mt-1" style="color: #6c757d;"></i>
+                          <a href="tel:+91222525126" class="text-decoration-none" style="color: #6c757d;">
+                              +91-222525126
+                          </a>
+                      </li>
+                  </ul>
+              </div>
+  
+              <!-- النشرة البريدية -->
+              <div class="col-lg-3 col-md-6">
+                  <h5 class="fw-bold mb-4" style="color: #495057;">النشرة البريدية</h5>
+                  <p style="color: #6c757d;">اشترك ليصلك كل جديد عن الكورسات والعروض.</p>
+                  <form class="mb-3">
+                      <div class="input-group">
+                          <input type="email" class="form-control" placeholder="بريدك الإلكتروني" 
+                                 style="border-radius: 30px 0 0 30px; border-color: #dee2e6;">
+                          <button class="btn btn-primary" type="submit" 
+                                  style="border-radius: 0 30px 30px 0;">
+                              <i class="fas fa-paper-plane"></i>
+                          </button>
+                      </div>
+                  </form>
+                  <p style="color: #adb5bd; font-size: 0.9rem;">
+                      نحن نحترم خصوصيتك. يمكنك إلغاء الاشتراك في أي وقت.
+                  </p>
+              </div>
+          </div>
+  
+          <hr class="my-4" style="border-color: #e9ecef;">
+  
+          <!-- حقوق النشر -->
+          <div class="row align-items-center">
+              <div class="col-md-6 text-center text-md-start">
+                  <p class="mb-0" style="color: #adb5bd;">
+                      &copy; 2023 معهد التطوير المهني العالي. جميع الحقوق محفوظة.
+                  </p>
+              </div>
+              <div class="col-md-6 text-center text-md-end">
+                  <a href="#" class="text-decoration-none me-3" style="color: #adb5bd;">شروط الخدمة</a>
+                  <a href="#" class="text-decoration-none" style="color: #adb5bd;">سياسة الخصوصية</a>
+              </div>
+          </div>
+      </div>
+  </footer>
+
+
+
+
 
     <script
       src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
