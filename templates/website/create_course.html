@@ -2,7 +2,7 @@
 Create a Course
 {% endblock %} {% block content %}
 
-<div class="container mt-4">
+<!-- <div class="container mt-4">
   <h1 class="text-danger">Create a Course</h1>
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
@@ -95,5 +95,135 @@ Create a Course
     }
   </script>
 
-  {% endblock %}
+  
+</div> -->
+
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow-lg border-0">
+        <div class="card-header bg-primary text-white py-3">
+          <h2 class="mb-0 text-center"><i class="fas fa-plus-circle me-2"></i> Create New Course</h2>
+        </div>
+        
+        <div class="card-body p-4">
+          <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="teacher_id" value="{{ request.user.teacher.id }}">
+            
+            <!-- Course Name -->
+            <div class="mb-4">
+              <label for="name" class="form-label fw-bold text-primary">Course Title</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-book text-primary"></i></span>
+                <input type="text" class="form-control form-control-lg border-start-0" id="name" name="name" required placeholder="Enter course title">
+              </div>
+            </div>
+            
+            <!-- Short Description -->
+            <div class="mb-4">
+              <label for="small_description" class="form-label fw-bold text-primary">Short Description</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-align-left text-primary"></i></span>
+                <input type="text" class="form-control border-start-0" id="small_description" name="small_description" placeholder="Brief summary (appears on course card)">
+              </div>
+            </div>
+            
+            <!-- Price -->
+            <div class="mb-4">
+              <label for="price" class="form-label fw-bold text-primary">Price ($)</label>
+              <div class="input-group" style="max-width: 200px;">
+                <span class="input-group-text bg-light">$</span>
+                <input type="number" class="form-control border-start-0" id="price" name="price" step="0.01" min="0" required placeholder="0.00">
+              </div>
+            </div>
+            
+            <!-- Course Image -->
+            <div class="mb-4">
+              <label for="image_course" class="form-label fw-bold text-primary">Course Image</label>
+              <div class="card border-dashed p-3 text-center" style="cursor: pointer;" onclick="document.getElementById('image_course').click()">
+                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                <h5 class="text-muted">Click to upload image</h5>
+                <p class="small text-muted">Recommended size: 800x450px</p>
+                <input type="file" class="d-none" id="image_course" name="image_course" accept="image/*">
+              </div>
+            </div>
+            
+            <!-- Full Description -->
+            <div class="mb-4">
+              <label class="form-label fw-bold text-primary">Detailed Description</label>
+              <textarea class="form-control" id="description" name="description" rows="5" required placeholder="Describe your course in detail..."></textarea>
+            </div>
+            
+            <!-- What Will Be Learned -->
+            <div class="mb-4">
+              <label class="form-label fw-bold text-primary">What Students Will Learn</label>
+              <textarea class="form-control" id="learned" name="learned" rows="5" placeholder="List the key learning outcomes (one per line)"></textarea>
+              <div class="form-text">Enter each learning point on a new line</div>
+            </div>
+            
+            <!-- Tags -->
+            <div class="mb-4">
+              <label for="tags" class="form-label fw-bold text-primary">Course Tags</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-tags text-primary"></i></span>
+                <input type="text" class="form-control border-start-0" id="tags" name="tags" placeholder="web, design, programming (separate with commas)">
+              </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+              <button type="submit" class="btn btn-primary btn-lg px-4 me-md-2">
+                <i class="fas fa-save me-2"></i> Create Course
+              </button>
+              <button type="button" class="btn btn-outline-secondary btn-lg px-4">
+                <i class="fas fa-times me-2"></i> Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  // Initialize CKEditor
+  document.addEventListener('DOMContentLoaded', function() {
+    try {
+      CKEDITOR.replace("description", {
+        toolbar: [
+          { name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike'] },
+          { name: 'paragraph', items: ['NumberedList', 'BulletedList'] },
+          { name: 'links', items: ['Link', 'Unlink'] },
+          { name: 'insert', items: ['Image', 'Table'] }
+        ]
+      });
+      CKEDITOR.replace("learned");
+    } catch (error) {
+      console.log(error);
+    }
+    
+    // Preview image when selected
+    document.getElementById('image_course').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const uploadArea = e.target.parentElement;
+          uploadArea.innerHTML = `
+            <div class="text-center">
+              <img src="${event.target.result}" class="img-thumbnail mb-2" style="max-height: 200px;">
+              <p class="small text-muted">${file.name}</p>
+              <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); this.parentElement.innerHTML = '<i class=\\'fas fa-cloud-upload-alt fa-3x text-muted mb-2\\'></i><h5 class=\\'text-muted\\'>Click to upload image</h5><p class=\\'small text-muted\\'>Recommended size: 800x450px</p>'; document.getElementById('image_course').value = '';">
+                Change Image
+              </button>
+            </div>
+          `;
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+  });
+</script>
+
+{% endblock %}
