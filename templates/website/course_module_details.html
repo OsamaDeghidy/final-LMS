@@ -6,7 +6,7 @@
 
 {% block content %}
 
-<div class="container">
+<!-- <div class="container">
   <div class="row my-4">
     <div class="col-md-8">
       <h1>{{ course.name }}</h1>
@@ -94,6 +94,627 @@
       {% endif %}
     </div>
   </div>
+</div> -->
+
+<div class="course-detail-container">
+  <div class="course-header">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8">
+          <div class="course-meta">
+            <span class="badge bg-primary">{{ course.organisation.profile.name }}</span>
+            {% for tag in course.tags.all %}
+              <span class="badge bg-secondary">{{ tag.name }}</span>
+            {% endfor %}
+          </div>
+          <h1 class="course-title">{{ course.name }}</h1>
+          <p class="course-subtitle">{{ course.small_description }}</p>
+          
+          <div class="course-instructor">
+            <img src="{{ course.teacher.profile.image.url }}" class="instructor-avatar" alt="Instructor">
+            <div>
+              <span class="instructor-label">Created by</span>
+              <h5 class="instructor-name">{{ course.teacher.profile.name }}</h5>
+            </div>
+          </div>
+          
+          <div class="course-stats">
+            <div class="stat-item">
+              <i class="fas fa-calendar-alt"></i>
+              <span>Created {{ course.created_at|date:"M d, Y" }}</span>
+            </div>
+            <div class="stat-item">
+              <i class="fas fa-sync-alt"></i>
+              <span>Updated {{ course.updated_at|date:"M d, Y" }}</span>
+            </div>
+            <div class="stat-item">
+              <i class="fas fa-users"></i>
+              <span>{{ course.enrollment_set.count }} students</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="course-price-card">
+            <div class="price">${{ course.price }}</div>
+            <a href="#" class="btn btn-enroll">Enroll Now</a>
+            <div class="includes">
+              <h5>This course includes:</h5>
+              <ul>
+                <li><i class="fas fa-video"></i> {{ course.videos }} hours on-demand video</li>
+                <li><i class="fas fa-file-alt"></i> {{ course.modules }} modules</li>
+                <li><i class="fas fa-infinity"></i> Full lifetime access</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container course-content">
+    <div class="row">
+      <div class="col-lg-8">
+        <div class="course-image-container">
+          <img src="{{ course.image_course.url }}" class="course-image" alt="{{ course.name }}">
+        </div>
+        
+        <div class="course-modules">
+          <h2 class="section-title">Course Modules</h2>
+          
+          {% if course.module_set.all %}
+            <div class="accordion" id="modulesAccordion">
+              {% for module in course.module_set.all %}
+                <div class="module-card">
+                  <div class="module-header">
+                    <h3 class="module-title">
+                      <span class="module-number">Module {{ module.number }}</span>
+                      {{ module.name }}
+                    </h3>
+                    <div class="module-actions">
+                      <a href="{% url 'update_module' course_id=course.id module_id=module.id %}" class="btn btn-edit">
+                        <i class="fas fa-edit"></i> Edit
+                      </a>
+                      <a href="{% url 'delete_module' course_id=course.id module_id=module.id %}" class="btn btn-delete">
+                        <i class="fas fa-trash-alt"></i> Delete
+                      </a>
+                    </div>
+                  </div>
+                  
+                  <div class="module-body">
+                    <p class="module-description">{{ module.description }}</p>
+                    
+                    <div class="module-videos">
+                      <h4 class="section-subtitle">
+                        <i class="fas fa-video"></i> Videos
+                      </h4>
+                      {% if module.video_set.all %}
+                        <div class="video-grid">
+                          {% for video in module.video_set.all %}
+                            <div class="video-card">
+                              <div class="video-thumbnail">
+                                <video controls>
+                                  <source src="{{ video.video.url }}" type="video/mp4">
+                                  Your browser does not support the video tag.
+                                </video>
+                              </div>
+                              <div class="video-info">
+                                <h5>{{ video.name }}</h5>
+                                <div class="video-actions">
+                                  <a href="{% url 'create_quiz' video_id=video.id %}" class="btn btn-quiz">
+                                    <i class="fas fa-plus-circle"></i> Create Quiz
+                                  </a>
+                                  <a href="{% url 'quiz_list' video_id=video.id %}" class="btn btn-quizzes">
+                                    <i class="fas fa-list"></i> View Quizzes
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <div class="empty-state">
+                          <i class="fas fa-video-slash"></i>
+                          <p>No videos added yet</p>
+                        </div>
+                      {% endif %}
+                    </div>
+                    
+                    <div class="module-notes">
+                      <h4 class="section-subtitle">
+                        <i class="fas fa-file-alt"></i> Notes
+                      </h4>
+                      {% if module.notes_set.all %}
+                        <div class="notes-list">
+                          {% for note in module.notes_set.all %}
+                            <div class="note-card">
+                              <p>{{ note.description }}</p>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      {% else %}
+                        <div class="empty-state">
+                          <i class="fas fa-file-alt"></i>
+                          <p>No notes added yet</p>
+                        </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state">
+              <i class="fas fa-folder-open"></i>
+              <h3>No modules created yet</h3>
+              <p>Start by adding your first module</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="col-lg-4">
+        <div class="course-sidebar">
+          <div class="sidebar-card enrolled-users">
+            <h3 class="sidebar-title">
+              <i class="fas fa-users"></i> Enrolled Students
+            </h3>
+            {% if course.enrollment_set.all %}
+              <div class="user-grid">
+                {% for enrollment in course.enrollment_set.all %}
+                  <div class="user-card">
+                    <img src="{{ enrollment.user.profile.image.url }}" class="user-avatar" alt="Student">
+                    <span class="user-name">{{ enrollment.user.profile.name }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="empty-state">
+                <i class="fas fa-user-plus"></i>
+                <p>No students enrolled yet</p>
+              </div>
+            {% endif %}
+          </div>
+          
+          <div class="sidebar-card course-actions">
+            <h3 class="sidebar-title">
+              <i class="fas fa-cog"></i> Course Actions
+            </h3>
+            <a href="#" class="btn btn-action">
+              <i class="fas fa-plus-circle"></i> Add Module
+            </a>
+            <a href="#" class="btn btn-action">
+              <i class="fas fa-chart-line"></i> View Analytics
+            </a>
+            <a href="#" class="btn btn-action">
+              <i class="fas fa-edit"></i> Edit Course
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<style>
+  /* Base Styles */
+  .course-detail-container {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+  }
+  
+  /* Header Section */
+  .course-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 3rem 0;
+    margin-bottom: 3rem;
+  }
+  
+  .course-meta {
+    margin-bottom: 1.5rem;
+  }
+  
+  .course-meta .badge {
+    margin-right: 0.5rem;
+    font-size: 0.8rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 20px;
+  }
+  
+  .course-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+  
+  .course-subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+  }
+  
+  .course-instructor {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  .instructor-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 1rem;
+    border: 3px solid rgba(255,255,255,0.2);
+  }
+  
+  .instructor-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    display: block;
+  }
+  
+  .instructor-name {
+    margin: 0;
+    font-weight: 600;
+  }
+  
+  .course-stats {
+    display: flex;
+    gap: 2rem;
+  }
+  
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .stat-item i {
+    font-size: 1.1rem;
+  }
+  
+  /* Price Card */
+  .course-price-card {
+    background: white;
+    border-radius: 10px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  }
+  
+  .price {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #764ba2;
+    margin-bottom: 1.5rem;
+  }
+  
+  .btn-enroll {
+    background: #667eea;
+    color: white;
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 5px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-enroll:hover {
+    background: #5a6fd1;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+  }
+  
+  .includes h5 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    color: #333;
+  }
+  
+  .includes ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .includes li {
+    margin-bottom: 0.8rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+  }
+  
+  .includes li i {
+    margin-right: 0.8rem;
+    color: #667eea;
+    width: 20px;
+    text-align: center;
+  }
+  
+  /* Course Image */
+  .course-image-container {
+    margin-bottom: 3rem;
+  }
+  
+  .course-image {
+    width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  }
+  
+  /* Modules Section */
+  .section-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    position: relative;
+    padding-bottom: 0.5rem;
+    color: #2c3e50;
+  }
+  
+  .section-title:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(to right, #667eea, #764ba2);
+  }
+  
+  .section-subtitle {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 1.5rem 0 1rem;
+    color: #2c3e50;
+  }
+  
+  .module-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    border: 1px solid #eee;
+  }
+  
+  .module-header {
+    background: #f9fafc;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .module-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+    color: #2c3e50;
+  }
+  
+  .module-number {
+    background: #667eea;
+    color: white;
+    padding: 0.2rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    margin-right: 0.8rem;
+  }
+  
+  .module-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .btn-edit, .btn-delete {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    border-radius: 5px;
+  }
+  
+  .btn-edit {
+    background: #667eea;
+    color: white;
+    border: none;
+  }
+  
+  .btn-delete {
+    background: #ff4757;
+    color: white;
+    border: none;
+  }
+  
+  .module-body {
+    padding: 1.5rem;
+  }
+  
+  .module-description {
+    color: #555;
+    line-height: 1.6;
+  }
+  
+  /* Videos Section */
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .video-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    border: 1px solid #eee;
+  }
+  
+  .video-thumbnail video {
+    width: 100%;
+    display: block;
+  }
+  
+  .video-info {
+    padding: 1rem;
+  }
+  
+  .video-info h5 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+  }
+  
+  .video-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .btn-quiz, .btn-quizzes {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+    border-radius: 5px;
+  }
+  
+  .btn-quiz {
+    background: #4cd137;
+    color: white;
+    border: none;
+  }
+  
+  .btn-quizzes {
+    background: #3498db;
+    color: white;
+    border: none;
+  }
+  
+  /* Notes Section */
+  .notes-list {
+    display: grid;
+    gap: 1rem;
+  }
+  
+  .note-card {
+    background: #f9fafc;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+  }
+  
+  /* Empty States */
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #7f8c8d;
+  }
+  
+  .empty-state i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: #bdc3c7;
+  }
+  
+  /* Sidebar */
+  .sidebar-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid #eee;
+  }
+  
+  .sidebar-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+  }
+  
+  .sidebar-title i {
+    margin-right: 0.8rem;
+    color: #667eea;
+  }
+  
+  .user-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 1rem;
+  }
+  
+  .user-card {
+    text-align: center;
+  }
+  
+  .user-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 0.5rem;
+    border: 2px solid #eee;
+  }
+  
+  .user-name {
+    font-size: 0.8rem;
+    display: block;
+  }
+  
+  .course-actions {
+    display: grid;
+    gap: 0.8rem;
+  }
+  
+  .btn-action {
+    background: #f1f2f6;
+    color: #2c3e50;
+    border: none;
+    padding: 0.8rem;
+    border-radius: 5px;
+    font-weight: 500;
+    text-align: left;
+    display: flex;
+    align-items: center;
+  }
+  
+  .btn-action i {
+    margin-right: 0.8rem;
+    color: #667eea;
+  }
+  
+  /* Responsive */
+  @media (max-width: 992px) {
+    .course-title {
+      font-size: 2rem;
+    }
+    
+    .course-header {
+      padding: 2rem 0;
+    }
+    
+    .course-stats {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .course-title {
+      font-size: 1.8rem;
+    }
+    
+    .video-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .user-grid {
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
+  }
+</style>
 
 {% endblock %}

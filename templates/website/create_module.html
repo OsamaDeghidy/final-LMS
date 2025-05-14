@@ -1,6 +1,6 @@
 {% extends 'main/base.html' %} {% block head %} {% endblock %} {% block title %}
 {% endblock %} {% block content %}
-<div class="container">
+<!-- <div class="container">
     <h1>Add Module</h1>
     <hr>
     <form method="POST" enctype="multipart/form-data">
@@ -28,8 +28,147 @@
         </div>
         <button type="submit" class="btn btn-primary">Add Module</button>
     </form>
+</div> -->
+
+
+
+<div class="container py-5">
+  <div class="row justify-content-center">
+      <div class="col-lg-8">
+          <div class="card border-0 shadow-lg">
+              <div class="card-header bg-gradient-primary text-white py-3">
+                  <h2 class="h4 mb-0"><i class="fas fa-plus-circle me-2"></i> Add New Module</h2>
+              </div>
+              <div class="card-body p-4">
+                  <form method="POST" enctype="multipart/form-data">
+                      {% csrf_token %}
+                      
+                      <!-- Module Name -->
+                      <div class="mb-4">
+                          <label for="module_name" class="form-label fw-bold text-dark">Module Name</label>
+                          <div class="input-group">
+                              <span class="input-group-text bg-light"><i class="fas fa-heading text-primary"></i></span>
+                              <input type="text" class="form-control form-control-lg" id="module_name" name="module_name" placeholder="Enter module name" required>
+                          </div>
+                      </div>
+                      
+                      <!-- Video Upload -->
+                      <div class="mb-4">
+                          <label for="video" class="form-label fw-bold text-dark">Upload Videos</label>
+                          <div class="file-upload-wrapper">
+                              <input type="file" class="form-control form-control-lg" id="video" name="video" accept="video/*" multiple required>
+                              <div class="file-upload-info bg-light p-3 rounded mt-2">
+                                  <small class="text-muted d-block"><i class="fas fa-info-circle me-1"></i> Supported formats: MP4, MOV, AVI</small>
+                                  <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Max file size: 100MB per video</small>
+                              </div>
+                          </div>
+                      </div>
+                      
+                      <!-- Additional Notes -->
+                      <div class="mb-4">
+                          <label for="additional_notes" class="form-label fw-bold text-dark">Additional Notes</label>
+                          <textarea class="form-control form-control-lg" id="additional_notes" name="notes[]" rows="4" placeholder="Enter any additional notes or instructions..."></textarea>
+                      </div>
+                      
+                      <!-- Video Names -->
+                      <div class="mb-4">
+                          <div class="d-flex justify-content-between align-items-center mb-2">
+                              <label class="form-label fw-bold text-dark">Video Titles</label>
+                              <button type="button" class="btn btn-sm btn-success rounded-pill" onclick="addVideoName()">
+                                  <i class="fas fa-plus me-1"></i> Add Title
+                              </button>
+                          </div>
+                          <div id="video_names" class="video-names-container">
+                              <div class="input-group mb-2">
+                                  <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+                                  <input type="text" class="form-control" name="video_names[]" placeholder="Enter video title" required>
+                              </div>
+                          </div>
+                      </div>
+                      
+                      <!-- Submit Button -->
+                      <div class="d-grid gap-2 mt-4">
+                          <button type="submit" class="btn btn-primary btn-lg rounded-pill py-3">
+                              <i class="fas fa-save me-2"></i> Save Module
+                          </button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      </div>
+  </div>
 </div>
+
+<style>
+  .bg-gradient-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  .card {
+      border-radius: 12px;
+      overflow: hidden;
+  }
+  
+  .form-control, .form-control-lg, .input-group-text {
+      border-radius: 8px !important;
+  }
+  
+  .form-control:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+  }
+  
+  .file-upload-wrapper {
+      position: relative;
+  }
+  
+  .file-upload-info {
+      border-left: 3px solid #667eea;
+  }
+  
+  .video-names-container {
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 8px;
+  }
+  
+  /* Custom scrollbar */
+  .video-names-container::-webkit-scrollbar {
+      width: 6px;
+  }
+  
+  .video-names-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+  }
+  
+  .video-names-container::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 10px;
+  }
+  
+  .video-names-container::-webkit-scrollbar-thumb:hover {
+      background: #555;
+  }
+</style>
+
+
 <script>
+ function addVideoName() {
+      const container = document.getElementById('video_names');
+      const newInput = document.createElement('div');
+      newInput.className = 'input-group mb-2';
+      newInput.innerHTML = `
+          <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+          <input type="text" class="form-control" name="video_names[]" placeholder="Enter video title" required>
+          <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+              <i class="fas fa-times"></i>
+          </button>
+      `;
+      container.appendChild(newInput);
+  }
+
+
   function addNote() {
     var notesDiv = document.getElementById("additional_notes");
     var noteInput = document.createElement("div");
@@ -74,4 +213,5 @@
     console.log(error);
   }
 </script>
+
 {% endblock %}

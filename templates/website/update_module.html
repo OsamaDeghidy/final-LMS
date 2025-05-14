@@ -10,7 +10,7 @@
     {% endblock %}
 
     {% block content %}
-    <div class="container">
+<!--     <div class="container">
         <h1>Update Module</h1>
         <hr>
         <form method="POST">
@@ -30,4 +30,319 @@
             <button type="submit" class="btn btn-primary">Update Module</button>
             <a href="{% url 'course_detail' course_id=module.course.id %}" class="btn btn-secondary">Cancel</a>
         </form>
+    </div> -->
+
+    <div class="container py-5">
+        <div class="module-form-container">
+            <div class="form-header">
+                <h1 class="form-title">Update Module</h1>
+                <p class="form-subtitle">Edit the module details for <strong>{{ module.course.name }}</strong></p>
+                <div class="header-divider"></div>
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data" class="module-form">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="module_name" class="form-label">
+                        <i class="fas fa-heading mr-2"></i>Module Name
+                    </label>
+                    <input type="text" class="form-control form-input" id="module_name" name="module_name" 
+                           value="{{ module.name }}" required>
+                    <div class="input-underline"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-video mr-2"></i>Videos
+                    </label>
+                    <div class="file-upload-area" id="video-dropzone">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                        </div>
+                        <h5 class="upload-title">Drag & drop videos here</h5>
+                        <p class="upload-subtitle">or click to browse files</p>
+                        <input type="file" class="file-input" id="video" name="video" 
+                               accept="video/*" multiple>
+                        <div class="uploaded-files mt-3" id="uploaded-files"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="note" class="form-label">
+                        <i class="fas fa-file-alt mr-2"></i>Notes
+                    </label>
+                    <textarea class="form-control form-textarea" id="note" name="note" 
+                              rows="5">{{ module.note.description }}</textarea>
+                    <small class="form-hint">Add supporting notes for this module (supports markdown)</small>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-update">
+                        <i class="fas fa-save mr-2"></i> Update Module
+                    </button>
+                    <a href="{% url 'course_detail' course_id=module.course.id %}" class="btn btn-cancel">
+                        <i class="fas fa-times mr-2"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <style>
+        .module-form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            padding: 2.5rem;
+            border: 1px solid #eaeaea;
+        }
+        
+        .form-header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .form-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .form-subtitle {
+            color: #718096;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .header-divider {
+            height: 3px;
+            width: 80px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            margin: 0 auto;
+            border-radius: 3px;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .form-input {
+            border: none;
+            border-radius: 0;
+            border-bottom: 2px solid #e2e8f0;
+            padding: 0.75rem 0;
+            background: transparent;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+        }
+        
+        .form-input:focus {
+            box-shadow: none;
+            border-color: #667eea;
+        }
+        
+        .input-underline {
+            height: 2px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            width: 0;
+            transition: width 0.3s ease;
+        }
+        
+        .form-input:focus ~ .input-underline {
+            width: 100%;
+        }
+        
+        .form-textarea {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            min-height: 150px;
+            font-size: 1rem;
+        }
+        
+        .form-textarea:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-hint {
+            color: #718096;
+            font-size: 0.85rem;
+            display: block;
+            margin-top: 0.5rem;
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            background-color: #f8fafc;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .file-upload-area:hover {
+            border-color: #667eea;
+            background-color: rgba(102, 126, 234, 0.05);
+        }
+        
+        .upload-icon {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        
+        .upload-title {
+            color: #4a5568;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .upload-subtitle {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+        
+        .file-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        .uploaded-files {
+            display: none;
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .btn-update {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-update:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            background: linear-gradient(135deg, #5a6fd1, #6a429e);
+        }
+        
+        .btn-cancel {
+            background: white;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+            padding: 0.8rem 2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-cancel:hover {
+            background: #f8fafc;
+            border-color: #cbd5e0;
+            color: #2d3748;
+        }
+        
+        @media (max-width: 768px) {
+            .module-form-container {
+                padding: 1.5rem;
+            }
+            
+            .form-title {
+                font-size: 1.8rem;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .btn-update, .btn-cancel {
+                width: 100%;
+            }
+        }
+    </style>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropzone = document.getElementById('video-dropzone');
+            const fileInput = document.querySelector('.file-input');
+            const uploadedFiles = document.getElementById('uploaded-files');
+            
+            // Handle drag and drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                dropzone.classList.add('highlight');
+            }
+            
+            function unhighlight() {
+                dropzone.classList.remove('highlight');
+            }
+            
+            // Handle file selection
+            fileInput.addEventListener('change', handleFiles, false);
+            
+            function handleFiles(e) {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    uploadedFiles.style.display = 'block';
+                    uploadedFiles.innerHTML = `
+                        <p><strong>Selected files (${files.length}):</strong></p>
+                        <ul class="file-list">
+                            ${Array.from(files).map(file => `<li>${file.name}</li>`).join('')}
+                        </ul>
+                    `;
+                }
+            }
+        });
+    </script>
     {% endblock %}
