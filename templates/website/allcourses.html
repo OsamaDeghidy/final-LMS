@@ -1,0 +1,75 @@
+{% extends 'main/base.html' %} {% load static %} {% block head %} {% endblock %}
+{% block title %} {% endblock %} {% block content %}
+
+<div class="mb-2">
+  <div
+    class="w-100 d-flex justify-content-center align-items-center flex-column py-5"
+    style="background-color: #1d3b53"
+  >
+    <h2 class="text-white">
+      What You Want To
+      <span class="text-danger" style="font-size: 1.5em">Learn ?</span>
+    </h2>
+    <div class="w-50 position-relative">
+      <input type="text" placeholder="Search Course" class="w-100 px-3 py-3" />
+      <button
+        class="btn btn-danger position-absolute px-4"
+        style="right: 5px; top: 5px; bottom: 5px"
+      >
+        Search
+      </button>
+    </div>
+  </div>
+  <div class="m-5 d-flex flex-wrap justify-content-center gap-3">
+    {% for course in courses %}
+    <a href="{% url 'course_detail' course_id=course.id %}">
+      <div class="card border-0 shadow" style="width: 18rem">
+        <img
+          src="{{ course.image_course.url }}"
+          class="card-img-top"
+          width="100%"
+          height="180px"
+          alt="{{ course.name }}"
+        />
+  
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2">
+            {% for tag in course.tags.all %}
+            <span class="badge bg-danger bg-gradient">{{ tag.name }}</span>
+            {% endfor %}
+          </div>
+          <h5 class="card-title">{{ course.name }}</h5>
+          <p class="card-text">{{ course.small_description }}</p>
+          <ul class="list-inline mb-0">
+            <li class="list-inline-item me-0 small">
+              {% for i in "x"|ljust:course.rating %}
+                <li class="list-inline-item me-0 small">
+                  <i class="fas fa-star text-warning"></i>
+                </li>
+                {% endfor %}
+
+              {% comment %} {% if course.rating|float %}{% if course.rating|float|int < course.rating|float %}<i class="fas fa-star-half-alt text-warning"></i>{% endif %}{% endif %} {% endcomment %}
+            </li>
+            <li class="list-inline-item ms-2 h6 fw-light mb-0 fw-bold">{{ course.rating }}/5.0</li>
+          </ul>
+        </div>
+        <div class="card-footer pt-0 pb-3 bg-white border-0">
+          <hr />
+          <div class="d-flex justify-content-between mt-2">
+            <span class="h6 mb-0"><i class="far fa-clock text-danger me-2"></i>{{ course.videos_time }} </span>
+            <span class="h6 mb-0"><i class="fas fa-table text-primary me-2"></i>{{ course.total_module }} modules</span>
+          </div>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  
+
+    
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
