@@ -3,9 +3,9 @@ db.sqlite3
 
 node_modules/
 dist/
-env/
-*/__pycache__ 
-*/migrations
+#env/
+#*/__pycache__ 
+#*/migrations
 staticfiles/
 
 # Compiled Java class files
