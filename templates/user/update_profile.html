@@ -1,6 +1,6 @@
 {% extends 'main/base.html' %} {% block head %} {% endblock %} {% block title %}
 {% endblock %} {% block content %}
-<h1 class="text-danger px-5 py-3">Update Profile</h1>
+<!-- <h1 class="text-danger px-5 py-3">Update Profile</h1>
 <form method="POST" class="px-5" enctype="multipart/form-data">
   {% csrf_token %}
   <div class="form-group my-2">
@@ -93,14 +93,258 @@
   </div>
   {% endif %}
   <button type="submit" class="btn btn-primary my-2">Submit</button>
-</form>
+</form> -->
+
+
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-0 py-3">
+          <h2 class="mb-0 text-primary">
+            <i class="fas fa-user-edit me-2"></i> Update Your Profile
+          </h2>
+          <p class="text-muted mb-0">Keep your information current and showcase your professional identity</p>
+        </div>
+        
+        <div class="card-body">
+          <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+            {% csrf_token %}
+            
+            <!-- Profile Picture Upload -->
+            <div class="text-center mb-4">
+              <div class="position-relative d-inline-block">
+                <img id="profile-preview" src="{% if profile.image_profile %}{{ profile.image_profile.url }}{% else %}{% static '/user/images/profile.png' %}{% endif %}" 
+                     class="rounded-circle shadow-sm" width="150" height="150" style="object-fit: cover;">
+                <label for="image_profile" class="btn btn-sm btn-primary rounded-circle position-absolute" style="bottom: 10px; right: 10px; width: 40px; height: 40px; line-height: 28px;">
+                  <i class="fas fa-camera"></i>
+                  <input type="file" id="image_profile" name="image_profile" class="d-none" accept="image/*">
+                </label>
+              </div>
+            </div>
+            
+            <!-- Basic Information Section -->
+            <div class="mb-4">
+              <h5 class="text-primary mb-3"><i class="fas fa-id-card me-2"></i> Basic Information</h5>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="name" class="form-label">Full Name</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fas fa-user"></i></span>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ profile.name }}" required>
+                  </div>
+                </div>
+                
+                {% if profile.status == 'Student' or profile.status == 'Teacher' %}
+                <div class="col-md-6">
+                  <label for="date_of_birth" class="form-label">Date of Birth</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fas fa-calendar-alt"></i></span>
+                    <input type="date" class="form-control" id="date_of_birth" name="date_of_birth">
+                  </div>
+                </div>
+                {% endif %}
+                
+                <div class="col-12">
+                  <label for="shortBio" class="form-label">Short Bio</label>
+                  <textarea class="form-control" id="shortBio" name="shortBio" rows="2" placeholder="Tell us about yourself in a few words">{{ profile.shortBio }}</textarea>
+                </div>
+                
+                <div class="col-12">
+                  <label for="detail" class="form-label">Detailed Profile</label>
+                  <textarea class="form-control" id="detail" name="detail" rows="4" placeholder="Share more details about your background and experience">{{ profile.detail }}</textarea>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Professional Information Section -->
+            <div class="mb-4">
+              <h5 class="text-primary mb-3"><i class="fas fa-briefcase me-2"></i> Professional Information</h5>
+              <div class="row g-3">
+                {% if profile.status == 'Student' or profile.status == 'Teacher' %}
+                <div class="col-md-6">
+                  <label for="department" class="form-label">Department</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fas fa-building"></i></span>
+                    <input type="text" class="form-control" id="department" name="department">
+                  </div>
+                </div>
+                {% endif %}
+                
+                {% if profile.status == 'Teacher' %}
+                <div class="col-md-6">
+                  <label for="qualification" class="form-label">Qualification</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fas fa-graduation-cap"></i></span>
+                    <input type="text" class="form-control" id="qualification" name="qualification">
+                  </div>
+                </div>
+                
+                <div class="col-12">
+                  <label for="research_interests" class="form-label">Research Interests</label>
+                  <input type="text" class="form-control" id="research_interests" name="research_interests" placeholder="Separate interests with commas">
+                </div>
+                {% endif %}
+                
+                {% if profile.status == 'Organization' %}
+                <div class="col-md-6">
+                  <label for="location" class="form-label">Location</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fas fa-map-marker-alt"></i></span>
+                    <input type="text" class="form-control" id="location" name="location">
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="website" class="form-label">Website</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light">https://</span>
+                    <input type="text" class="form-control" id="website" name="website">
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="employees" class="form-label">Number of Employees</label>
+                  <input type="number" class="form-control" id="employees" name="employees">
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="founded_year" class="form-label">Founded Year</label>
+                  <input type="date" class="form-control" id="founded_year" name="founded_year">
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            
+            <!-- Social Media Section -->
+            <div class="mb-4">
+              <h5 class="text-primary mb-3"><i class="fas fa-share-alt me-2"></i> Social Media Links</h5>
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="github" class="form-label">GitHub</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fab fa-github"></i></span>
+                    <input type="text" class="form-control" id="github" name="github" placeholder="username">
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="linkedin" class="form-label">LinkedIn</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fab fa-linkedin"></i></span>
+                    <input type="text" class="form-control" id="linkedin" name="linkedin" placeholder="profile-url">
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="twitter" class="form-label">Twitter</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fab fa-twitter"></i></span>
+                    <input type="text" class="form-control" id="twitter" name="twitter" placeholder="@username">
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="facebook" class="form-label">Facebook</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fab fa-facebook"></i></span>
+                    <input type="text" class="form-control" id="facebook" name="facebook" placeholder="profile-url">
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="instagram" class="form-label">Instagram</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fab fa-instagram"></i></span>
+                    <input type="text" class="form-control" id="instagram" name="instagram" placeholder="@username">
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="youtube" class="form-label">YouTube</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fab fa-youtube"></i></span>
+                    <input type="text" class="form-control" id="youtube" name="youtube" placeholder="channel-url">
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+              <button type="submit" class="btn btn-primary px-4 py-2">
+                <i class="fas fa-save me-2"></i> Save Changes
+              </button>
+              <a href="#" class="btn btn-outline-secondary px-4 py-2">
+                <i class="fas fa-times me-2"></i> Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
+  // Profile image preview
+  document.getElementById('image_profile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        document.getElementById('profile-preview').src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+  
+  // Initialize date inputs with current values if available
+  document.addEventListener('DOMContentLoaded', function() {
+    // You would populate these from your Django template variables
+    // Example: if ({{ profile.date_of_birth }}) { ... }
+  });
+
   try {
     CKEDITOR.replace("detail");
   } catch (error) {
     console.log(error);
   }
 </script>
+
+<style>
+  .card {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .form-control, .input-group-text {
+    border-radius: 8px !important;
+  }
+  
+  .form-control:focus {
+    border-color: #1d3b53;
+    box-shadow: 0 0 0 0.25rem rgba(29, 59, 83, 0.15);
+  }
+  
+  #profile-preview {
+    transition: all 0.3s ease;
+    border: 3px solid #e9ecef;
+  }
+  
+  #profile-preview:hover {
+    transform: scale(1.05);
+    border-color: #1d3b53;
+  }
+  
+  .btn-primary {
+    background-color: #1d3b53;
+    border-color: #1d3b53;
+  }
+  
+  .btn-primary:hover {
+    background-color: #2a5a7c;
+    border-color: #2a5a7c;
+  }
+</style>
 
 {% endblock %}

@@ -130,30 +130,30 @@ def submit_quiz(request):
 
 
 
-def submit_quiz(request):
-    if request.method == 'POST':
-        quiz_id = request.POST.get('quiz_id')
-        question_ids = request.POST.getlist('question_ids[]')
-        answer_ids = request.POST.getlist('answer_ids[]')
+# def submit_quiz(request):
+#     if request.method == 'POST':
+#         quiz_id = request.POST.get('quiz_id')
+#         question_ids = request.POST.getlist('question_ids[]')
+#         answer_ids = request.POST.getlist('answer_ids[]')
 
-        # Do something with the form data, for example:
-        quiz = Quiz.objects.get(id=quiz_id)
-        total_marks = 0
-        obtained_marks = 0
-        for question_id, answer_id in zip(question_ids, answer_ids):
-            question = Question.objects.get(id=question_id)
-            answer = Answer.objects.get(id=answer_id)
-            if answer.is_correct:
-                obtained_marks += question.marks
-            total_marks += question.marks
-        percentage = obtained_marks / total_marks * 100
-        if percentage >= quiz.pass_percentage:
-            message = 'Congratulations! You passed the quiz with a score of {}%.'.format(round(percentage))
-        else:
-            message = 'Sorry, you failed the quiz with a score of {}%.'.format(round(percentage))
-        return redirect('quiz_result', quiz_id=quiz_id, message=message)
-    else:
-        return redirect('home')
+#         # Do something with the form data, for example:
+#         quiz = Quiz.objects.get(id=quiz_id)
+#         total_marks = 0
+#         obtained_marks = 0
+#         for question_id, answer_id in zip(question_ids, answer_ids):
+#             question = Question.objects.get(id=question_id)
+#             answer = Answer.objects.get(id=answer_id)
+#             if answer.is_correct:
+#                 obtained_marks += question.marks
+#             total_marks += question.marks
+#         percentage = obtained_marks / total_marks * 100
+#         if percentage >= quiz.pass_percentage:
+#             message = 'Congratulations! You passed the quiz with a score of {}%.'.format(round(percentage))
+#         else:
+#             message = 'Sorry, you failed the quiz with a score of {}%.'.format(round(percentage))
+#         return redirect('quiz_result', quiz_id=quiz_id, message=message)
+#     else:
+#         return redirect('home')
 
 
 
@@ -169,8 +169,6 @@ def courseviewpagenote(request, course_id, note_id):
         return render(request, 'website/courseviewnote.html', {'course': course, 'note': note})
     else:
         return redirect('course_detail', course_id=course.id)
-
-
 
 
 
@@ -275,9 +273,6 @@ def course_detail(request, course_id):
             profile_context=profile
     context = {"profile": profile_context, "course": course}        
     return render(request, 'website/course_detail.html', context)
-
-
-
 
 
 def update_course(request, course_id):
@@ -641,6 +636,7 @@ def enroll_course(request, course_id):
     else:
         messages.warning(request, f"You are already enrolled in {course.name}.")
     return redirect(reverse('courseviewpage', args=[course_id]))
+
 
 def analytics(request):
     return render(request, 'website/analytics.html')
