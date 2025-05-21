@@ -605,3 +605,118 @@ class QuizUserAnswer(models.Model):
     
     def __str__(self):
         return f"إجابة {self.attempt.user.username} على سؤال {self.question.id}"
+
+
+class School(models.Model):
+    name = models.CharField(max_length=255)
+    address = models.TextField()
+    phone = models.CharField(max_length=20)
+    email = models.EmailField()
+    
+    def __str__(self):
+        return self.name
+
+
+class Meeting(models.Model):
+    MEETING_TYPES = (
+        ('ZOOM', 'اجتماع عبر زووم'),
+        ('NORMAL', 'اجتماع عادي'),
+    )
+    
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    meeting_type = models.CharField(max_length=10, choices=MEETING_TYPES)
+    start_time = models.DateTimeField()
+    duration = models.DurationField(default=timedelta(minutes=60))
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
+    creator = models.ForeignKey(User, on_delete=models.CASCADE)
+    zoom_link = models.URLField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    notification_task_id = models.CharField(max_length=255, blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.title} - {self.start_time}"
+    
+    def clean(self):
+        if self.meeting_type == 'ZOOM' and not self.zoom_link:
+            raise ValidationError("يجب إضافة رابط زووم للاجتماعات عن بعد")
+    
+    @property
+    def end_time(self):
+        return self.start_time + self.duration
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+        # Note: setup_notifications method would need to be implemented
+        # self.setup_notifications()
+
+
+class Participant(models.Model):
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    is_attending = models.BooleanField(default=False)
+    attendance_time = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        unique_together = ('meeting', 'user')
+    
+    def __str__(self):
+        return f"{self.user} - {self.meeting}"
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE)
+    message = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"إشعار لـ {self.user} - {self.meeting}"
+
+
+class BookCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Book(models.Model):
+    title = models.CharField(max_length=255)
+    author_name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    book_file = models.FileField(upload_to='books/')
+    cover_image = models.ImageField(upload_to='books/covers/', null=True, blank=True)
+    category = models.ForeignKey(BookCategory, on_delete=models.SET_NULL, null=True, related_name='books')
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    upload_date = models.DateTimeField(auto_now_add=True)
+    is_available = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.title
+
+
+class ArticleCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Article(models.Model):
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    category = models.ForeignKey(ArticleCategory, on_delete=models.SET_NULL, null=True, related_name='articles')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    image = models.ImageField(upload_to='articles/', null=True, blank=True)
+    is_published = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.title
+
+
