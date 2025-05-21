@@ -4,128 +4,200 @@
 {% block title %} معهد التطوير المهني العالي {% endblock %}
 {% block content %}
 
-<section class="hero-section position-relative overflow-hidden py-5" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);"  dir="rtl">
-  <!-- Decorative elements -->
-  <div class="position-absolute top-0 start-0 w-100 h-100" style="z-index: 0;">
-    <div class="position-absolute" style="top: 20%; left: 10%; width: 100px; height: 100px; background: rgba(220, 53, 69, 0.1); border-radius: 50%;"></div>
-    <div class="position-absolute" style="bottom: 10%; right: 15%; width: 150px; height: 150px; background: rgba(23, 162, 184, 0.1); border-radius: 50%;"></div>
-  </div>
 
-  <div class="container position-relative" style="z-index: 1;">
-    <div class="row align-items-center">
-      <!-- Text Content -->
-      <div class="col-lg-6 pe-lg-5">
-        <div class="mb-4">
-          <span class="d-inline-block px-3 py-1 mb-3 rounded-pill" style="background-color: rgba(220, 53, 69, 0.1); color: #dc3545; font-weight: 600;">استمر في التعلم</span>
-          <h1 class="display-5 fw-bold mb-4" style="line-height: 1.3;">
-            حقق أهدافك 
-            <span class="position-relative" style="color: #dc3545;">
-              التدريبية
-              <img src="{% static 'main/images/hero-2-svg.svg' %}" alt="" class="position-absolute start-0 bottom-0 w-100" style="transform: translateY(5px);">
-            </span> 
-            باحترافية
-          </h1>
-          <p class="lead text-muted mb-4" style="line-height: 1.8;">
-            أصبح التطوير المهني اليوم هو الميزة التي ترجح اختيار<br>
-            الموظفين وترقيتهم ومكافأتهم
-          </p>
-          
-          <a href="/courses/" class="btn btn-danger btn-lg px-4 py-2 fw-bold shadow-sm d-inline-flex align-items-center" style="border-radius: 30px; transition: all 0.3s;">
-            البحث عن الدورات
-            <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" class="me-2">
-              <path d="M11.7153 1L16 5.28471L11.7153 9.56941" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-              <path d="M4 5.28473H15.88" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-          </a>
-        </div>
-      </div>
+<section class="hero-section position-relative overflow-hidden" style="min-height: 100vh;">
 
-      <!-- Hero Image with Floating Card -->
-      <div class="col-lg-6 position-relative mt-5 mt-lg-0">
-        <!-- Main Hero Image -->
-        <div class="position-relative" style="width: 100%; height: 500px; border-radius: 12px; overflow: hidden;">
-          <img src="{% static 'main/images/hero_6.png' %}" alt="تعليم" class="w-100 h-100" style="object-fit: cover;">
-          
-       <!-- Floating Course Card (Pixel-Perfect Match) -->
-    <!-- Floating Course Card (Pixel Perfect Match) -->
-      <!-- Floating Course Card -->
-      {% with top_course=courses|dictsortreversed:"rating"|first %}
-      <div class="card position-absolute shadow-lg border-0" style="width: 300px; bottom: -10px; right: 340px; border-radius: 15px; overflow: hidden; transition: all 0.3s; transform-style: preserve-3d;">
-        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center p-3">
-          <div class="d-flex align-items-center">
-            <div class="me-2" style="width: 36px; height: 36px; border-radius: 50%; overflow: hidden;">
-              <img src="{% static 'main/images/profile.jpg' %}" alt="معهد التطوير المهني" class="w-100 h-100 object-fit-cover">
-            </div>
-            <span class="fw-bold" style="font-size: 14px;">معهد التطوير المهني</span>
-          </div>
-          <button class="btn btn-sm p-0" style="color: #adb5bd;">
-            <i class="far fa-bookmark fs-5"></i>
-          </button>
-        </div>
-        
-        {% if top_course.image_course.url %}
-          <img src="{{ top_course.image_course.url }}" class="card-img-top" alt="{{ top_course.name }}" style="height: 160px; object-fit: cover;">
-        {% else %}
-          <img src="{% static 'main/images/course-default.png' %}" class="card-img-top" alt="Default course image" style="height: 160px; object-fit: cover;">
-        {% endif %}
-        
-        <div class="card-body p-4">
-          <span class="badge rounded-pill mb-2" style="background-color: #e9f8fb; color: #17A2B8; font-size: 12px; font-weight: 500;">
-            التدريب الإلكتروني
-          </span>
-          
-          <h5 class="fw-bold mb-3" style="font-size: 16px; line-height: 1.4;">
-            {{ top_course.name|default:"تأسيس اللغة الإنجليزية" }}
-          </h5>
-          
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="d-flex align-items-center text-muted" style="font-size: 12px;">
-              <i class="fas fa-book me-2"></i>
-              <span>{{ top_course.lectures|default:"21" }} درس</span>
-              <span class="mx-2">|</span>
-              <i class="fas fa-users me-2"></i>
-              <span>{{ top_course.enrollment_count|default:"4" }} طلاب</span>
-            </div>
-
-          </div>
-          
-          <div class="d-flex justify-content-between align-items-center">
-         
-            <div class="d-flex align-items-center">
-              <span class="fw-bold me-2" style="font-size: 14px;">
-                {% if top_course.rating %}{{ top_course.rating }}{% else %}0{% endif %}/5
+  <div class="container h-100 position-relative" style="z-index: 1; padding-top: 5rem; padding-bottom: 5rem;">
+    <div class="row align-items-center h-100 g-5">
+      <!-- Text Content - Adjusted for better mobile responsiveness -->
+      <div class="col-lg-6 order-lg-1 order-2" dir="rtl">
+        <div class="pe-lg-5 pe-0">
+          <div class="d-inline-block position-relative mb-4">
+            <span class="badge bg-white text-danger fw-bold px-4 py-2 shadow-sm" style="font-size: 1rem; border-radius: 50px; border: 1px solid; color: #e5978b;">
+              استمر في التعلم
+              <span class="position-absolute top-100 start-50 translate-middle mt-2">
+                <svg width="30" height="12" viewBox="0 0 30 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 9C10 3 20 1.5 27 6" stroke="#e5978b" stroke-width="2" stroke-linecap="round" stroke-dasharray="5 3"/>
+                </svg>
               </span>
-              <span class="mx-2">|</span>
-              <div class="text-warning">
-                {% with rating=top_course.rating|default:0 %}
-                  {% for i in "12345" %}
-                    {% if forloop.counter <= rating|add:0 %}
-                      <i class="fas fa-star"></i>
-                    {% else %}
-                      <i class="far fa-star"></i>
-                    {% endif %}
-                  {% endfor %}
-                {% endwith %}
-              </div>
-            </div>
-            <span class="fw-bold" style="color: #dc3545; font-size: 16px;">
-              {{ top_course.price|default:"99.00" }} ر.س
             </span>
           </div>
-        </div>
-        
-        <div class="card-footer bg-white border-0 p-0">
-          <a href="{% url 'course_detail' course_id=top_course.pk %}" class="btn btn-light w-100 py-3 fw-bold" style="border-top: 1px solid #eee; border-radius: 0 0 15px 15px; font-size: 14px;">
-            مشاهدة الدورة
-          </a>
+          
+          <h1 class="display-4 display-lg-3 fw-bold mb-4" style="line-height: 1.3; color: #0e5181;">
+            انطلق في رحلة 
+            <span class="position-relative d-inline-block" style="color: #d16e5f;">
+              التعلم
+              <img src="{% static 'main/images/hero-2-svg.svg' %}" alt="" class="position-absolute start-0 bottom-0" style="width: 100%; max-width: 120px; transform: translateY(5px);">
+            </span>
+            مع أفضل المدربين
+          </h1>
+          
+          <p class="lead text-muted mb-5" style="font-size: 1.1rem; line-height: 1.8;">
+            اكتشف أكثر من 500 دورة تدريبية في مختلف المجالات لتطوير مهاراتك وبناء مستقبل مهني ناجح
+          </p>
+          
+          <div class="d-flex flex-wrap gap-3 mb-5">
+            <a href="/allcourses" class="btn btn-danger btn-lg px-4 px-lg-5 py-3 fw-bold d-flex align-items-center shadow" style="border-radius: 12px; transition: all 0.4s;">
+              ابدأ التعلم الآن
+              <i class="fas fa-arrow-left ms-2"></i>
+            </a>
+            <a href="#" class="btn btn-outline-dark btn-lg px-4 px-lg-5 py-3 fw-bold d-flex align-items-center" style="border-radius: 12px; transition: all 0.4s;">
+              <i class="fas fa-play-circle me-2" style="color: #e5978b;"></i>
+              شاهد الفيديو
+            </a>
+          </div>
+          
+          <!-- Stats -->
+          <div class="d-flex flex-wrap gap-3 gap-lg-5 mt-5">
+            <div class="d-flex align-items-center">
+              <div class="bg-white rounded-circle p-2 p-lg-3 shadow-sm me-3">
+                <i class="fas fa-users text-danger fs-4"></i>
+              </div>
+              <div>
+                <h3 class="mb-0 fw-bold">25K+</h3>
+                <p class="text-muted mb-0 small">متعلم مسجل</p>
+              </div>
+            </div>
+            <div class="d-flex align-items-center">
+              <div class="bg-white rounded-circle p-2 p-lg-3 shadow-sm me-3">
+                <i class="fas fa-chalkboard-teacher text-danger fs-4"></i>
+              </div>
+              <div>
+                <h3 class="mb-0 fw-bold">150+</h3>
+                <p class="text-muted mb-0 small">مدرب محترف</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      {% endwith %}
+
+      <!-- Hero Visuals -->
+      <div class="col-lg-6 position-relative">
+        <!-- Main Image Container -->
+        <div class="position-relative" style="height: 550px;">
+          <!-- Your Image in the Background -->
+          <div class="position-absolute top-50 start-50 translate-middle w-75 h-75" style="background: url('{% static 'main/images/hero_6.png' %}') center/contain no-repeat; z-index: 1; opacity: 0.8;"></div>
+ 
+          <!-- Floating Course Cards - Adjusted positions for mobile -->
+          <div class="card position-absolute shadow-lg border-0 d-none d-md-block" style="width: 200px; max-width: 70%; top: 0; left: 0; border-radius: 16px; z-index: 3; transform: rotate(-5deg); transition: all 0.4s;">
+            <div class="card-body p-3">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-light rounded-circle p-2 me-2">
+                  <i class="fas fa-laptop-code text-danger"></i>
+                </div>
+                <span class="fw-bold small">تطوير الويب</span>
+              </div>
+              <h6 class="fw-bold mb-2">دورة تطوير الويب الكاملة</h6>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="text-warning small">
+                  <i class="fas fa-star"></i> 4.9
+                </div>
+                <span class="badge bg-danger bg-opacity-10 text-danger small">جديد</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card position-absolute shadow-lg border-0 d-none d-md-block" style="width: 200px; max-width: 70%; bottom: 30px; right: 0; border-radius: 16px; z-index: 3; transform: rotate(3deg); transition: all 0.4s;">
+            <div class="card-body p-3">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-light rounded-circle p-2 me-2">
+                  <i class="fas fa-chart-line text-danger"></i>
+                </div>
+                <span class="fw-bold small">التسويق</span>
+              </div>
+              <h6 class="fw-bold mb-2">إستراتيجيات التسويق الرقمي</h6>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="text-warning small">
+                  <i class="fas fa-star"></i> 4.7
+                </div>
+                <span class="badge bg-primary bg-opacity-10 text-primary small">الأكثر مبيعاً</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Floating Elements - Hidden on small screens -->
+          <div class="position-absolute bg-white shadow-sm rounded-circle d-flex align-items-center justify-content-center d-none d-md-flex" style="width: 60px; height: 60px; bottom: 80px; left: 30px; z-index: 4; animation: float 4s ease-in-out infinite; color: #d16e5f;">
+            <i class="fas fa-award text-danger fs-3"></i>
+          </div>
+          
+          <div class="position-absolute bg-danger text-white rounded-pill px-3 py-2 fw-bold d-none d-md-block" style="font-size: 12px; top: 40px; right: 80px; z-index: 4; transform: rotate(10deg); color: #d16e5f;">
+            <i class="fas fa-bolt me-1"></i> الأكثر شهرة
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
+
+<style>
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-15px) rotate(5deg); }
+  }
+  
+  .hero-section {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+  }
+  
+  .hero-section .card:hover {
+    transform: rotate(0deg) scale(1.05) !important;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
+    z-index: 5 !important;
+  }
+  
+  .btn-danger {
+    background: linear-gradient(135deg, #e5978b 0%, #cb3342 100%);
+    border: none;
+  }
+  
+  .btn-danger:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(228, 104, 117, 0.4) !important;
+  }
+  
+  .btn-outline-dark:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-3px);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 992px) {
+    .hero-section {
+      text-align: center;
+    }
+    .pe-lg-5 {
+      padding-right: 0 !important;
+    }
+    .display-4 {
+      font-size: 2.5rem;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .hero-section {
+      min-height: auto;
+      padding-top: 3rem;
+      padding-bottom: 3rem;
+    }
+    .display-4 {
+      font-size: 2rem;
+    }
+    .lead {
+      font-size: 1rem;
+    }
+    .btn-lg {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+    }
+  }
+
+  @keyframes float-image {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.05); }
+  }
+
+</style>
 
 
 <section class="p-5 pt-2 d-flex gap-5 justify-content-center flex-wrap">
@@ -171,257 +243,253 @@
   </div>
 </section>
 
-<section class="categories-section py-5">
-  <div class="container">
-    <div class="text-center mb-5 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.3s">
-      <!-- Subtitle -->
-      <h5 class="small-title mb-2">
-        أهم التصنيفات
-      </h5>
-      
-      <!-- Main Title with Decorative Element -->
-      <h2 class="section-title mb-4">
-        <div class="position-relative">
-          <span class="position-relative text-danger">
-            التصنيفات
-            <img src="{% static 'main/images/hero-2-svg.svg' %}" alt="" class="position-absolute start-0 bottom-0" style="width: 100%; max-width: 120px; transform: translateY(5px);">
-          </span> 
-          <span class="ms-2">الأكثر طلباً</span>
-        </div>
-      </h2>
-    </div>
-
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-      <!-- Category card -->
-      <div class="col">
-        <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-elevate">
-          <div class="py-3">
-            <img src="{% static 'main/images/international.png' %}" alt="اللغات" class="category-icon mb-3" style="height: 60px;">
-            <h4 class="card-title mb-2">اللغات</h4>
-            <p class="card-text text-muted">لغات جديدة لتعزيز مهاراتك!</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col">
-        <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-elevate">
-          <div class="py-3">
-            <img src="{% static 'main/images/opportunities.png' %}" alt="الإدارة" class="category-icon mb-3" style="height: 60px;">
-            <h4 class="card-title mb-2">الإدارة</h4>
-            <p class="card-text text-muted">مهارات الإدارة لنجاح مستدام!</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col">
-        <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-elevate">
-          <div class="py-3">
-            <img src="{% static 'main/images/calendar.png' %}" alt="التعليم" class="category-icon mb-3" style="height: 60px;">
-            <h4 class="card-title mb-2">التعليم</h4>
-            <p class="card-text text-muted">نحو مستقبل مشرق يبدأ من هنا!</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col">
-        <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-elevate">
-          <div class="py-3">
-            <img src="{% static 'main/images/binary.png' %}" alt="البرمجة" class="category-icon mb-3" style="height: 60px;">
-            <h4 class="card-title mb-2">البرمجة</h4>
-            <p class="card-text text-muted">اصنع المستقبل بيديك!</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col">
-        <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-elevate">
-          <div class="py-3">
-            <img src="{% static 'main/images/rock-climbing.png' %}" alt="تطوير الذات" class="category-icon mb-3" style="height: 60px;">
-            <h4 class="card-title mb-2">تطوير الذات</h4>
-            <p class="card-text text-muted">عِش النسخة الأفضل منك.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col">
-        <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-elevate">
-          <div class="py-3">
-            <img src="{% static 'main/images/earphone.png' %}" alt="الحاسب الآلي" class="category-icon mb-3" style="height: 60px;">
-            <h4 class="card-title mb-2">الحاسب الآلي</h4>
-            <p class="card-text text-muted">تطوير مهاراتك الرقمية.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col">
-        <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-elevate">
-          <div class="py-3">
-            <img src="{% static 'main/images/management.png' %}" alt="المالية والمحاسبة" class="category-icon mb-3" style="height: 60px;">
-            <h4 class="card-title mb-2">المالية والمحاسبة</h4>
-            <p class="card-text text-muted">اتخاذ قرارات استثمارية ذكية بثقة.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col">
-        <div class="card h-100 border-0 shadow-sm rounded-3 text-center p-3 hover-elevate">
-          <div class="py-3">
-            <img src="{% static 'main/images/computer.png' %}" alt="التجارة الإلكترونية" class="category-icon mb-3" style="height: 60px;">
-            <h4 class="card-title mb-2">التجارة الإلكترونية</h4>
-            <p class="card-text text-muted">حقق نجاحك الرقمي.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
 
 <section class="popular-courses py-5" dir="rtl">
-  <!-- Section Header -->
-  <div class="container mb-4">
-    <div class="d-flex justify-content-between align-items-center">
-      <div>
-        <h5 class="text-muted mb-2">دوراتنا</h5>
-        <h2 class="fw-bold">
-          <span class="text-danger position-relative">
-            الدورات
-            <img src="{% static 'main/images/hero-2-svg.svg' %}" alt="" class="position-absolute start-0 bottom-0 w-100" style="transform: translateY(5px);">
-          </span>
-          الأكثر طلباً
-        </h2>
+
+
+  <div class="text-center mb-5 wow fadeInUp" data-wow-duration="1s" data-wow-delay="0.3s">
+    <!-- Subtitle -->
+    <h5 class="small-title mb-2" style="color: #0e5181; font-size: 35px;">
+      دوراتنا
+    </h5>
+    
+    <!-- Main Title with Decorative Element -->
+    <h2 class="section-title mb-4" >
+      <div class="position-relative">
+        <span class="position-relative" style="color: #d16e5f; font-size: 40px;">
+          الدورات
+          <img src="{% static 'main/images/hero-2-svg.svg' %}" alt="" class="position-absolute start-0 bottom-0" style="width: 100%; max-width: 120px; transform: translateY(5px);">
+        </span> 
+        <span class="ms-2" style="color: #0e5181; font-size: 40px;">الأكثر طلباً</span>
       </div>
-      <a href="/allcourses" class="btn text-white px-4 py-2" style="background-color: #1d3b53; border-radius: 30px;">
-        عرض جميع الدورات
-        <i class="fas fa-arrow-left ms-2"></i>
-      </a>
-    </div>
+    </h2>
   </div>
+ 
 
-  <!-- Courses Carousel -->
+  <!-- Courses Grid -->
   <div class="container">
-    <div id="coursesCarousel" class="carousel slide" data-bs-ride="carousel">
-      <div class="carousel-inner">
-        {% for course in courses %}
-          {% if forloop.counter0|divisibleby:3 %}
-          <div class="carousel-item {% if forloop.first %}active{% endif %}">
-            <div class="row g-4">
-          {% endif %}
+    <div class="row g-4" id="coursesContainer">
+      {% for course in courses %}
+        <div class="col-md-4">
+          <div class="card border-0 shadow h-100" style="border-radius: 10px;">
+            <!-- Institute Badge -->
+            <div class="card-header bg-white border-0 pt-3 pb-0">
+              <span class="badge bg-light text-dark">معهد التطوير المهني</span>
+            </div>
+            
+            <!-- Course Image -->
+            <a href="{% url 'course_detail' course_id=course.id %}">
+              {% if course.image_course.url %}
+              <img src="{{ course.image_course.url }}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="{{ course.name }}">
+              {% else %}
+              <img src="{% static '/images/course/02.jpg' %}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="Default image">
+              {% endif %}
+            </a>
 
-          <div class="col-md-4">
-            <div class="card border-0 shadow h-100" style="border-radius: 10px;">
-              <!-- Institute Badge -->
-              <div class="card-header bg-white border-0 pt-3 pb-0">
-                <span class="badge bg-light text-dark">معهد التطوير المهني</span>
+            <!-- Course Body -->
+            <div class="card-body text-center">
+              <!-- Course Type -->
+              <span class="badge rounded-pill mb-2" style="background-color: #e9f8fb; color: #17A2B8; font-size: 12px;">
+                التدريب الإلكتروني
+              </span>
+              
+              <!-- Course Title -->
+              <h5 class="card-title fw-bold mb-2" style="color: #0e5181;">{{ course.name }}</h5>
+              
+              <!-- Course Meta -->
+              <div class="text-muted mb-3" style="font-size: 13px;">
+                <span>{{ course.lectures|default:"14" }} درس</span>
+                <span class="mx-2">·</span>
+                <span>{{ course.enrollment_count|default:"8" }} طالب</span>
               </div>
               
-              <!-- Course Image -->
-              <a href="{% url 'course_detail' course_id=course.id %}">
-                {% if course.image_course.url %}
-                <img src="{{ course.image_course.url }}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="{{ course.name }}">
-                {% else %}
-                <img src="{% static '/images/course/02.jpg' %}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="Default image">
-                {% endif %}
-              </a>
-
-              <!-- Course Body -->
-              <div class="card-body text-center">
-                <!-- Course Type -->
-                <span class="badge rounded-pill mb-2" style="background-color: #e9f8fb; color: #17A2B8; font-size: 12px;">
-                  التدريب الإلكتروني
-                </span>
-                
-                <!-- Course Title -->
-                <h5 class="card-title fw-bold mb-2">{{ course.name }}</h5>
-                
-                <!-- Course Meta -->
-                <div class="text-muted mb-3" style="font-size: 13px;">
-                  <span>{{ course.lectures|default:"14" }} درس</span>
-                  <span class="mx-2">·</span>
-                  <span>{{ course.enrollment_count|default:"8" }} طالب</span>
+              <!-- Rating and Price -->
+              <div class="d-flex justify-content-between align-items-center px-3">
+                <div class="text-warning">
+                  {% for i in "12345" %}
+                    {% if forloop.counter <= course.rating|add:0 %}
+                      <i class="fas fa-star"></i>
+                    {% else %}
+                      <i class="far fa-star"></i>
+                    {% endif %}
+                  {% endfor %}
+                  <span class="text-muted ms-1">{{ course.rating|default:"2" }}/5.00</span>
                 </div>
-                
-                <!-- Rating and Price -->
-                <div class="d-flex justify-content-between align-items-center px-3">
-                  <div class="text-warning">
-                    {% for i in "12345" %}
-                      {% if forloop.counter <= course.rating|add:0 %}
-                        <i class="fas fa-star"></i>
-                      {% else %}
-                        <i class="far fa-star"></i>
-                      {% endif %}
-                    {% endfor %}
-                    <span class="text-muted ms-1">{{ course.rating|default:"2" }}/5.00</span>
-                  </div>
-                  <span class="fw-bold text-danger">{{ course.price|default:"99,00" }} ر.س</span>
-                </div>
-              </div>
-              
-              <!-- View Button -->
-              <div class="card-footer bg-white border-0 text-center py-3">
-                <a href="{% url 'course_detail' course_id=course.id %}" class="btn btn-outline-primary w-100">مشاهدة الدورة</a>
+                <span class="fw-bold text-danger">{{ course.price|default:"99,00" }} ر.س</span>
               </div>
             </div>
-          </div>
-
-          {% if forloop.counter0|add:1|divisibleby:3 or forloop.last %}
+            
+            <!-- View Button -->
+            <div class="card-footer bg-white border-0 text-center py-3">
+              <a href="{% url 'course_detail' course_id=course.id %}" class="btn btn-outline-primary w-100">مشاهدة الدورة</a>
             </div>
           </div>
-          {% endif %}
-        {% endfor %}
-      </div>
-      
-      <!-- Carousel Controls -->
-      <!-- <button class="carousel-control-prev" type="button" data-bs-target="#coursesCarousel" data-bs-slide="prev">
-        <span class="carousel-control-prev-icon bg-danger rounded-circle p-3" aria-hidden="true"></span>
-      </button>
-      <button class="carousel-control-next" type="button" data-bs-target="#coursesCarousel" data-bs-slide="next">
-        <span class="carousel-control-next-icon bg-danger rounded-circle p-3" aria-hidden="true"></span>
-      </button> -->
-    </div>
-  </div>
-</section>
-
-
-<section
-  class="w-75 m-auto d-flex justify-content-between rounded rounded-3 p-4 align-items-center mb-4"
-  style="background-color: #17a2b8"
->
-  <div class="w-75">
-    <h1 class="text-white fw-bolder">Become an Instructor!</h1>
-  </div>
-  <div>
-    <button class="btn btn-danger">Start Teaching Today</button>
-  </div>
-</section>
-
-<section class="accreditations-section py-5" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-  <div class="container">
-    <!-- Section Heading -->
-    <div class="text-center mb-5">
-      <h1 class="section-title">اعتماداتنا</h1>
+        </div>
+        
+        {% if forloop.counter|divisibleby:3 and not forloop.last %}
+          </div><div class="row g-4" style="padding-top: 30px;">
+        {% endif %}
+      {% endfor %}
     </div>
     
-    <!-- Accreditation Logos - Larger Version -->
-    <div class="row justify-content-center align-items-center">
-      <div class="col-8 col-md-5 col-lg-3 mb-5 text-center">
-        <div class="accreditation-logo">
-          <img src="{% static 'main/images/1.png' %}" alt="Accreditation 1" class="img-fluid" style="max-height: 120px; width: auto;">
+    <!-- Show More Button - Centered Design -->
+    <div class="text-center mt-4 mb-4">
+      <a href="/allcourses" class="btn btn-danger btn-lg px-4 px-lg-5 py-2 py-lg-3 fw-bold d-inline-flex align-items-center" 
+        style="background-color: #20495C; 
+                color: white;
+                border: none;
+                border-radius: 8px;
+                transition: all 0.3s ease;
+                font-size: 1.1rem;">
+        عرض المزيد من الدورات
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<style>
+  /* Hover Effect */
+  .btn-primary:hover {
+    background-color: #1a3d4d !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(32, 73, 92, 0.2);
+  }
+  
+  /* Responsive Adjustment */
+  @media (max-width: 768px) {
+    .btn-primary {
+      padding: 0.75rem 1.5rem !important;
+      font-size: 1rem !important;
+    }
+  }
+</style>
+
+<!-- Premium Partners Section -->
+<section class="partners-section py-6" dir="rtl" style="background-color: #f9f9f9; padding: 20px;">
+  <div class="container">
+    <div class="text-center mb-5">
+      <span class="badge mb-3 px-4 py-2 d-inline-flex align-items-center" 
+            style="font-size: 1rem; 
+                   border-radius: 50px; 
+                   background-color: rgba(209, 110, 95, 0.1); 
+                   color: #0e5181;
+                   font-weight: 600;">
+        <i class="fas fa-handshake me-2" style="color: #d16e5f;"></i> شركاؤنا المعتمدون
+      </span>
+      <h2 class="display-5 fw-bold mb-3" style="color: #0e5181;">شركاء النجاح</h2>
+      <p class="lead mx-auto" style="color: #5a6a7a; max-width: 700px; font-size: 1.2rem;">
+        نتعاون مع أبرز المؤسسات التعليمية العالمية لتقديم أفضل المحتوى التعليمي
+      </p>
+    </div>
+    
+    <div class="row g-4 justify-content-center align-items-center">
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="partner-card p-4 rounded-4 h-100 d-flex align-items-center justify-content-center position-relative"
+             style="background-color: white; 
+                    border: 2px solid rgba(14, 81, 129, 0.1);
+                    height: 180px;
+                    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.03);">
+          <img src="{% static 'main/images/1.png' %}" alt="Partner" class="img-fluid position-relative z-index-1"
+               style="max-height: 120px; 
+                      filter: grayscale(100%) contrast(120%);
+                      transition: all 0.4s ease;">
+          <div class="position-absolute w-100 h-100 top-0 start-0 rounded-4"
+               style="background: linear-gradient(135deg, rgba(209, 110, 95, 0.03) 0%, transparent 100%);
+                      opacity: 0;
+                      transition: opacity 0.4s ease;"></div>
         </div>
       </div>
-      <div class="col-8 col-md-5 col-lg-3 mb-5 text-center">
-        <div class="accreditation-logo">
-          <img src="{% static 'main/images/2.png' %}" alt="National eLearning Center" class="img-fluid" style="max-height: 120px; width: auto;">
+      
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="partner-card p-4 rounded-4 h-100 d-flex align-items-center justify-content-center position-relative"
+             style="background-color: white; 
+                    border: 2px solid rgba(14, 81, 129, 0.1);
+                    height: 180px;
+                    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.03);">
+          <img src="{% static 'main/images/2.png' %}" alt="Partner" class="img-fluid position-relative z-index-1"
+               style="max-height: 120px; 
+                      filter: grayscale(100%) contrast(120%);
+                      transition: all 0.4s ease;">
+          <div class="position-absolute w-100 h-100 top-0 start-0 rounded-4"
+               style="background: linear-gradient(135deg, rgba(209, 110, 95, 0.03) 0%, transparent 100%);
+                      opacity: 0;
+                      transition: opacity 0.4s ease;"></div>
         </div>
       </div>
-      <div class="col-8 col-md-5 col-lg-3 mb-5 text-center">
-        <div class="accreditation-logo">
-          <img src="{% static 'main/images/3.png' %}" alt="Accreditation 3" class="img-fluid" style="max-height: 120px; width: auto;">
+      
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="partner-card p-4 rounded-4 h-100 d-flex align-items-center justify-content-center position-relative"
+             style="background-color: white; 
+                    border: 2px solid rgba(14, 81, 129, 0.1);
+                    height: 180px;
+                    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.03);">
+          <img src="{% static 'main/images/3.png' %}" alt="Partner" class="img-fluid position-relative z-index-1"
+               style="max-height: 120px; 
+                      filter: grayscale(100%) contrast(120%);
+                      transition: all 0.4s ease;">
+          <div class="position-absolute w-100 h-100 top-0 start-0 rounded-4"
+               style="background: linear-gradient(135deg, rgba(209, 110, 95, 0.03) 0%, transparent 100%);
+                      opacity: 0;
+                      transition: opacity 0.4s ease;"></div>
         </div>
       </div>
+      
     </div>
   </div>
 </section>
+
+<style>
+  /* Partner Card Hover Effects */
+  .partner-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 15px 30px rgba(14, 81, 129, 0.1) !important;
+    border-color: rgba(209, 110, 95, 0.3) !important;
+  }
+  
+  .partner-card:hover img {
+    filter: grayscale(0%) contrast(100%) !important;
+    transform: scale(1.15);
+  }
+  
+  .partner-card:hover div:last-child {
+    opacity: 1 !important;
+  }
+  
+  /* Floating Animation */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  /* Responsive Adjustments */
+  @media (max-width: 992px) {
+    .partner-card {
+      height: 160px !important;
+    }
+    
+    .partner-card img {
+      max-height: 70px !important;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .partner-card {
+      height: 140px !important;
+    }
+    
+    .partner-card img {
+      max-height: 60px !important;
+    }
+    
+    .display-5 {
+      font-size: 2.2rem !important;
+    }
+  }
+</style>
 
 
 <script>

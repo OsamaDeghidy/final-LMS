@@ -21,128 +21,9 @@
     />
   </head>
   <body>
-<!--     <nav
-      class="navbar navbar-expand-lg navbar-light bg-light p-0 py-2 w-100"
-      style="
-        box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 15px -3px,
-          rgba(0, 0, 0, 0.05) 0px 4px 6px -2px;
-        z-index: 1000;
-      "
-    >
-      <div class="container-fluid">
-        {% comment %}<a class="navbar-brand fs-2 fw-bolder" href="/">معهد التطوير المهني العالي </a>{% endcomment %}
-        <img src='{% static 'main/images/logo.png' %}' style="width: 80px; height: auto;"> 
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarSupportedContent"
-          aria-controls="navbarSupportedContent"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div
-          class="collapse navbar-collapse justify-content-end"
-          id="navbarSupportedContent"
-        >
-          <div class="w-75 d-flex justify-content-between flex-wrap">
-            <div class="d-flex align-items-center">
-              <ul class="d-flex m-0 list-unstyled">
-                <li>
-                  <a
-                    class="text-dark px-3 fs-3 fw-bold text-decoration-none"
-                    href="/"
-                    >Home</a
-                  >
-                </li>
-                <li>
-                  <a
-                    class="text-dark px-3 fs-3 fw-bold text-decoration-none"
-                    href="/contact"
-                    >Contact</a
-                  >
-                </li>
-                <li>
-                  <a
-                    class="text-decoration-none text-dark px-3 fs-3 fw-bold"
-                    href="/allcourses"
-                  >
-                    Courses
-                  </a>
-                </li>
-              </ul>
-            </div>
 
 
-<form method="GET" action="{% url 'allcourses' %}">
-    <div class="position-relative" style="width: 100%">
-        <input
-            type="text"
-            name="search_query"
-            value="{{ search_query }}"
-            placeholder="Search Course"
-            class="w-100 px-2 py-2 rounded rounded-3 border border-2 border-secondary"
-        />
-        <button
-            type="submit"
-            class="btn position-absolute"
-            style="right: 2px; top: 4px; bottom: 5px"
-        >
-            <i class="fa-solid fa-magnifying-glass"></i>
-        </button>
-    </div>
-</form>
-            {% if user.is_authenticated %}
-            <div class="d-flex align-items-center gap-2">
-              <button class="btn p-0 rounded rounded-3">
-                <a
-                  class="btn text-decoration-none text-white"
-                  style="background-color: #1d3b53"
-                  href="{% url 'logout' %}"
-                  >Logout</a
-                >
-              </button>
-              <button class="btn p-0 rounded rounded-3">
-                <a
-                  class="btn text-decoration-none text-white"
-                  style="background-color: #1d3b53"
-                  href="{% url 'dashboard' %}"
-                  >Dashboard</a
-                >
-              </button>
-            </div>
-            {% else %}
-            <div class="d-flex align-items-center gap-2">
-              <button class="btn p-0 rounded rounded-3">
-                <a
-                  class="btn text-decoration-none text-white"
-                  style="background-color: #1d3b53"
-                  href="{% url 'login' %}"
-                  >Login</a
-                >
-              </button>
-              <button class="btn p-0 rounded rounded-3">
-                <a
-                  class="btn text-white text-decoration-none"
-                  style="background-color: #1d3b53"
-                  href="{% url 'register' %}"
-                  >Register</a
-                >
-              </button>
-            </div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-    </nav> -->
-
-    <nav class="navbar navbar-expand-lg navbar-light py-3 w-100" style="
-    background-color: #f8f9fa;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-    z-index: 1000;
-" dir="rtl">
+    <nav class="navbar navbar-expand-lg navbar-light py-3 w-100" style=" background-color: #f8f9fa; box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08); z-index: 1000;" dir="rtl">
     <div class="container">
         <a class="navbar-brand" href="/">
             <img src='{% static 'main/images/logo.png' %}' style="width: 100px; height: auto;">
@@ -153,45 +34,93 @@
         </button>
         
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <div class="d-flex flex-column flex-lg-row w-100 align-items-lg-center justify-content-lg-center">
+            <div class="d-flex flex-column flex-lg-row w-100 align-items-lg-center justify-content-lg-between">
                 <!-- روابط التنقل في المنتصف -->
-                <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
-                    <li class="nav-item mx-2">
+                <ul class="navbar-nav mb-2 mb-lg-0" style="margin-right: auto; margin-left: auto;">
+                    <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
                         <a class="nav-link px-3 py-2 fw-semibold" href="/" 
                            style="color: #495057; border-radius: 8px;">
-                           <i class="fas fa-home me-1" style="color: #6c757d;"></i> الرئيسية
+                           الرئيسية
                         </a>
                     </li>
-                    <li class="nav-item mx-2">
+                    <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
                         <a class="nav-link px-3 py-2 fw-semibold" href="/allcourses"
                            style="color: #495057; border-radius: 8px;">
-                           <i class="fas fa-book me-1" style="color: #6c757d;"></i> الكورسات
+                           الكورسات
                         </a>
                     </li>
-                    <li class="nav-item mx-2">
+                    <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
+                        <a class="nav-link px-3 py-2 fw-semibold" href="/course-category/e-learning"
+                           style="color: #495057; border-radius: 8px;">
+                           التدريب الإلكتروني
+                        </a>
+                    </li>
+                    <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
+                        <a class="nav-link px-3 py-2 fw-semibold" href="/course-bundle"
+                           style="color: #495057; border-radius: 8px;">
+                           الدبلومات
+                        </a>
+                    </li>
+                    <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
                         <a class="nav-link px-3 py-2 fw-semibold" href="/contact"
                            style="color: #495057; border-radius: 8px;">
-                           <i class="fas fa-envelope me-1" style="color: #6c757d;"></i> اتصل بنا
+                           اتصل بنا
                         </a>
                     </li>
                 </ul>
-                
-                <!-- أزرار التسجيل على اليمين -->
-                <div class="d-flex ms-lg-auto">
+
+                <!-- User and Cart Section -->
+                <div class="d-flex align-items-center">
+                    <!-- Cart Icon with Dropdown -->
+                    <div class="dropdown me-3">
+                        <a href="#" class="position-relative" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-shopping-cart fa-lg" style="color: #495057;"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                0
+                            </span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end p-3" style="width: 300px;">
+                            <li class="text-center py-2">
+                                <p class="mb-0">سلة التسوق فارغة</p>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="/cart" class="btn btn-primary w-100">عرض السلة</a>
+                            </li>
+                        </ul>
+                    </div>
+
                     {% if user.is_authenticated %}
-                        <a href="{% url 'dashboard' %}" class="btn btn-outline-primary me-2 px-4 rounded-pill fw-bold">
-                            <i class="fas fa-tachometer-alt me-1"></i> لوحة التحكم
+                    <!-- User Profile Dropdown -->
+                    <div class="dropdown">
+                        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="{% if user.profile.image %}{{ user.profile.image.url }}{% else %}{% static 'main/images/profile.jpg' %}{% endif %}" 
+                                alt="Profile" class="rounded-circle me-2" width="32" height="32">
                         </a>
-                        <a href="{% url 'logout' %}" class="btn btn-primary px-4 rounded-pill fw-bold">
-                            <i class="fas fa-sign-out-alt me-1"></i> تسجيل خروج
-                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'dashboard' %}">
+                                    <i class="fas fa-tachometer-alt me-2"></i> لوحة التحكم
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                                    <i class="fas fa-sign-out-alt me-2"></i> تسجيل خروج
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                     {% else %}
-                        <a href="{% url 'login' %}" class="btn btn-outline-primary me-2 px-4 rounded-pill fw-bold">
+                    <!-- Guest User Icons -->
+                    <div class="d-flex">
+                        <a href="{% url 'login' %}" class="btn btn-outline-primary me-2 px-3 rounded-pill fw-bold">
                             <i class="fas fa-sign-in-alt me-1"></i> تسجيل دخول
                         </a>
-                        <a href="{% url 'register' %}" class="btn btn-primary px-4 rounded-pill fw-bold">
-                            <i class="fas fa-user-plus me-1"></i> تسجيل جديد
+                        <a href="{% url 'register' %}" class="btn btn-primary px-3 rounded-pill fw-bold">
+                            <i class="fas fa-user-plus me-1"></i> حساب جديد
                         </a>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -269,7 +198,7 @@
                       <a href="#" class="text-secondary me-3"><i class="fab fa-facebook-f fa-lg"></i></a>
                       <a href="#" class="text-secondary me-3"><i class="fab fa-twitter fa-lg"></i></a>
                       <a href="#" class="text-secondary me-3"><i class="fab fa-linkedin-in fa-lg"></i></a>
-                      <a href="#" class="text-secondary"><i class="fab fa-instagram fa-lg"></i></a>
+                      <a href="#" class="text-secondary me-3"><i class="fab fa-instagram fa-lg"></i></a>
                   </div>
               </div>
   
@@ -305,17 +234,17 @@
                   <h5 class="fw-bold mb-4" style="color: #495057;">تواصل معنا</h5>
                   <ul class="list-unstyled">
                       <li class="mb-3 d-flex">
-                          <i class="fas fa-map-marker-alt me-3 mt-1" style="color: #6c757d;"></i>
+                          <i class="fas fa-map-marker-alt me-3 mt-1" style="color: #6c757d; padding-left: 5px;"></i>
                           <span style="color: #6c757d;">شارع التعليم، مدينة المعرفة، مصر</span>
                       </li>
                       <li class="mb-3 d-flex">
-                          <i class="fas fa-envelope me-3 mt-1" style="color: #6c757d;"></i>
+                          <i class="fas fa-envelope me-3 mt-1" style="color: #6c757d; padding-left: 5px;"></i>
                           <a href="mailto:pilotlearningiitkgp@gmail.com" class="text-decoration-none" style="color: #6c757d;">
                               pilotlearningiitkgp@gmail.com
                           </a>
                       </li>
                       <li class="mb-3 d-flex">
-                          <i class="fas fa-phone me-3 mt-1" style="color: #6c757d;"></i>
+                          <i class="fas fa-phone me-3 mt-1" style="color: #6c757d; padding-left: 5px;"></i>
                           <a href="tel:+91222525126" class="text-decoration-none" style="color: #6c757d;">
                               +91-222525126
                           </a>
@@ -329,12 +258,13 @@
                   <p style="color: #6c757d;">اشترك ليصلك كل جديد عن الكورسات والعروض.</p>
                   <form class="mb-3">
                       <div class="input-group">
+                        <button class="btn btn-primary" type="submit" 
+                                style="border-radius: 0 30px 30px 0;">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
                           <input type="email" class="form-control" placeholder="بريدك الإلكتروني" 
                                  style="border-radius: 30px 0 0 30px; border-color: #dee2e6;">
-                          <button class="btn btn-primary" type="submit" 
-                                  style="border-radius: 0 30px 30px 0;">
-                              <i class="fas fa-paper-plane"></i>
-                          </button>
+                       
                       </div>
                   </form>
                   <p style="color: #adb5bd; font-size: 0.9rem;">
