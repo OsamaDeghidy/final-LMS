@@ -1,191 +1,130 @@
-{% extends 'main/base.html' %} {% block head %} {% endblock %} {% block title %}
+{% extends 'main/dashboard_base.html' %}
+{% load static %}{% block head %} {% endblock %} {% block title %}
 Create a Course
-{% endblock %} {% block content %}
+{% endblock %} 
+{% block dashboard_content %}
 
-<!-- <div class="container mt-4">
-  <h1 class="text-danger">Create a Course</h1>
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <input type="hidden" name="teacher_id" value="{{ request.user.teacher.id }}">
-    <div class="form-group my-2">
-      <label for="name">Course Name</label>
-      <input
-        type="text"
-        class="form-control border-dark"
-        id="name"
-        name="name"
-        required
-      />
-    </div>
-    <div class="form-group my-2">
-      <label for="description">Description</label>
-      <textarea
-        class="form-control border-dark"
-        id="description"
-        name="description"
-        rows="3"
-        id="description"
-        required
-      ></textarea>
-    </div>
-    <div class="form-group my-2">
-      <label for="image_course">Image</label>
-      <input
-        type="file"
-        class="form-control-file"
-        id="image_course"
-        name="image_course"
-        accept="image/*"
-      />
-    </div>
-    <div class="form-group my-2">
-      <label for="price">Price</label>
-      <input
-        type="number"
-        class="form-control border-dark"
-        id="price"
-        name="price"
-        step="0.01"
-        min="0"
-        required
-      />
-    </div>
-    <div class="form-group my-2">
-      <label for="small_description">Short Description</label>
-      <input
-        type="text"
-        class="form-control border-dark"
-        id="small_description"
-        name="small_description"
-      />
-    </div>
-    <div class="form-group my-2">
-      <label for="learned">What will you learn</label>
-      <textarea
-        class="form-control border-dark"
-        id="learned"
-        name="learned"
-        rows="3"
-        id="learned"
-      ></textarea>
-    </div>
-
-    <div class="form-group my-2">
-      <label for="tags">Tags (separate by comma)</label>
-      <input
-        type="text"
-        class="form-control border-dark"
-        id="tags"
-        name="tags"
-      />
-    </div>
-    <button type="submit" class="btn btn-primary my-2">Create</button>
-  </form>
-
-  <script>
-    try {
-      CKEDITOR.replace("description");
-    } catch (error) {
-      console.log(error);
-    }
-    try {
-      CKEDITOR.replace("learned");
-    } catch (error) {
-      console.log(error);
-    }
-  </script>
-
-  
-</div> -->
-
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-8" dir="rtl">
       <div class="card shadow-lg border-0">
-        <div class="card-header bg-primary text-white py-3">
-          <h2 class="mb-0 text-center"><i class="fas fa-plus-circle me-2"></i> Create New Course</h2>
+        <div class="card-header text-white text-right" style="background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);">
+          <h2 class="mb-0 text-center">
+            <i class="fas fa-plus-circle ms-2"></i> إنشاء دورة جديدة
+          </h2>
         </div>
-        
         <div class="card-body p-4">
           <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
             {% csrf_token %}
             <input type="hidden" name="teacher_id" value="{{ request.user.teacher.id }}">
-            
-            <!-- Course Name -->
-            <div class="mb-4">
-              <label for="name" class="form-label fw-bold text-primary">Course Title</label>
+    
+            <!-- اسم الدورة -->
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">عنوان الدورة</label>
               <div class="input-group">
                 <span class="input-group-text bg-light"><i class="fas fa-book text-primary"></i></span>
-                <input type="text" class="form-control form-control-lg border-start-0" id="name" name="name" required placeholder="Enter course title">
+                <input type="text" class="form-control form-control-lg border-end-0" name="name" required placeholder="أدخل عنوان الدورة">
               </div>
             </div>
-            
-            <!-- Short Description -->
-            <div class="mb-4">
-              <label for="small_description" class="form-label fw-bold text-primary">Short Description</label>
+    
+            <!-- الوصف المختصر -->
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">وصف مختصر</label>
               <div class="input-group">
                 <span class="input-group-text bg-light"><i class="fas fa-align-left text-primary"></i></span>
-                <input type="text" class="form-control border-start-0" id="small_description" name="small_description" placeholder="Brief summary (appears on course card)">
+                <input type="text" class="form-control border-end-0" name="small_description" placeholder="ملخص يظهر في بطاقة الدورة">
               </div>
             </div>
-            
-            <!-- Price -->
-            <div class="mb-4">
-              <label for="price" class="form-label fw-bold text-primary">Price ($)</label>
+    
+            <!-- السعر -->
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">السعر ($)</label>
               <div class="input-group" style="max-width: 200px;">
                 <span class="input-group-text bg-light">$</span>
-                <input type="number" class="form-control border-start-0" id="price" name="price" step="0.01" min="0" required placeholder="0.00">
+                <input type="number" class="form-control border-end-0" name="price" step="0.01" min="0" placeholder="0.00" required>
               </div>
             </div>
-            
-            <!-- Course Image -->
+    
+            <!-- صورة الدورة -->
             <div class="mb-4">
-              <label for="image_course" class="form-label fw-bold text-primary">Course Image</label>
+              <label class="form-label fw-bold" style="color: #265a84;">صورة الدورة</label>
               <div class="card border-dashed p-3 text-center" style="cursor: pointer;" onclick="document.getElementById('image_course').click()">
                 <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
-                <h5 class="text-muted">Click to upload image</h5>
-                <p class="small text-muted">Recommended size: 800x450px</p>
+                <h5 class="text-muted">انقر لتحميل صورة</h5>
+                <p class="small text-muted">الحجم الموصى به: 800x450 بكسل</p>
                 <input type="file" class="d-none" id="image_course" name="image_course" accept="image/*">
               </div>
             </div>
-            
-            <!-- Full Description -->
-            <div class="mb-4">
-              <label class="form-label fw-bold text-primary">Detailed Description</label>
-              <textarea class="form-control" id="description" name="description" rows="5" required placeholder="Describe your course in detail..."></textarea>
+    
+            <!-- وصف تفصيلي -->
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">الوصف التفصيلي</label>
+              <textarea class="form-control" name="description" rows="5" required placeholder="اشرح محتوى الدورة بشكل تفصيلي..."></textarea>
             </div>
-            
-            <!-- What Will Be Learned -->
-            <div class="mb-4">
-              <label class="form-label fw-bold text-primary">What Students Will Learn</label>
-              <textarea class="form-control" id="learned" name="learned" rows="5" placeholder="List the key learning outcomes (one per line)"></textarea>
-              <div class="form-text">Enter each learning point on a new line</div>
+    
+            <!-- ماذا سيتعلم الطالب -->
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">ما الذي سيتعلمه الطالب؟</label>
+              <textarea class="form-control" name="learned" rows="5" placeholder="أدخل كل نقطة في سطر منفصل..."></textarea>
+              <div class="form-text">ضع كل نقطة تعلم في سطر جديد</div>
             </div>
-            
-            <!-- Tags -->
-            <div class="mb-4">
-              <label for="tags" class="form-label fw-bold text-primary">Course Tags</label>
+    
+            <!-- الوسوم -->
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">وسوم الدورة</label>
               <div class="input-group">
                 <span class="input-group-text bg-light"><i class="fas fa-tags text-primary"></i></span>
-                <input type="text" class="form-control border-start-0" id="tags" name="tags" placeholder="web, design, programming (separate with commas)">
+                <input type="text" class="form-control border-end-0" name="tags" placeholder="برمجة، تطوير، تصميم (افصل بينهم بفاصلة)">
               </div>
             </div>
-            
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
-              <button type="submit" class="btn btn-primary btn-lg px-4 me-md-2">
-                <i class="fas fa-save me-2"></i> Create Course
-              </button>
-              <button type="button" class="btn btn-outline-secondary btn-lg px-4">
-                <i class="fas fa-times me-2"></i> Cancel
-              </button>
+    
+            <!-- المستوى -->
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">مستوى الدورة</label>
+              <select class="form-select" name="level" required>
+                <option value="">-- اختر المستوى --</option>
+                <option value="beginner">مبتدئ</option>
+                <option value="intermediate">متوسط</option>
+                <option value="advanced">متقدم</option>
+              </select>
             </div>
+    
+            <!-- الفئة -->
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">فئة الدورة</label>
+              <select class="form-select" name="category">
+                <option value="">-- اختر الفئة --</option>
+                {% for cat in categories %}
+                  <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+    
+            <!-- المؤسسة -->
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">المؤسسة</label>
+              <select class="form-select" name="organization">
+                <option value="">-- اختر المؤسسة --</option>
+                {% for org in organizations %}
+                  <option value="{{ org.id }}">{{ org.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+    
+            <!-- الأزرار -->
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">
+              <button type="submit" class="btn btn-lg px-4" style="background-color: #265a84; color: #ffffff;">
+                <i class="fas fa-save ms-2"></i> حفظ الدورة
+              </button>
+              <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">
+                <i class="fas fa-times ms-2"></i> إلغاء
+              </a>
+            </div>
+    
           </form>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
+    
 <script>
   // Initialize CKEditor
   document.addEventListener('DOMContentLoaded', function() {
@@ -226,4 +165,4 @@ Create a Course
   });
 </script>
 
-{% endblock %}
+{% endblock dashboard_content %}

@@ -178,7 +178,12 @@ def dashboard(request):
     else:
         try:
             profile = Profile.objects.get(user=request.user)
-            context = {"profile": profile}
+            # Query all courses to display in the dashboard
+            courses = Course.objects.all()
+            context = {
+                "profile": profile,
+                "courses": courses
+            }
             return render(request, 'website/dashboard.html', context)
         except Profile.DoesNotExist:
             return HttpResponse('Profile does not exist for the user.')
@@ -223,8 +228,11 @@ def create_course(request):
                 return redirect('course_detail', course_id=course.id)
             except ObjectDoesNotExist:
                 return HttpResponse("Error: Teacher matching query does not exist.", status=404)
-
-        return render(request, 'website/create_course.html')
+        
+        # Get the profile for the dashboard_base.html template
+        profile = Profile.objects.get(user=request.user)
+        context = {"profile": profile}
+        return render(request, 'website/create_course.html', context)
     else:
         return redirect('index')
 

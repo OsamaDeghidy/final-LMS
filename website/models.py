@@ -50,6 +50,12 @@ class Course(models.Model):
         ('advanced', 'متقدم'),
     ]
     
+    STATUS_CHOICES = [
+        ('pending', 'قيد الانتظار'),
+        ('published', 'منشور'),
+        ('draft', 'مسودة'),
+    ]
+    
     name = models.CharField(max_length=2000,blank=True,null=True)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null = True, blank = True)
     teacher=models.ForeignKey(Teacher,on_delete=models.CASCADE, blank=True, null=True)
@@ -68,6 +74,7 @@ class Course(models.Model):
     total_video=models.IntegerField(null=True, blank = True)
     vidoes_time=models.CharField(max_length=2000,null=True, blank = True)
     total_module=models.IntegerField(blank=True, null=True, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     def save(self, *args, **kwargs):
         self.total_video = Video.objects.filter(course=self).count()
         time = sum([video.duration for video in Video.objects.filter(course=self)])
