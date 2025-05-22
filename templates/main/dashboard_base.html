@@ -4,91 +4,278 @@
 {% block content %}
 <div class="dashboard" dir="rtl"> 
   <div class="profile-header" style="background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);">
-  <div class="container py-4">
-    <div class="row align-items-center">
-      <div class="col-auto">
-        <div class="profile-avatar shadow">
-          <img src="{% static '/user/images/profile.png'%}" class="rounded-circle" width="120" height="120">
+    <div class="container py-4">
+      <div class="row align-items-center">
+        <div class="col-md-3 text-center mb-4 mb-md-0">
+          <div class="profile-avatar-container">
+            {% if profile.image_profile %}
+              <img 
+                src="{{ profile.image_profile.url }}" 
+                class="profile-avatar rounded-circle border border-4 border-white shadow" 
+                width="150" 
+                height="150"
+                alt="{{ profile.name }}"
+                style="object-fit: cover;"
+              >
+            {% else %}
+              <img 
+                src="{% static '/user/images/profile.png' %}" 
+                class="profile-avatar rounded-circle border border-4 border-white shadow" 
+                width="150" 
+                height="150"
+                alt="Default profile"
+                style="object-fit: cover;"
+              >
+            {% endif %}
+            
+            <!-- Name and Info Below Image -->
+            <div class="profile-info mt-3">
+              <div class="d-flex justify-content-center align-items-center gap-2">
+                <span class="badge bg-white text-dark rounded-pill px-3 py-1">
+                  <i class="fas fa-graduation-cap me-1 text-muted"></i> {{ student.department }}
+                </span>
+                <span class="badge bg-white text-dark rounded-pill px-3 py-1">
+                  <i class="fas fa-star me-1 text-warning"></i> 4.91
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="col">
-        <h1 class="text-white mb-1">{{ profile.name }}</h1>
-        <div class="d-flex flex-wrap align-items-center gap-3">
-          <span class="badge bg-light text-dark rounded-pill px-3 py-1">
-            <i class="fas fa-graduation-cap me-1"></i> {{ student.department }}
-          </span>
-          <span class="text-white-50"><i class="fas fa-envelope me-1"></i> {{profile.email}}</span>
-          <span class="text-white-50"><i class="fas fa-phone me-1"></i> {{profile.phone}}</span>
+        <div class="col">
+          <h1 class="text-white mb-1">{{ profile.name }}</h1>
+          <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+            <span class="text-white-50"><i class="fas fa-envelope me-1"></i> {{profile.email}}</span>
+            <span class="text-white-50"><i class="fas fa-phone me-1"></i> {{profile.phone}}</span>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-light btn-sm rounded-pill px-3">
+              <i class="fas fa-plus me-1"></i> إنشاء دورة جديدة
+            </button>
+            <button class="btn btn-outline-light btn-sm rounded-pill px-3">
+              <i class="fas fa-edit me-1"></i> تعديل الملف الشخصي
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  </div>
+</div>
 
-  <div class="container my-4">
-    <div class="row">
-      <!-- Sidebar Navigation -->
-      <div class="col-md-3 mb-4">
-        <div class="card border-0 shadow-sm mb-3">
-          <div class="card-header bg-white border-0 py-3">
-            <h5 class="mb-0 text-primary"><i class="fas fa-user-circle me-2"></i> Profile</h5>
+<style>
+  .profile-avatar {
+    position: relative;
+    text-align: center;
+  }
+  .profile-avatar img {
+    border: 4px solid white;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  }
+</style>
+
+    <div class="container my-4">
+      <div class="row">
+        <!-- Sidebar Navigation -->
+        <!-- <div class="col-md-3 mb-4">
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0 py-3">
+              <h5 class="mb-0 text-primary"><i class="fas fa-user-circle me-2"></i> Profile</h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush rounded">
+                <a href="{% url 'profile_detail' profile_id=request.user.profile.id %}" 
+                  class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-user text-muted me-2"></i> My Profile
+                </a>
+                <a href="{% url 'update_profile' %}" 
+                  class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-edit text-muted me-2"></i> Update Profile
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-file-alt text-muted me-2"></i> Profile File
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-history text-muted me-2"></i> Request History
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-question-circle text-muted me-2"></i> Q&A
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-users text-muted me-2"></i> Family
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-percentage text-muted me-2"></i> Percentages
+                </a>
+              </div>
+            </div>
           </div>
-          <div class="card-body p-0">
-            <div class="list-group list-group-flush">
-              <a href="{% url 'profile_detail' profile_id=request.user.profile.id %}" 
-                class="list-group-item list-group-item-action border-0 d-flex align-items-center">
-                <i class="fas fa-user text-muted me-2"></i> My Profile
-              </a>
-              <a href="{% url 'update_profile' %}" 
-                class="list-group-item list-group-item-action border-0 d-flex align-items-center">
-                <i class="fas fa-edit text-muted me-2"></i> Update Profile
-              </a>
+
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0 py-3">
+              <h5 class="mb-0 text-primary"><i class="fas fa-book-open me-2"></i> Courses</h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush rounded">
+                {% if profile.status == 'Student' %}
+                  <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-graduation-cap text-muted me-2"></i> My Courses
+                  </a>
+                  <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-calendar-alt text-muted me-2"></i> Calendar
+                  </a>
+                  <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-tasks text-muted me-2"></i> Assignments
+                  </a>
+                  <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-lightbulb text-muted me-2"></i> Ideas
+                  </a>
+                {% elif profile.status == 'Teacher' %}
+                  <a href="{% url 'create_course' %}" 
+                    class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-plus-circle text-muted me-2"></i> Create Course
+                  </a>
+                  <a href="{% url 'course' %}" 
+                    class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-list-ul text-muted me-2"></i> My Courses
+                  </a>
+                  <a href="{% url 'analytic' %}" 
+                    class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-chart-line text-muted me-2"></i> Analytics
+                  </a>
+                  <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-bullhorn text-muted me-2"></i> Announcements
+                  </a>
+                  <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-exchange-alt text-muted me-2"></i> Planned Changes
+                  </a>
+                {% elif profile.status == 'Organization' %}
+                  <a href="{% url 'make_teacher' %}" 
+                    class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-user-plus text-muted me-2"></i> Assign Teacher
+                  </a>
+                  <a href="{% url 'teacher_list' %}" 
+                    class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-users text-muted me-2"></i> Teacher List
+                  </a>
+                  <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-bullhorn text-muted me-2"></i> Announcements
+                  </a>
+                  <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                    <i class="fas fa-cogs text-muted me-2"></i> Operations
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 py-3">
+              <h5 class="mb-0 text-primary"><i class="fas fa-cog me-2"></i> Settings</h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush rounded">
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-sign-out-alt text-muted me-2"></i> Logout
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-bell text-muted me-2"></i> Notifications
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-bundle text-muted me-2"></i> My Bundles
+                </a>
+              </div>
+            </div>
+          </div>
+        </div> -->
+        
+        <div class="col-md-3 mb-4">
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0 py-3">
+             <a href="{% url 'dashboard' %}" class="text-decoration-none text-dark"> <h5 class="mb-0 text"><i class="fas fa-tachometer-alt me-2" style="color: #2a5a7c;"></i> لوحة التحكم</h5></a>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush rounded">
+                <a href="{% url 'profile_detail' profile_id=request.user.profile.id %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-user text-muted me-2" style="padding-left: 5px;"></i> ملفي الشخصي
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-book text-muted me-2" style="padding-left: 5px;"></i> الدورات الملتحق بها
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-heart text-muted me-2" style="padding-left: 5px;"></i> قائمتي المفضلة
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-star text-muted me-2" style="padding-left: 5px;"></i> التقييمات
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-file-alt text-muted me-2" style="padding-left: 5px;"></i> اختباراتي
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-history text-muted me-2" style="padding-left: 5px;"></i> تاريخ الطلب
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-question-circle text-muted me-2" style="padding-left: 5px;"></i> سؤال وجواب
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-calendar-alt text-muted me-2" style="padding-left: 5px;"></i> Calendar
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-certificate text-muted me-2" style="padding-left: 5px;"></i> شهاداتي
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0 py-3">
+              <h5 class="mb-0 text" style="color: #2a5a7c;"><i class="fas fa-user-tie me-2"style="padding-left: 5px;"></i> المدرب والدورات</h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush rounded"> 
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-graduation-cap text-muted me-2"style="padding-left: 5px;"></i> دوراتي
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-boxes text-muted me-2"style="padding-left: 5px;"></i> My Bundles
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-bullhorn text-muted me-2"style="padding-left: 5px;"></i> الإعلانات
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-exchange-alt text-muted me-2"style="padding-left: 5px;"></i> عمليات السحب
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-redo text-muted me-2"style="padding-left: 5px;"></i> محاولات اختبار
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-tasks text-muted me-2"style="padding-left: 5px;"></i> Assignments
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-chart-line text-muted me-2"style="padding-left: 5px;"></i> Analytics
+                </a>
+                
+              </div>
+            </div>
+          </div>
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 py-3">
+              <h5 class="mb-0 text" style="color: #2a5a7c;"><i class="fas fa-cog me-2"style="padding-left: 5px;"></i> الإعدادات</h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush rounded">
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-sliders-h text-muted me-2"style="padding-left: 5px;"></i> الإعدادات
+                </a>
+                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-sign-out-alt text-muted me-2"style="padding-left: 5px;"></i> تسجيل الخروج
+                </a>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="card border-0 shadow-sm">
-          <div class="card-header bg-white border-0 py-3">
-            <h5 class="mb-0 text-primary"><i class="fas fa-book-open me-2"></i> Courses</h5>
-          </div>
-          <div class="card-body p-0">
-            <div class="list-group list-group-flush">
-              {% if profile.status == 'Student' %}
-                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center">
-                  <i class="fas fa-graduation-cap text-muted me-2"></i> My Courses
-                </a>
-              {% elif profile.status == 'Teacher' %}
-                <a href="{% url 'create_course' %}" 
-                  class="list-group-item list-group-item-action border-0 d-flex align-items-center">
-                  <i class="fas fa-plus-circle text-muted me-2"></i> Create Course
-                </a>
-                <a href="{% url 'course' %}" 
-                  class="list-group-item list-group-item-action border-0 d-flex align-items-center">
-                  <i class="fas fa-list-ul text-muted me-2"></i> My Courses
-                </a>
-                <a href="{% url 'analytic' %}" 
-                  class="list-group-item list-group-item-action border-0 d-flex align-items-center">
-                  <i class="fas fa-chart-line text-muted me-2"></i> Analytics
-                </a>
-              {% elif profile.status == 'Organization' %}
-                <a href="{% url 'make_teacher' %}" 
-                  class="list-group-item list-group-item-action border-0 d-flex align-items-center">
-                  <i class="fas fa-user-plus text-muted me-2"></i> Assign Teacher
-                </a>
-                <a href="{% url 'teacher_list' %}" 
-                  class="list-group-item list-group-item-action border-0 d-flex align-items-center">
-                  <i class="fas fa-users text-muted me-2"></i> Teacher List
-                </a>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
+        {% block dashboard_content %}{% endblock %}
       
-      {% block dashboard_content %}{% endblock %}
-    
+      </div>
     </div>
-  </div>
 </div>
 
 
@@ -128,9 +315,34 @@
     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
   }
   
-  .list-group-item-action:hover {
+  .hover-effect:hover {
     background-color: #f8f9fa;
-    color: #1d3b53 !important;
+    color: #2a5a7c !important;
+    transform: translateX(5px);
+    transition: all 0.3s ease;
+  }
+  
+  /* Selected item style */
+  .list-group-item.active {
+    background-color: #2a5a7c !important;
+    color: white !important;
+    border-color: #2a5a7c !important;
+  }
+  
+  /* Hover effect for selected item */
+  .list-group-item.active:hover {
+    background-color: #1f4561 !important;
+    color: white !important;
+  }
+  
+  /* Icon color change on hover */
+  .hover-effect:hover .text-muted {
+    color: #2a5a7c !important;
+  }
+  
+  /* Icon color for active item */
+  .list-group-item.active .text-muted {
+    color: white !important;
   }
 </style>
 {% endblock %}

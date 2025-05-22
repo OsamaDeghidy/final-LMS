@@ -68,90 +68,109 @@
       </div>
 
     {% elif profile.status == 'Teacher' %}
-      <!-- Teacher Dashboard -->
-      <div class="row mb-4">
-        <!-- Stats Cards -->
-        <div class="col-md-6 col-xl-3 mb-3">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start">
-                <div>
-                  <h6 class="text-uppercase text-muted small mb-1">Total Content</h6>
-                  <h3 class="mb-0">402 <small class="text-muted">Hours</small></h3>
+    <div style="padding-bottom: 50px;">
+      <div class="card-header bg-white border-0 py-3">
+        <h4 class="mb-0"><i class="fas fa-tachometer-alt me-2 text-primary"></i> لوحة التحكم</h4>
+      </div>
+      <div class="container mt-4">
+        <div class="row g-4">
+          <!-- Row 1 -->
+          <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-3">
+              <div class="d-flex align-items-center">
+                <div class="icon-circle bg-light text-primary me-4">
+                  <i class="fas fa-book-open fa-2x"></i>
                 </div>
-                <span class="badge bg-primary bg-opacity-10 text-primary p-2 rounded-circle">
-                  <i class="fas fa-film fa-lg"></i>
-                </span>
+                <div style="padding-right: 20px;">
+                  <h3 class="mb-1">19</h3>
+                  <p class="text-muted mb-0">الدورات المسجلة</p>
+                </div>
               </div>
-              <div class="mt-3">
-                <span class="text-success small"><i class="fas fa-arrow-up me-1"></i> 12% from yesterday</span>
+            </div>
+          </div>
+      
+          <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-3">
+              <div class="d-flex align-items-center">
+                <div class="icon-circle bg-light text-warning me-4">
+                  <i class="fas fa-play-circle fa-2x"></i>
+                </div>
+                <div style="padding-right: 20px;">
+                  <h3 class="mb-1">0</h3>
+                  <p class="text-muted mb-0">الدورات النشطة</p>
+                </div>
+              </div>
+            </div>
+          </div>
+      
+          <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-3">
+              <div class="d-flex align-items-center">
+                <div class="icon-circle bg-light text-success me-4">
+                  <i class="fas fa-check-circle fa-2x"></i>
+                </div>
+                <div style="padding-right: 20px;">
+                  <h3 class="mb-1">27</h3>
+                  <p class="text-muted mb-0">الدورات المكتملة</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div class="col-md-6 col-xl-3 mb-3">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start">
-                <div>
-                  <h6 class="text-uppercase text-muted small mb-1">Time Spent</h6>
-                  <h3 class="mb-0">38 <small class="text-muted">Mins</small></h3>
+      
+        <div class="row g-4 mt-1">
+          <!-- Row 2 -->
+          <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-3">
+              <div class="d-flex align-items-center">
+                <div class="icon-circle bg-light text-danger me-4">
+                  <i class="fas fa-users fa-2x"></i>
                 </div>
-                <span class="badge bg-info bg-opacity-10 text-info p-2 rounded-circle">
-                  <i class="fas fa-clock fa-lg"></i>
-                </span>
-              </div>
-              <div class="mt-3">
-                <span class="text-success small"><i class="fas fa-arrow-up me-1"></i> 5% from yesterday</span>
+                <div style="padding-right: 20px;">
+                  <h3 class="mb-1">146</h3>
+                  <p class="text-muted mb-0">إجمالي الطلاب</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <div class="col-md-6 col-xl-3 mb-3">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start">
-                <div>
-                  <h6 class="text-uppercase text-muted small mb-1">Doubts Resolved</h6>
-                  <h3 class="mb-0">10</h3>
+      
+          <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-3">
+              <div class="d-flex align-items-center">
+                <div class="icon-circle bg-light text-info me-4">
+                  <i class="fas fa-chalkboard-teacher fa-2x"></i>
                 </div>
-                <span class="badge bg-success bg-opacity-10 text-success p-2 rounded-circle">
-                  <i class="fas fa-check-circle fa-lg"></i>
-                </span>
-              </div>
-              <div class="mt-3">
-                <span class="text-success small"><i class="fas fa-arrow-up me-1"></i> 2 today</span>
+                <div style="padding-right: 20px;">
+                  <h3 class="mb-1">1</h3>
+                  <p class="text-muted mb-0">إجمالي الدورات</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <div class="col-md-6 col-xl-3 mb-3">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start">
-                <div>
-                  <h6 class="text-uppercase text-muted small mb-1">Doubts Raised</h6>
-                  <h3 class="mb-0">17</h3>
+      
+          <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm p-3">
+              <div class="d-flex align-items-center">
+                <div class="icon-circle bg-light text-warning me-4">
+                  <i class="fas fa-dollar-sign fa-2x"></i>
                 </div>
-                <span class="badge bg-warning bg-opacity-10 text-warning p-2 rounded-circle">
-                  <i class="fas fa-question-circle fa-lg"></i>
-                </span>
-              </div>
-              <div class="mt-3">
-                <span class="text-danger small"><i class="fas fa-arrow-down me-1"></i> 3 today</span>
+                <div style="padding-right: 20px;">
+                  <h3 class="mb-1">$383.01</h3>
+                  <p class="text-muted mb-0">إجمالي الأرباح</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
+    
+      
+    </div> 
+    
       <!-- Recent Activity Section -->
       <div class="card border-0 shadow-sm">
         <div class="card-header bg-white border-0 py-3">
-          <h4 class="mb-0"><i class="fas fa-history me-2 text-primary"></i> Recent Activity</h4>
+          <h4 class="mb-0"><i class="fas fa-history me-2 text-primary"></i> الدورات الجارية</h4>
         </div>
         <div class="card-body">
           <div class="alert alert-info">
@@ -163,4 +182,23 @@
   </div>
 
 
+  <style>
+     .icon-circle {
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      
+        .card {
+          border-radius: 12px;
+        }
+      
+        h3 {
+          font-weight: 600;
+        }
+  </style>
+  
 {% endblock dashboard_content %}
