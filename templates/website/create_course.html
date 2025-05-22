@@ -4,7 +4,7 @@ Create a Course
 {% endblock %} 
 {% block dashboard_content %}
 
-    <div class="col-lg-8" dir="rtl">
+    <!-- <div class="col-lg-8" dir="rtl">
       <div class="card shadow-lg border-0">
         <div class="card-header text-white text-right" style="background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);">
           <h2 class="mb-0 text-center">
@@ -16,7 +16,7 @@ Create a Course
             {% csrf_token %}
             <input type="hidden" name="teacher_id" value="{{ request.user.teacher.id }}">
     
-            <!-- اسم الدورة -->
+     
             <div class="mb-3">
               <label class="form-label fw-bold" style="color: #265a84;">عنوان الدورة</label>
               <div class="input-group">
@@ -25,7 +25,7 @@ Create a Course
               </div>
             </div>
     
-            <!-- الوصف المختصر -->
+      
             <div class="mb-3">
               <label class="form-label fw-bold" style="color: #265a84;">وصف مختصر</label>
               <div class="input-group">
@@ -34,7 +34,7 @@ Create a Course
               </div>
             </div>
     
-            <!-- السعر -->
+      
             <div class="mb-3">
               <label class="form-label fw-bold" style="color: #265a84;">السعر ($)</label>
               <div class="input-group" style="max-width: 200px;">
@@ -43,7 +43,6 @@ Create a Course
               </div>
             </div>
     
-            <!-- صورة الدورة -->
             <div class="mb-4">
               <label class="form-label fw-bold" style="color: #265a84;">صورة الدورة</label>
               <div class="card border-dashed p-3 text-center" style="cursor: pointer;" onclick="document.getElementById('image_course').click()">
@@ -54,20 +53,20 @@ Create a Course
               </div>
             </div>
     
-            <!-- وصف تفصيلي -->
+         
             <div class="mb-3">
               <label class="form-label fw-bold" style="color: #265a84;">الوصف التفصيلي</label>
               <textarea class="form-control" name="description" rows="5" required placeholder="اشرح محتوى الدورة بشكل تفصيلي..."></textarea>
             </div>
     
-            <!-- ماذا سيتعلم الطالب -->
+        
             <div class="mb-3">
               <label class="form-label fw-bold" style="color: #265a84;">ما الذي سيتعلمه الطالب؟</label>
               <textarea class="form-control" name="learned" rows="5" placeholder="أدخل كل نقطة في سطر منفصل..."></textarea>
               <div class="form-text">ضع كل نقطة تعلم في سطر جديد</div>
             </div>
     
-            <!-- الوسوم -->
+          
             <div class="mb-3">
               <label class="form-label fw-bold" style="color: #265a84;">وسوم الدورة</label>
               <div class="input-group">
@@ -76,7 +75,7 @@ Create a Course
               </div>
             </div>
     
-            <!-- المستوى -->
+          
             <div class="mb-3">
               <label class="form-label fw-bold" style="color: #265a84;">مستوى الدورة</label>
               <select class="form-select" name="level" required>
@@ -87,7 +86,7 @@ Create a Course
               </select>
             </div>
     
-            <!-- الفئة -->
+    
             <div class="mb-3">
               <label class="form-label fw-bold" style="color: #265a84;">فئة الدورة</label>
               <select class="form-select" name="category">
@@ -98,7 +97,7 @@ Create a Course
               </select>
             </div>
     
-            <!-- المؤسسة -->
+
             <div class="mb-3">
               <label class="form-label fw-bold" style="color: #265a84;">المؤسسة</label>
               <select class="form-select" name="organization">
@@ -109,7 +108,7 @@ Create a Course
               </select>
             </div>
     
-            <!-- الأزرار -->
+ 
             <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">
               <button type="submit" class="btn btn-lg px-4" style="background-color: #265a84; color: #ffffff;">
                 <i class="fas fa-save ms-2"></i> حفظ الدورة
@@ -122,10 +121,9 @@ Create a Course
           </form>
         </div>
       </div>
-    </div>
-
-    
-<script>
+    </div> -->
+ 
+<!-- <script>
   // Initialize CKEditor
   document.addEventListener('DOMContentLoaded', function() {
     try {
@@ -163,6 +161,362 @@ Create a Course
       }
     });
   });
+</script> -->
+
+
+    <div class="col-lg-8">   
+      
+      <!-- Step Progress Bar -->
+      <div class="container mb-4" dir="rtl">
+        <div class="d-flex justify-content-center align-items-center" id="stepper">
+          <div class="step-item text-center flex-fill position-relative active">
+            <div class="step-circle mx-auto">1</div>
+            <div class="mt-2">بيانات الدورة</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-item text-center flex-fill position-relative">
+            <div class="step-circle mx-auto">2</div>
+            <div class="mt-2">الموديول</div>
+            <div class="step-line"></div>
+          </div>
+        </div>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        <!-- ====== الخطوة 1: بيانات الدورة ====== -->
+        <div id="step1" class="card border-0 shadow-lg step-card">
+          <div class="card-header text-white" style="background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);">
+            <h2 class="mb-0 text-center"><i class="fas fa-plus-circle ms-2"></i> إنشاء دورة جديدة</h2>
+          </div>
+          <div class="card-body p-4">
+
+            <input type="hidden" name="teacher_id" value="{{ request.user.teacher.id }}">
+
+            <div class="mb-3">
+              <label class="form-label fw-bold text-dark">عنوان الدورة</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-book text-primary"></i></span>
+                <input type="text" class="form-control" name="name" required placeholder="أدخل عنوان الدورة">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold text-dark">مستوى الدورة</label>
+              <select class="form-select" name="level" required>
+                <option value="">-- اختر المستوى --</option>
+                <option value="beginner">مبتدئ</option>
+                <option value="intermediate">متوسط</option>
+                <option value="advanced">متقدم</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold text-dark">فئة الدورة</label>
+              <select class="form-select" name="category">
+                <option value="">-- اختر الفئة --</option>
+                {% for cat in categories %}
+                  <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold text-dark">وصف مختصر</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-align-left text-primary"></i></span>
+                <input type="text" class="form-control" name="small_description" placeholder="ملخص يظهر في بطاقة الدورة">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold text-dark">السعر ($)</label>
+              <div class="input-group" style="max-width: 200px;">
+                <span class="input-group-text bg-light">$</span>
+                <input type="number" class="form-control" name="price" step="0.01" min="0" placeholder="0.00" required>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold text-dark">صورة الدورة</label>
+              <div class="card border-dashed p-3 text-center" onclick="document.getElementById('image_course').click()" style="cursor:pointer;">
+                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                <h5 class="text-muted">انقر لتحميل صورة</h5>
+                <input type="file" class="d-none" id="image_course" name="image_course" accept="image/*">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold text-dark">الوصف التفصيلي</label>
+              <textarea class="form-control" name="description" rows="5" required></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-bold text-dark">ما الذي سيتعلمه الطالب؟</label>
+              <textarea class="form-control" name="learned" rows="5"></textarea>
+              <div class="form-text">ضع كل نقطة تعلم في سطر جديد</div>
+            </div>
+
+     
+
+            <div class="mb-3">
+              <label class="form-label fw-bold text-dark">وسوم الدورة</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-tags text-primary"></i></span>
+                <input type="text" class="form-control" name="tags" placeholder="برمجة، تطوير...">
+              </div>
+            </div>
+
+            <!-- <div class="mb-3">
+              <label class="form-label fw-bold text-dark">المؤسسة</label>
+              <select class="form-select" name="organization">
+                <option value="">-- اختر المؤسسة --</option>
+                {% for org in organizations %}
+                  <option value="{{ org.id }}">{{ org.name }}</option>
+                {% endfor %}
+              </select>
+            </div> -->
+
+            <div class="d-flex justify-content-end mt-4">
+              <button type="button" class="btn btn-lg px-4" style="background-color: #265a84; color: #ffffff;" onclick="nextStep()">التالي <i class="fas fa-arrow-left me-1"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====== الخطوة 2: بيانات الموديول ====== -->
+        <div id="step2" class="card border-0 shadow-lg d-none step-card">
+          <div class="card-header  text-white py-3" style="background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);">
+            <h2 class="h4 mb-0"><i class="fas fa-plus-circle me-2"></i> إضافة موديول جديد</h2>
+          </div>
+          <div class="card-body p-4">
+
+            <div class="mb-4">
+              <label class="form-label fw-bold text-dark">اسم الموديول</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-heading text-primary"></i></span>
+                <input type="text" class="form-control" name="module_name" placeholder="أدخل اسم الموديول" required>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-bold text-dark">تحميل الفيديوهات</label>
+              <input type="file" class="form-control" name="video" accept="video/*" multiple required>
+              <small class="text-muted mt-2 d-block">الصيغ المدعومة: MP4, MOV, AVI</small>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-bold text-dark">ملاحظات إضافية</label>
+              <textarea class="form-control" name="notes[]" rows="4" placeholder="أدخل أي ملاحظات إضافية..."></textarea>
+            </div>
+
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fw-bold text-dark">عناوين الفيديوهات</label>
+                <button type="button" class="btn btn-sm rounded-pill" style="background-color: #2e77b2; color: #ffffff;" onclick="addVideoName()"><i class="fas fa-plus me-1"></i> إضافة عنوان</button>
+              </div>
+              <div id="video_names">
+                <div class="input-group mb-2">
+                  <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+                  <input type="text" class="form-control" name="video_names[]" placeholder="أدخل عنوان الفيديو" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between mt-4">
+              <button type="button" class="btn btn-secondary btn-lg px-4" onclick="prevStep()"><i class="fas fa-arrow-right ms-1"></i> السابق</button>
+              <button type="submit" class="btn btn-lg px-4" style="background-color: #265a84; color: #ffffff;"><i class="fas fa-save ms-2"></i> حفظ الدورة</button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <style>
+      .step-item {
+        position: relative;
+        z-index: 1;
+      }
+    
+      .step-circle {
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        font-weight: bold;
+        border-radius: 50%;
+        background-color: #ccc;
+        color: #fff;
+      }
+    
+      .step-line {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background-color: #ccc;
+        z-index: -1;
+      }
+    
+      .step-item:first-child .step-line {
+        left: 50%;
+        width: 50%;
+      }
+    
+      .step-item:last-child .step-line {
+        left: 0;
+        width: 50%;
+      }
+    
+      .step-item.active .step-circle,
+      .step-item.completed .step-circle {
+        background-color: #1d3b53;
+      }
+    
+      .step-item.completed .step-line {
+        background-color: #21531d;
+      }
+    </style>
+
+<!-- JavaScript للتنقل بين الخطوات -->
+<script>
+
+let currentStep = 0;
+
+  function goToNextStep() {
+    const steps = document.querySelectorAll('#stepper .step-item');
+
+    if (currentStep < steps.length - 1) {
+      // الخطوة الحالية تصبح "مكتملة"
+      steps[currentStep].classList.add('completed');
+      steps[currentStep].classList.remove('active');
+
+      // الخطوة التالية تصبح "نشطة"
+      currentStep++;
+      steps[currentStep].classList.add('active');
+    }
+  }
+
+
+  function nextStep() {
+    goToNextStep();
+    document.getElementById("step1").classList.add("d-none");
+    document.getElementById("step2").classList.remove("d-none");
+  }
+
+  function prevStep() {
+    document.getElementById("step2").classList.add("d-none");
+    document.getElementById("step1").classList.remove("d-none");
+  }
+
+  // function addVideoName() {
+  //   const container = document.getElementById("video_names");
+  //   const inputGroup = document.createElement("div");
+  //   inputGroup.classList.add("input-group", "mb-2");
+  //   inputGroup.innerHTML = `
+  //     <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+  //     <input type="text" class="form-control" name="video_names[]" placeholder="أدخل عنوان الفيديو" required>
+  //   `;
+  //   container.appendChild(inputGroup);
+  // }
+
+
+  // function addVideoName() {
+  //     const container = document.getElementById('video_names');
+  //     const newInput = document.createElement('div');
+  //     newInput.className = 'input-group mb-2';
+  //     newInput.innerHTML = `
+  //         <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+  //         <input type="text" class="form-control" name="video_names[]" placeholder="أدخل عنوان الفيديو" required>
+  //         <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+  //             <i class="fas fa-times"></i>
+  //         </button>
+  //     `;
+  //     container.appendChild(newInput);
+  // }
+
+
+  function addNote() {
+    var notesDiv = document.getElementById("additional_notes");
+    var noteInput = document.createElement("div");
+    noteInput.classList.add("note-input");
+    noteInput.innerHTML = `
+        <textarea class="form-control border-dark" name="notes[]" rows="3"></textarea>
+        <button type="button" class="btn btn-danger" onclick="removeNote(this)">-</button>
+    `;
+    notesDiv.appendChild(noteInput);
+
+    try {
+      CKEDITOR.replace(notesDiv.lastChild.firstChild);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  function removeNote(btn) {
+    var noteInput = btn.parentNode;
+    noteInput.remove();
+  }
+
+  function addVideoName() {
+    var videoNamesDiv = document.getElementById("video_names");
+    var videoNameInput = document.createElement("div");
+    videoNameInput.classList.add("video-name-input");
+    videoNameInput.innerHTML = `
+      <input type="text" class="form-control" name="video_names[]" placeholder="أدخل عنوان الفيديو" required>
+      <button type="button" class="btn btn-outline-danger" onclick="removeVideoName(this)">
+          <i class="fas fa-times"></i>
+      </button>
+    `;
+    videoNamesDiv.appendChild(videoNameInput);
+  }
+
+  function removeVideoName(btn) {
+    var videoNameInput = btn.parentNode;
+    videoNameInput.remove();
+  }
+
+  try {
+    CKEDITOR.replace("additional_notes");
+  } catch (error) {
+    console.log(error);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    try {
+      CKEDITOR.replace("description", {
+        toolbar: [
+          { name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike'] },
+          { name: 'paragraph', items: ['NumberedList', 'BulletedList'] },
+          { name: 'links', items: ['Link', 'Unlink'] },
+          { name: 'insert', items: ['Image', 'Table'] }
+        ]
+      });
+      CKEDITOR.replace("learned");
+    } catch (error) {
+      console.log(error);
+    }
+    
+    // Preview image when selected
+    document.getElementById('image_course').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const uploadArea = e.target.parentElement;
+          uploadArea.innerHTML = `
+            <div class="text-center">
+              <img src="${event.target.result}" class="img-thumbnail mb-2" style="max-height: 200px;">
+              <p class="small text-muted">${file.name}</p>
+              <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); this.parentElement.innerHTML = '<i class=\\'fas fa-cloud-upload-alt fa-3x text-muted mb-2\\'></i><h5 class=\\'text-muted\\'>Click to upload image</h5><p class=\\'small text-muted\\'>Recommended size: 800x450px</p>'; document.getElementById('image_course').value = '';">
+                Change Image
+              </button>
+            </div>
+          `;
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+  });
 </script>
+
 
 {% endblock dashboard_content %}
