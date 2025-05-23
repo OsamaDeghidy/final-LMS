@@ -1,7 +1,14 @@
 {% extends 'main/dashboard_base.html' %}
-{% load static %}{% block head %} {% endblock %} {% block title %}
+{% load static %}
+
+{% block head %}
+<script src="{% static 'js/course-image-upload.js' %}"></script>
+{% endblock %}
+
+{% block title %}
 Create a Course
-{% endblock %} 
+{% endblock %}
+
 {% block dashboard_content %}
 
   <!-- <div class="col-lg-8" dir="rtl">
@@ -241,7 +248,9 @@ Create a Course
               <div class="card border-dashed p-3 text-center" onclick="document.getElementById('image_course').click()" style="cursor:pointer;">
                 <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
                 <h5 class="text-muted">انقر لتحميل صورة</h5>
+                <p class="small text-muted">الحجم الموصى به: 800x450 بكسل</p>
                 <input type="file" class="d-none" id="image_course" name="image_course" accept="image/*">
+                <!-- Preview will be added here by JavaScript -->
               </div>
             </div>
 

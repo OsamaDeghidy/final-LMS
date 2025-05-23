@@ -76,9 +76,19 @@ class Course(models.Model):
     total_module=models.IntegerField(blank=True, null=True, default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     def save(self, *args, **kwargs):
+        # First save the course if it's a new instance
+        is_new = not self.pk  # Check if this is a new course
+        if is_new:  # If this is a new course (not yet saved)
+            # For new courses, just save without calculating videos
+            super().save(*args, **kwargs)
+            return  # Exit early for new courses
+        
+        # For existing courses, update video counts and time
         self.total_video = Video.objects.filter(course=self).count()
         time = sum([video.duration for video in Video.objects.filter(course=self)])
         self.vidoes_time = str(timedelta(seconds=time))
+        
+        # Save with the updated values
         super().save(*args, **kwargs)
     def __str__(self):
         return self.name
