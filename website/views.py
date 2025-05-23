@@ -15,6 +15,7 @@ from django.urls import reverse
 from .utils import searchCourses
 from django.shortcuts import redirect
 from django.core.exceptions import ObjectDoesNotExist
+from django.http import JsonResponse
 
 def batch(iterable, n=1):
     """
@@ -28,7 +29,6 @@ def index(request):
     courses = Course.objects.all()
     context = {'courses': courses}
     return render(request, 'website/home.html', context)
-
 
 def allcourses(request):
     courses = Course.objects.all()
@@ -54,7 +54,6 @@ def courseviewpage(request, course_id):
     else:
         return redirect('course_detail',course_id=course.id)
 
-
 def courseviewpagevideo(request, course_id, video_id):
     course = get_object_or_404(Course, id=course_id)
     video = get_object_or_404(Video, id=video_id)
@@ -69,9 +68,6 @@ def courseviewpagevideo(request, course_id, video_id):
         return render(request, 'website/courseviewvideo.html', {'course': course, 'video': video, 'questions': questions, 'quiz': quiz})
     else:
         return redirect('course_detail', course_id=course.id)
-
-
-from django.http import JsonResponse
 
 def submit_quiz(request):
     if request.method == 'POST' and request.user.is_authenticated:
@@ -128,35 +124,6 @@ def submit_quiz(request):
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
-
-
-# def submit_quiz(request):
-#     if request.method == 'POST':
-#         quiz_id = request.POST.get('quiz_id')
-#         question_ids = request.POST.getlist('question_ids[]')
-#         answer_ids = request.POST.getlist('answer_ids[]')
-
-#         # Do something with the form data, for example:
-#         quiz = Quiz.objects.get(id=quiz_id)
-#         total_marks = 0
-#         obtained_marks = 0
-#         for question_id, answer_id in zip(question_ids, answer_ids):
-#             question = Question.objects.get(id=question_id)
-#             answer = Answer.objects.get(id=answer_id)
-#             if answer.is_correct:
-#                 obtained_marks += question.marks
-#             total_marks += question.marks
-#         percentage = obtained_marks / total_marks * 100
-#         if percentage >= quiz.pass_percentage:
-#             message = 'Congratulations! You passed the quiz with a score of {}%.'.format(round(percentage))
-#         else:
-#             message = 'Sorry, you failed the quiz with a score of {}%.'.format(round(percentage))
-#         return redirect('quiz_result', quiz_id=quiz_id, message=message)
-#     else:
-#         return redirect('home')
-
-
-
 def courseviewpagenote(request, course_id, note_id):
     course = get_object_or_404(Course, id=course_id)
     note = get_object_or_404(Notes, id=note_id)
@@ -169,8 +136,6 @@ def courseviewpagenote(request, course_id, note_id):
         return render(request, 'website/courseviewnote.html', {'course': course, 'note': note})
     else:
         return redirect('course_detail', course_id=course.id)
-
-
 
 def dashboard(request):
     if not request.user.is_authenticated:
@@ -189,8 +154,6 @@ def dashboard(request):
             return HttpResponse('Profile does not exist for the user.')
         except Profile.MultipleObjectsReturned:
             return HttpResponse('Multiple profiles found for the user. Please contact support.')
-
-
 
 def create_course(request):
     if request.user.profile.status == 'Teacher':
@@ -235,7 +198,6 @@ def create_course(request):
         return render(request, 'website/create_course.html', context)
     else:
         return redirect('index')
-
 
 def course_detail(request, course_id):
     course = get_object_or_404(Course, pk=course_id)
@@ -282,9 +244,11 @@ def course_detail(request, course_id):
     context = {"profile": profile_context, "course": course}        
     return render(request, 'website/course_detail.html', context)
 
-
 def update_course(request, course_id):
     import json
+    from django.http import JsonResponse
+    from django.urls import reverse
+    
     course = get_object_or_404(Course, pk=course_id)
     if(course.teacher.profile == request.user.profile):
         # Get user profile and student data
@@ -312,21 +276,58 @@ def update_course(request, course_id):
             }
         
         if request.method == 'POST':
+            # Update course data
             course.name = request.POST.get('name')
             course.description = request.POST.get('description')
             course.price = request.POST.get('price')
             course.small_description = request.POST.get('small_description')
             course.learned = request.POST.get('learned')
-            tags = request.POST.get('tags').split(',')
+            tags = request.POST.get('tags', '').split(',')
             course.update_at = datetime.today()
+            
+            # Handle image upload
+            if 'image_course' in request.FILES:
+                course.image_course = request.FILES['image_course']
 
+            # Clear existing tags and add new ones
+            course.tags.clear()
             for tag in tags:
                 tag = tag.strip()
                 if tag:
                     obj, created = Tags.objects.get_or_create(name=tag)
                     course.tags.add(obj)
             course.save()
-            return redirect('course_detail', course_id=course.id)
+            
+            # Check if module data is also submitted
+            if 'module_id' in request.POST and request.POST.get('module_id'):
+                module_id = request.POST.get('module_id')
+                try:
+                    module = Module.objects.get(id=module_id, course=course)
+                    module_name = request.POST.get('module_name', '')
+                    if module_name:
+                        module.name = module_name
+                        module.save()
+                    
+                    # Handle video uploads
+                    video_files = request.FILES.getlist('video')
+                    video_names = request.POST.getlist('video_names[]', [])
+                    
+                    for i, video in enumerate(video_files):
+                        video_name = video_names[i] if i < len(video_names) else video.name.split('.')[0]
+                        Video.objects.create(module=module, video=video, name=video_name, course=course)
+                except Module.DoesNotExist:
+                    pass  # Module not found, just continue
+            
+            # Check if this is an AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.POST.get('is_ajax') == 'true':
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'Course and module updated successfully',
+                    'redirect_url': reverse('course_detail', args=[course_id])
+                })
+            else:
+                # Redirect to course detail page
+                return redirect('course_detail', course_id=course.id)
         
         return render(request, 'website/update_course.html', {
             'course': course, 
@@ -337,8 +338,6 @@ def update_course(request, course_id):
         })
     else:
         return redirect('course_detail', course_id=course.id)
-
-
 
 def delete_course(request):
     if request.method == 'POST':
@@ -383,8 +382,6 @@ def course(request):
     }
     return render(request,'website/courses.html', context)
 
-
-
 def create_module(request, course_id):
     course = Course.objects.get(id=course_id)
     
@@ -425,37 +422,65 @@ def create_module(request, course_id):
         'student': student
     })
 
-
-
-
 def update_module(request, course_id, module_id):
     course = Course.objects.get(id=course_id)
     module = Module.objects.get(id=module_id)
 
     if request.method == 'POST':
-        module_name = request.POST['module_name']
-        module.name = module_name
-        module.save()
+        # Check if this is an AJAX request from the update_course page
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'videos' in request.FILES:
+            # Handle AJAX request from update_course page
+            module_name = request.POST.get('name', '')
+            if module_name:
+                module.name = module_name
+                module.save()
+            
+            # Get video names from the AJAX request - handle both parameter formats
+            video_names = []
+            if 'video_names[]' in request.POST:
+                video_names = request.POST.getlist('video_names[]')
+            elif 'video_names' in request.POST:
+                video_names = request.POST.getlist('video_names')
+            
+            # Handle video uploads
+            videos = []
+            if 'videos' in request.FILES:
+                videos = request.FILES.getlist('videos')
+            elif 'video' in request.FILES:
+                videos = request.FILES.getlist('video')
+                
+            for i, video in enumerate(videos):
+                # Use provided video name if available, otherwise use the file name
+                video_name = video_names[i] if i < len(video_names) else video.name.split('.')[0]
+                Video.objects.create(module=module, video=video, name=video_name, course=course)
+            
+            # Return JSON response for AJAX request
+            from django.http import JsonResponse
+            return JsonResponse({'success': True, 'message': 'Module updated successfully'})
+        else:
+            # Handle regular form submission
+            module_name = request.POST.get('module_name', '')
+            module.name = module_name
+            module.save()
 
-        videos_to_delete = request.POST.getlist('delete_video')
-        for video_id in videos_to_delete:
-            Video.objects.filter(id=video_id).delete()
+            videos_to_delete = request.POST.getlist('delete_video')
+            for video_id in videos_to_delete:
+                Video.objects.filter(id=video_id).delete()
 
-        for video in request.FILES.getlist('video'):
-            video_name = video.name.split('.')[0]
-            Video.objects.create(module=module, video=video, name=video_name, course=course)
+            for video in request.FILES.getlist('video'):
+                video_name = video.name.split('.')[0]
+                Video.objects.create(module=module, video=video, name=video_name, course=course)
 
-        notes_to_delete = request.POST.getlist('delete_note')
-        for note_id in notes_to_delete:
-            Notes.objects.filter(id=note_id).delete()
+            notes_to_delete = request.POST.getlist('delete_note')
+            for note_id in notes_to_delete:
+                Notes.objects.filter(id=note_id).delete()
 
-        for note in request.POST.getlist('note'):
-            Notes.objects.create(user=request.user, module=module, description=note)
+            for note in request.POST.getlist('note'):
+                Notes.objects.create(user=request.user, module=module, description=note)
 
-        return redirect('course_modules', course_id=course_id)
+            return redirect('course_modules', course_id=course_id)
 
     return render(request, 'website/update_module.html', {'course': course, 'module': module})
-
 
 def delete_module(request, course_id, module_id):
     course = Course.objects.get(id=course_id)
@@ -467,8 +492,6 @@ def delete_module(request, course_id, module_id):
 
     return render(request, 'website/delete_module.html', {'course': course, 'module': module})
 
-
-
 def course_modules(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     modules = Module.objects.filter(course=course)
@@ -478,76 +501,13 @@ def course_modules(request, course_id):
     }
     return redirect('update_course', course_id=course.id)
 
-
 def quiz_list(request, video_id):
     quizzes = Quiz.objects.filter(video=video_id)
     return render(request, 'website/quiz_list.html', {'quizzes': quizzes})
 
-
 def view_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
     return render(request, 'website/view_quiz.html', {'quiz': quiz})
-
-# def create_quiz(request, video_id):
-#     video = Video.objects.get(id=video_id)
-#     if request.user.profile != video.module.course.teacher.profile:
-#         return HttpResponse('You do not have permission to access this page')
-#     if request.method == 'POST':
-#         pass_mark = request.POST.get('pass_mark')
-#         start_time_str = request.POST.get('timestamp')
-#         if start_time_str:
-#             start_time = timedelta(seconds=float(start_time_str))
-#         else:
-#             start_time = timedelta(seconds=0)
-
-#         quiz = Quiz.objects.create(
-#             video=video,
-#             start_time=start_time,
-#             pass_mark=pass_mark,
-#         )
-
-#         question_text = request.POST.get('question_text')
-#         question = Question.objects.create(
-#             quiz=quiz,
-#             text=question_text,
-#         )
-
-#         answer1_text = request.POST.get('answer1_text')
-#         answer1_is_correct = request.POST.get('answer1_is_correct') == 'on'
-#         answer1 = Answer.objects.create(
-#             question=question,
-#             text=answer1_text,
-#             is_correct=answer1_is_correct,
-#         )
-
-#         answer2_text = request.POST.get('answer2_text')
-#         answer2_is_correct = request.POST.get('answer2_is_correct') == 'on'
-#         answer2 = Answer.objects.create(
-#             question=question,
-#             text=answer2_text,
-#             is_correct=answer2_is_correct,
-#         )
-
-#         answer3_text = request.POST.get('answer3_text')
-#         answer3_is_correct = request.POST.get('answer3_is_correct') == 'on'
-#         answer3 = Answer.objects.create(
-#             question=question,
-#             text=answer3_text,
-#             is_correct=answer3_is_correct,
-#         )
-
-#         answer4_text = request.POST.get('answer4_text')
-#         answer4_is_correct = request.POST.get('answer4_is_correct') == 'on'
-#         answer4 = Answer.objects.create(
-#             question=question,
-#             text=answer4_text,
-#             is_correct=answer4_is_correct,
-#         )
-#         return redirect('quiz_detail', quiz_id=quiz.id)
-
-#     return render(request, 'website/create_quiz.html', {'video': video})
-
-
 
 from datetime import datetime, timedelta
 
@@ -614,7 +574,6 @@ def create_quiz(request, video_id):
 
     return render(request, 'website/create_quiz.html', {'video': video})
 
-
 def update_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, pk=quiz_id)
 
@@ -654,15 +613,12 @@ def update_quiz(request, quiz_id):
 
     return render(request, 'quiz/update_quiz.html', {'quiz': quiz})
 
-
 def delete_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, pk=quiz_id)
     if request.method == 'POST':
         quiz.delete()
         return redirect('quiz_list')
     return render(request, 'website/delete_quiz.html', {'quiz': quiz})
-
-
 
 def make_teacher(request):
     r_profile=get_object_or_404(Profile, user=request.user)
@@ -700,9 +656,6 @@ def teacher_list(request):
     else:
         return redirect('index')
 
-
-
-
 def enroll_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     if not request.user.is_authenticated:
@@ -714,7 +667,92 @@ def enroll_course(request, course_id):
         messages.warning(request, f"You are already enrolled in {course.name}.")
     return redirect(reverse('courseviewpage', args=[course_id]))
 
-
 def analytics(request):
     return render(request, 'website/analytics.html')
 
+
+# def create_quiz(request, video_id):
+#     video = Video.objects.get(id=video_id)
+#     if request.user.profile != video.module.course.teacher.profile:
+#         return HttpResponse('You do not have permission to access this page')
+#     if request.method == 'POST':
+#         pass_mark = request.POST.get('pass_mark')
+#         start_time_str = request.POST.get('timestamp')
+#         if start_time_str:
+#             start_time = timedelta(seconds=float(start_time_str))
+#         else:
+#             start_time = timedelta(seconds=0)
+
+#         quiz = Quiz.objects.create(
+#             video=video,
+#             start_time=start_time,
+#             pass_mark=pass_mark,
+#         )
+
+#         question_text = request.POST.get('question_text')
+#         question = Question.objects.create(
+#             quiz=quiz,
+#             text=question_text,
+#         )
+
+#         answer1_text = request.POST.get('answer1_text')
+#         answer1_is_correct = request.POST.get('answer1_is_correct') == 'on'
+#         answer1 = Answer.objects.create(
+#             question=question,
+#             text=answer1_text,
+#             is_correct=answer1_is_correct,
+#         )
+
+#         answer2_text = request.POST.get('answer2_text')
+#         answer2_is_correct = request.POST.get('answer2_is_correct') == 'on'
+#         answer2 = Answer.objects.create(
+#             question=question,
+#             text=answer2_text,
+#             is_correct=answer2_is_correct,
+#         )
+
+#         answer3_text = request.POST.get('answer3_text')
+#         answer3_is_correct = request.POST.get('answer3_is_correct') == 'on'
+#         answer3 = Answer.objects.create(
+#             question=question,
+#             text=answer3_text,
+#             is_correct=answer3_is_correct,
+#         )
+
+#         answer4_text = request.POST.get('answer4_text')
+#         answer4_is_correct = request.POST.get('answer4_is_correct') == 'on'
+#         answer4 = Answer.objects.create(
+#             question=question,
+#             text=answer4_text,
+#             is_correct=answer4_is_correct,
+#         )
+#         return redirect('quiz_detail', quiz_id=quiz.id)
+
+#     return render(request, 'website/create_quiz.html', {'video': video})
+
+
+
+# def submit_quiz(request):
+#     if request.method == 'POST':
+#         quiz_id = request.POST.get('quiz_id')
+#         question_ids = request.POST.getlist('question_ids[]')
+#         answer_ids = request.POST.getlist('answer_ids[]')
+
+#         # Do something with the form data, for example:
+#         quiz = Quiz.objects.get(id=quiz_id)
+#         total_marks = 0
+#         obtained_marks = 0
+#         for question_id, answer_id in zip(question_ids, answer_ids):
+#             question = Question.objects.get(id=question_id)
+#             answer = Answer.objects.get(id=answer_id)
+#             if answer.is_correct:
+#                 obtained_marks += question.marks
+#             total_marks += question.marks
+#         percentage = obtained_marks / total_marks * 100
+#         if percentage >= quiz.pass_percentage:
+#             message = 'Congratulations! You passed the quiz with a score of {}%.'.format(round(percentage))
+#         else:
+#             message = 'Sorry, you failed the quiz with a score of {}%.'.format(round(percentage))
+#         return redirect('quiz_result', quiz_id=quiz_id, message=message)
+#     else:
+#         return redirect('home')

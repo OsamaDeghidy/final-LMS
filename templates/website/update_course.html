@@ -1,6 +1,10 @@
 {% extends 'main/dashboard_base.html' %}
 {% load static %}
-{% block head %} {% endblock %} {% block title %}
+{% block head %}
+<script src="{% static 'js/update-course-image.js' %}"></script>
+{% endblock %}
+
+{% block title %}
 Update Course
 {% endblock %} 
 {% block dashboard_content %}
@@ -245,9 +249,10 @@ Update Course
                           </div>
                   
                           <div class="form-actions">
-                            <div class="d-flex justify-content-between">
-                              <button type="button" class="btn btn-save flex-grow-1 me-2" onclick="saveModuleChanges()">
-                                <i class="fas fa-save ms-2"></i> حفظ التعديلات
+                            <div class="d-flex justify-content-between mt-4 ">
+                              <button type="button" class="btn btn-secondary btn-lg px-4" onclick="prevStep()"><i class="fas fa-arrow-right ms-1"></i> السابق</button>
+                              <button type="button" class="btn btn-lg px-4" style="background-color: #265a84; color: #ffffff;" onclick="saveCourseAndModule()">
+                                <i class="fas fa-save ms-2"></i> حفظ
                               </button>
                             </div>
                           </div>
@@ -286,6 +291,561 @@ Update Course
       </div>
     </div>
 
+    <!-- JavaScript Logic -->
+    <script>
+      // Variable to store the selected module ID
+      let currentStep = 0;
+
+      function goToNextStep() {
+        const steps = document.querySelectorAll('#stepper .step-item');
+
+        if (currentStep < steps.length - 1) {
+          // الخطوة الحالية تصبح "مكتملة"
+          steps[currentStep].classList.add('completed');
+          steps[currentStep].classList.remove('active');
+
+          // الخطوة التالية تصبح "نشطة"
+          currentStep++;
+          steps[currentStep].classList.add('active');
+        }
+      }
+
+      function nextStep() {
+        goToNextStep();
+        document.getElementById("step1").classList.add("d-none");
+        document.getElementById("step2").classList.remove("d-none");
+      }
+      
+      function saveCourseAndModule() {
+        // إظهار رسالة التحميل
+        var loadingMsg = document.createElement('div');
+        loadingMsg.className = 'loading-message';
+        loadingMsg.innerHTML = 
+          '<div class="loading-overlay"></div>' +
+          '<div class="loading-content">' +
+            '<div class="spinner-border text-primary" role="status">' +
+              '<span class="visually-hidden">جاري التحميل...</span>' +
+            '</div>' +
+            '<p>جاري حفظ الدورة والموديول...</p>' +
+          '</div>';
+        document.body.appendChild(loadingMsg);
+        
+        // تحديث محتوى المحررات
+        if (typeof CKEDITOR !== 'undefined') {
+          if (CKEDITOR.instances.description) {
+            CKEDITOR.instances.description.updateElement();
+          }
+          if (CKEDITOR.instances.learned) {
+            CKEDITOR.instances.learned.updateElement();
+          }
+        }
+        
+        // جمع بيانات الدورة
+        var form = document.querySelector('form');
+        var formData = new FormData(form);
+        var courseId = '{{ course.id }}';
+        
+        // إضافة بيانات الموديول إذا كانت موجودة
+        var moduleId = document.getElementById('module_id');
+        if (moduleId && moduleId.value) {
+          formData.append('module_id', moduleId.value);
+          
+          var moduleName = document.getElementById('module_name');
+          if (moduleName && moduleName.value) {
+            formData.append('module_name', moduleName.value);
+          }
+          
+          var moduleNotes = document.getElementById('module_notes');
+          if (moduleNotes) {
+            formData.append('notes', moduleNotes.value);
+          }
+          
+          // جمع أسماء الفيديوهات
+          var videoNameInputs = document.querySelectorAll('input[name="video_names[]"]');
+          if (videoNameInputs && videoNameInputs.length > 0) {
+            for (var i = 0; i < videoNameInputs.length; i++) {
+              formData.append('video_names[]', videoNameInputs[i].value);
+            }
+          }
+          
+          // إضافة ملفات الفيديو إذا كانت موجودة
+          var videoFiles = document.querySelector('input[name="video"]');
+          if (videoFiles && videoFiles.files && videoFiles.files.length > 0) {
+            for (var i = 0; i < videoFiles.files.length; i++) {
+              formData.append('video', videoFiles.files[i]);
+            }
+          }
+        }
+        
+        // إضافة علامة للإشارة إلى أن هذا طلب AJAX
+        formData.append('is_ajax', 'true');
+        
+        // إرسال النموذج لحفظ الدورة والموديول
+        fetch('/{{ course.id }}/update/', {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: formData
+        })
+        .then(function(response) {
+          if (!response.ok) {
+            throw new Error('فشل حفظ الدورة والموديول');
+          }
+          return response.json();
+        })
+        .then(function(result) {
+          console.log('Course and module saved:', result);
+          // إزالة رسالة التحميل
+          document.body.removeChild(loadingMsg);
+          
+          // عرض رسالة نجاح
+          showAlert('تم حفظ الدورة والموديول بنجاح!', 'success');
+          
+          // الانتقال إلى صفحة تفاصيل الدورة
+          setTimeout(function() {
+            if (result.redirect_url) {
+              window.location.href = result.redirect_url;
+            } else {
+              window.location.href = '/course/' + courseId + '/';
+            }
+          }, 1500);
+        })
+        .catch(function(error) {
+          console.error('Error:', error);
+          // إزالة رسالة التحميل
+          document.body.removeChild(loadingMsg);
+          // عرض رسالة خطأ
+          showAlert('حدث خطأ: ' + error.message, 'danger');
+        });
+      }
+
+      function prevStep() {
+        document.getElementById("step2").classList.add("d-none");
+        document.getElementById("step1").classList.remove("d-none");
+      }
+      
+      // Function to handle module selection
+      function selectModule(moduleId) {
+        console.log('Selecting module with ID:', moduleId);
+        
+        // إلغاء تحديد جميع الموديولات أولاً
+        var allModuleCards = document.querySelectorAll('.module-card');
+        for (var i = 0; i < allModuleCards.length; i++) {
+          allModuleCards[i].classList.remove('selected');
+        }
+
+        // تحديد الموديول المختار
+        var selectedCard = document.querySelector('.module-card[data-module-id="' + moduleId + '"]');
+        if (selectedCard) {
+          selectedCard.classList.add('selected');
+          console.log('Module card selected:', selectedCard);
+          
+          // الحصول على اسم الموديول من العنوان
+          var moduleName = selectedCard.querySelector('.module-title').textContent.trim();
+          
+          // عرض قسم التحرير وتغيير العنوان
+          var moduleEditSection = document.getElementById('moduleEditSection');
+          var selectedModuleName = document.getElementById('selected_module_name');
+          
+          if (moduleEditSection) {
+            moduleEditSection.style.display = 'block';
+          }
+          
+          // ملء نموذج التحرير ببيانات الموديول
+          document.getElementById('module_id').value = moduleId;
+          
+          // الحصول على المعلومات من العنصر المحدد
+          var moduleNameInput = document.getElementById('module_name');
+          var moduleNotesInput = document.getElementById('module_notes');
+          
+          if (moduleNameInput) {
+            // استخراج اسم الموديول من العنصر المحدد
+            var titleElement = selectedCard.querySelector('.module-title');
+            if (titleElement) {
+              // إزالة رقم الموديول من العنوان
+              var fullTitle = titleElement.textContent.trim();
+              var nameOnly = fullTitle.replace(/\u0645\u0648\u062f\u064a\u0648\u0644 \d+/g, '').trim();
+              moduleNameInput.value = nameOnly;
+            }
+          }
+          
+          // تحديث اسم الموديول المحدد في العنوان
+          if (selectedModuleName) {
+            selectedModuleName.textContent = moduleName;
+          }
+          
+          // مسح أي أسماء فيديو موجودة مسبقاً
+          var videoNamesContainer = document.getElementById('video_names');
+          if (videoNamesContainer) {
+            videoNamesContainer.innerHTML = '';
+            
+            // إضافة أسماء الفيديو الحالية من العنصر المحدد
+            var videoElements = selectedCard.querySelectorAll('.video-card h5');
+            if (videoElements && videoElements.length > 0) {
+              for (var i = 0; i < videoElements.length; i++) {
+                addVideoNameWithValue(videoElements[i].textContent.trim());
+              }
+            }
+          }
+        } else {
+          console.error('Module card not found for ID:', moduleId);
+          showAlert('لم يتم العثور على الموديول', 'danger');
+        }
+      }
+      
+      // Function to save module changes
+      function saveModuleChanges() {
+        // إظهار رسالة التحميل
+        var loadingMsg = document.createElement('div');
+        loadingMsg.className = 'loading-message';
+        loadingMsg.innerHTML = 
+          '<div class="loading-overlay"></div>' +
+          '<div class="loading-content">' +
+            '<div class="spinner-border text-primary" role="status">' +
+              '<span class="visually-hidden">جاري التحميل...</span>' +
+            '</div>' +
+            '<p>جاري حفظ التعديلات...</p>' +
+          '</div>';
+        document.body.appendChild(loadingMsg);
+
+        // جمع بيانات الموديول
+        var moduleId = document.getElementById('module_id').value;
+        var moduleName = document.getElementById('module_name').value;
+        var moduleNotes = document.getElementById('module_notes').value;
+        var courseId = '{{ course.id }}';
+        
+        // التحقق من وجود قيم صالحة
+        if (!moduleId || !moduleName) {
+          alert('الرجاء اختيار موديول وإدخال اسم له');
+          document.body.removeChild(loadingMsg);
+          return;
+        }
+        
+        // تحديث محتوى المحررات
+        if (typeof CKEDITOR !== 'undefined') {
+          if (CKEDITOR.instances.description) {
+            CKEDITOR.instances.description.updateElement();
+          }
+          if (CKEDITOR.instances.learned) {
+            CKEDITOR.instances.learned.updateElement();
+          }
+        }
+
+        // جمع بيانات الدورة والموديول معاً
+        var formData = new FormData(document.querySelector('form'));
+        
+        // إضافة بيانات الموديول
+        formData.append('module_id', moduleId);
+        formData.append('module_name', moduleName);
+        formData.append('notes', moduleNotes);
+        
+        // جمع أسماء الفيديوهات
+        var videoNameInputs = document.querySelectorAll('input[name="video_names[]"]');
+        if (videoNameInputs && videoNameInputs.length > 0) {
+          for (var i = 0; i < videoNameInputs.length; i++) {
+            formData.append('video_names[]', videoNameInputs[i].value);
+          }
+        }
+        
+        // إضافة ملفات الفيديو إذا كانت موجودة
+        var videoFiles = document.querySelector('input[name="video"]');
+        if (videoFiles && videoFiles.files && videoFiles.files.length > 0) {
+          for (var i = 0; i < videoFiles.files.length; i++) {
+            formData.append('video', videoFiles.files[i]);
+          }
+        }
+
+        // إرسال النموذج لحفظ الدورة والموديول معاً
+        fetch('/{{ course.id }}/update/', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: formData
+        })
+        .then(function(response) {
+          if (!response.ok) {
+            throw new Error('فشل حفظ التعديلات');
+          }
+          return response.json();
+        })
+        .then(function(result) {
+          console.log('Changes saved:', result);
+          // إزالة رسالة التحميل
+          document.body.removeChild(loadingMsg);
+          
+          // عرض رسالة نجاح
+          showAlert('تم حفظ التعديلات بنجاح!', 'success');
+          
+          // الانتقال إلى صفحة تفاصيل الدورة
+          setTimeout(function() {
+            window.location.href = '/course/' + courseId + '/';
+          }, 1500);
+        })
+        .catch(function(error) {
+          console.error('Error:', error);
+          // إزالة رسالة التحميل
+          document.body.removeChild(loadingMsg);
+          // عرض رسالة خطأ
+          showAlert('حدث خطأ: ' + error.message, 'danger');
+        });
+      }
+      
+      // Function to add a new video name input
+      function addVideoName() {
+          addVideoNameWithValue('');
+      }
+      
+      // Function to add a video name input with a specific value
+      function addVideoNameWithValue(value) {
+          const videoNamesContainer = document.getElementById('video_names');
+          const newInput = document.createElement('div');
+          newInput.className = 'input-group mb-2';
+          newInput.innerHTML = `
+              <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+              <input type="text" class="form-control" name="video_names[]" value="${value}" required>
+              <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
+          `;
+          videoNamesContainer.appendChild(newInput);
+      }
+
+      // وظيفة لتهيئة محررات CKEDITOR
+      function initCKEditors() {
+        try {
+          if (CKEDITOR.instances.description) {
+            CKEDITOR.instances.description.destroy();
+          }
+          CKEDITOR.replace("description", {
+            language: 'ar',
+            height: 250,
+            toolbar: [
+              { name: 'document', items: [ 'Source', '-', 'NewPage', 'Preview', '-', 'Templates' ] },
+              { name: 'clipboard', items: [ 'Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo' ] },
+              { name: 'editing', items: [ 'Find', 'Replace', '-', 'SelectAll', '-', 'Scayt' ] },
+              { name: 'basicstyles', items: [ 'Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'CopyFormatting', 'RemoveFormat' ] },
+              { name: 'paragraph', items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock', '-', 'BidiLtr', 'BidiRtl', 'Language' ] },
+              { name: 'links', items: [ 'Link', 'Unlink', 'Anchor' ] },
+              { name: 'insert', items: [ 'Image', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar' ] },
+              { name: 'styles', items: [ 'Styles', 'Format', 'Font', 'FontSize' ] },
+              { name: 'colors', items: [ 'TextColor', 'BGColor' ] },
+              { name: 'tools', items: [ 'Maximize', 'ShowBlocks' ] }
+            ],
+            contentsLangDirection: 'rtl'
+          });
+        } catch (error) {
+          console.log("Error initializing description editor:", error);
+        }
+        try {
+          if (CKEDITOR.instances.learned) {
+            CKEDITOR.instances.learned.destroy();
+          }
+          CKEDITOR.replace("learned", {
+            language: 'ar',
+            height: 250,
+            toolbar: [
+              { name: 'document', items: [ 'Source', '-', 'NewPage', 'Preview', '-', 'Templates' ] },
+              { name: 'clipboard', items: [ 'Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo' ] },
+              { name: 'editing', items: [ 'Find', 'Replace', '-', 'SelectAll', '-', 'Scayt' ] },
+              { name: 'basicstyles', items: [ 'Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'CopyFormatting', 'RemoveFormat' ] },
+              { name: 'paragraph', items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock', '-', 'BidiLtr', 'BidiRtl', 'Language' ] },
+              { name: 'links', items: [ 'Link', 'Unlink', 'Anchor' ] },
+              { name: 'insert', items: [ 'Image', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar' ] },
+              { name: 'styles', items: [ 'Styles', 'Format', 'Font', 'FontSize' ] },
+              { name: 'colors', items: [ 'TextColor', 'BGColor' ] },
+              { name: 'tools', items: [ 'Maximize', 'ShowBlocks' ] }
+            ],
+            contentsLangDirection: 'rtl'
+          });
+        } catch (error) {
+          console.log("Error initializing learned editor:", error);
+        }
+        
+      }
+      
+      // Function to show alerts
+      function showAlert(message, type) {
+        var alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
+        alertDiv.setAttribute('role', 'alert');
+        alertDiv.innerHTML = message + 
+          '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+        
+        // Add the alert to the top of the page
+        var container = document.querySelector('.col-lg-8');
+        if (container) {
+          container.insertBefore(alertDiv, container.firstChild);
+        } else {
+          document.body.insertBefore(alertDiv, document.body.firstChild);
+        }
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(function() {
+          alertDiv.classList.remove('show');
+          setTimeout(function() {
+            alertDiv.remove();
+          }, 300);
+        }, 5000);
+      }
+      
+      // استدعاء وظيفة تهيئة المحررات
+      setTimeout(function() {
+        initCKEditors();
+      }, 500);
+
+      // وظيفة لفتح نافذة حذف الموديول
+      function openDeleteModuleModal(moduleId, moduleName) {
+          var deleteModuleIdElement = document.getElementById('deleteModuleId');
+          var deleteModuleNameElement = document.getElementById('deleteModuleName');
+          var deleteModuleModalElement = document.getElementById('deleteModuleModal');
+          
+          if (deleteModuleIdElement && deleteModuleNameElement && deleteModuleModalElement) {
+              deleteModuleIdElement.value = moduleId;
+              deleteModuleNameElement.textContent = moduleName;
+              deleteModuleModalElement.classList.add('show');
+              deleteModuleModalElement.style.display = 'block';
+              document.body.classList.add('modal-open');
+              document.body.appendChild(document.createElement('div')).className = 'modal-backdrop fade show';
+          }
+      }
+
+      // وظيفة لإغلاق نافذة حذف الموديول
+      function closeDeleteModuleModal() {
+          var deleteModuleModalElement = document.getElementById('deleteModuleModal');
+          if (deleteModuleModalElement) {
+              deleteModuleModalElement.classList.remove('show');
+              deleteModuleModalElement.style.display = 'none';
+              document.body.classList.remove('modal-open');
+              var backdrop = document.querySelector('.modal-backdrop');
+              if (backdrop) {
+                  backdrop.remove();
+              }
+          }
+      }
+
+      // وظيفة لحذف الموديول
+      function deleteModule() {
+          var moduleId = document.getElementById('deleteModuleId').value;
+          var courseId = '{{ course.id }}';
+          var moduleDeleteUrl = '/course/' + courseId + '/module/' + moduleId + '/delete/';
+          
+          fetch(moduleDeleteUrl, {
+              method: 'POST',
+              headers: {
+                  'X-CSRFToken': '{{ csrf_token }}',
+                  'Content-Type': 'application/json'
+              },
+              credentials: 'same-origin'
+          })
+          .then(function(response) {
+              if (response.ok) {
+                  closeDeleteModuleModal();
+                  showAlert('تم حذف الموديول بنجاح', 'success');
+                  // إعادة تحميل الصفحة بعد الحذف
+                  setTimeout(function() { window.location.reload(); }, 1500);
+              } else {
+                  throw new Error('حدث خطأ أثناء حذف الموديول');
+              }
+          })
+          .catch(function(error) {
+              closeDeleteModuleModal();
+              showAlert(error.message, 'danger');
+              console.error('Error:', error);
+          });
+      }
+      
+      // وظيفة لعرض تنبيه
+      function showAlert(message, type) {
+          var alertDiv = document.createElement('div');
+          alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
+          alertDiv.setAttribute('role', 'alert');
+          alertDiv.innerHTML = 
+              message +
+              '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+          
+          var container = document.querySelector('.container');
+          if (container) {
+              container.prepend(alertDiv);
+              
+              // إخفاء التنبيه بعد 3 ثوان
+              setTimeout(function() {
+                  alertDiv.classList.remove('show');
+                  setTimeout(function() {
+                      alertDiv.remove();
+                  }, 300);
+              }, 3000);
+          }
+      }
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+          // التحقق من وجود العناصر قبل استخدامها
+          const dropzone = document.getElementById('video-dropzone');
+          const fileInput = document.querySelector('.file-input');
+          const uploadedFiles = document.getElementById('uploaded-files');
+          const imageInput = document.getElementById('image_course');
+          
+          // إضافة معالج الملفات للصور
+          if (imageInput) {
+              imageInput.addEventListener('change', function(e) {
+                  const fileName = e.target.files[0]?.name || 'لم يتم اختيار ملف';
+                  const fileInfoElement = document.getElementById('file-info');
+                  if (fileInfoElement) {
+                      fileInfoElement.textContent = fileName;
+                  }
+              });
+          }
+          
+          // التعامل مع سحب وإفلات الملفات (إذا كانت العناصر موجودة)
+          if (dropzone) {
+              // Handle drag and drop
+              ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                  dropzone.addEventListener(eventName, preventDefaults, false);
+              });
+              
+              ['dragenter', 'dragover'].forEach(eventName => {
+                  dropzone.addEventListener(eventName, highlight, false);
+              });
+              
+              ['dragleave', 'drop'].forEach(eventName => {
+                  dropzone.addEventListener(eventName, unhighlight, false);
+              });
+          }
+          
+          function preventDefaults(e) {
+              e.preventDefault();
+              e.stopPropagation();
+          }
+          
+          function highlight() {
+              dropzone.classList.add('highlight');
+          }
+          
+          function unhighlight() {
+              dropzone.classList.remove('highlight');
+          }
+          
+          // التعامل مع اختيار الملفات (إذا كان العنصر موجودًا)
+          if (fileInput) {
+              fileInput.addEventListener('change', handleFiles, false);
+          }
+          
+          function handleFiles(e) {
+              const files = e.target.files;
+              if (files.length > 0) {
+                  uploadedFiles.style.display = 'block';
+                  uploadedFiles.innerHTML = `
+                      <p><strong>Selected files (${files.length}):</strong></p>
+                      <ul class="file-list">
+                          ${Array.from(files).map(file => `<li>${file.name}</li>`).join('')}
+                      </ul>
+                  `;
+              }
+          }
+      });
+  </script>
+    
     <!-- CSS -->
     <style>
 
@@ -806,6 +1366,37 @@ Update Course
     border: 1px solid #e2e8f0;
   }
   
+  /* Loading Overlay Styles */
+  .loading-message {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+  }
+  
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+  
+  .loading-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  }
+  
   .btn-add-video {
     background: #2e77b2;
     color: white;
@@ -995,395 +1586,7 @@ Update Course
   }
     </style>
            
-    <!-- JavaScript Logic -->
-    <script>
-        // Variable to store the selected module ID
-        let currentStep = 0;
-
-        function goToNextStep() {
-          const steps = document.querySelectorAll('#stepper .step-item');
-
-          if (currentStep < steps.length - 1) {
-            // الخطوة الحالية تصبح "مكتملة"
-            steps[currentStep].classList.add('completed');
-            steps[currentStep].classList.remove('active');
-
-            // الخطوة التالية تصبح "نشطة"
-            currentStep++;
-            steps[currentStep].classList.add('active');
-          }
-        }
-
-        function nextStep() {
-          goToNextStep();
-          document.getElementById("step1").classList.add("d-none");
-          document.getElementById("step2").classList.remove("d-none");
-        }
-
-        function prevStep() {
-          document.getElementById("step2").classList.add("d-none");
-          document.getElementById("step1").classList.remove("d-none");
-        }
-        
-        // Function to handle module selection
-        function selectModule(moduleId) {
-          console.log('Selecting module with ID:', moduleId);
-          
-          // إلغاء تحديد جميع الموديولات أولاً
-          var allModuleCards = document.querySelectorAll('.module-card');
-          for (var i = 0; i < allModuleCards.length; i++) {
-            allModuleCards[i].classList.remove('selected');
-          }
-
-          // تحديد الموديول المختار
-          var selectedCard = document.querySelector('.module-card[data-module-id="' + moduleId + '"]');
-          if (selectedCard) {
-            selectedCard.classList.add('selected');
-            console.log('Module card selected:', selectedCard);
-            
-            // الحصول على اسم الموديول من العنوان
-            var moduleName = selectedCard.querySelector('.module-title').textContent.trim();
-            
-            // عرض قسم التحرير وتغيير العنوان
-            var moduleEditSection = document.getElementById('moduleEditSection');
-            var selectedModuleName = document.getElementById('selected_module_name');
-            
-            if (moduleEditSection) {
-              moduleEditSection.style.display = 'block';
-            }
-            
-            // ملء نموذج التحرير ببيانات الموديول
-            document.getElementById('module_id').value = moduleId;
-            
-            // الحصول على المعلومات من العنصر المحدد
-            var moduleNameInput = document.getElementById('module_name');
-            var moduleNotesInput = document.getElementById('module_notes');
-            
-            if (moduleNameInput) {
-              // استخراج اسم الموديول من العنصر المحدد
-              var titleElement = selectedCard.querySelector('.module-title');
-              if (titleElement) {
-                // إزالة رقم الموديول من العنوان
-                var fullTitle = titleElement.textContent.trim();
-                var nameOnly = fullTitle.replace(/\u0645\u0648\u062f\u064a\u0648\u0644 \d+/g, '').trim();
-                moduleNameInput.value = nameOnly;
-              }
-            }
-            
-            // تحديث اسم الموديول المحدد في العنوان
-            if (selectedModuleName) {
-              selectedModuleName.textContent = moduleName;
-            }
-            
-            // مسح أي أسماء فيديو موجودة مسبقاً
-            var videoNamesContainer = document.getElementById('video_names');
-            if (videoNamesContainer) {
-              videoNamesContainer.innerHTML = '';
-              
-              // إضافة أسماء الفيديو الحالية من العنصر المحدد
-              var videoElements = selectedCard.querySelectorAll('.video-card h5');
-              if (videoElements && videoElements.length > 0) {
-                for (var i = 0; i < videoElements.length; i++) {
-                  addVideoNameWithValue(videoElements[i].textContent.trim());
-                }
-              }
-            }
-          } else {
-            console.error('Module card not found for ID:', moduleId);
-            showAlert('لم يتم العثور على الموديول', 'danger');
-          }
-        }
-        
-        // Function to save module changes
-        function saveModuleChanges() {
-          // إظهار رسالة التحميل
-          var loadingMsg = document.createElement('div');
-          loadingMsg.className = 'loading-message';
-          loadingMsg.innerHTML = 
-            '<div class="loading-overlay"></div>' +
-            '<div class="loading-content">' +
-              '<div class="spinner-border text-primary" role="status">' +
-                '<span class="visually-hidden">جاري التحميل...</span>' +
-              '</div>' +
-              '<p>جاري حفظ التعديلات...</p>' +
-            '</div>';
-          document.body.appendChild(loadingMsg);
-
-          // جمع بيانات الموديول
-          var moduleId = document.getElementById('module_id').value;
-          var moduleName = document.getElementById('module_name').value;
-          var moduleNotes = document.getElementById('module_notes').value;
-          var courseId = '{{ course.id }}';
-          
-          // التحقق من وجود قيم صالحة
-          if (!moduleId || !moduleName) {
-            alert('الرجاء اختيار موديول وإدخال اسم له');
-            document.body.removeChild(loadingMsg);
-            return;
-          }
-
-          // إنشاء كائن FormData لإرسال البيانات
-          var moduleFormData = new FormData();
-          moduleFormData.append('id', moduleId);
-          moduleFormData.append('name', moduleName);
-          moduleFormData.append('notes', moduleNotes);
-          
-          // جمع أسماء الفيديوهات
-          var videoNameInputs = document.querySelectorAll('input[name="video_names[]"]');
-          if (videoNameInputs && videoNameInputs.length > 0) {
-            for (var i = 0; i < videoNameInputs.length; i++) {
-              moduleFormData.append('video_names[]', videoNameInputs[i].value);
-            }
-          }
-          
-          // إضافة ملفات الفيديو إذا كانت موجودة
-          var videoFiles = document.querySelector('input[name="video"]');
-          if (videoFiles && videoFiles.files && videoFiles.files.length > 0) {
-            for (var i = 0; i < videoFiles.files.length; i++) {
-              moduleFormData.append('videos', videoFiles.files[i]);
-            }
-          }
-
-          // إرسال بيانات الموديول
-          fetch('/course/' + courseId + '/module/' + moduleId + '/update/', {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: moduleFormData
-          })
-          .then(function(response) {
-            if (!response.ok) {
-              throw new Error('فشل حفظ الموديول');
-            }
-            return response.json();
-          })
-          .then(function(result) {
-            console.log('Module saved:', result);
-            // إزالة رسالة التحميل
-            document.body.removeChild(loadingMsg);
-            
-            // عرض رسالة نجاح
-            showAlert('تم حفظ التعديلات بنجاح!', 'success');
-            
-            // إعادة تحميل الصفحة بعد فترة قصيرة
-            setTimeout(function() {
-              window.location.reload();
-            }, 1500);
-          })
-          .catch(function(error) {
-            console.error('Error:', error);
-            // إزالة رسالة التحميل
-            document.body.removeChild(loadingMsg);
-            // عرض رسالة خطأ
-            showAlert('حدث خطأ: ' + error.message, 'danger');
-          });
-        }
-        
-        // Function to add a new video name input
-        function addVideoName() {
-            addVideoNameWithValue('');
-        }
-        
-        // Function to add a video name input with a specific value
-        function addVideoNameWithValue(value) {
-            const videoNamesContainer = document.getElementById('video_names');
-            const newInput = document.createElement('div');
-            newInput.className = 'input-group mb-2';
-            newInput.innerHTML = `
-                <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
-                <input type="text" class="form-control" name="video_names[]" value="${value}" required>
-                <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
-            `;
-            videoNamesContainer.appendChild(newInput);
-        }
-
-        // وظيفة لتهيئة محررات CKEDITOR
-        function initCKEditors() {
-          try {
-            if (CKEDITOR.instances.description) {
-              CKEDITOR.instances.description.destroy();
-            }
-            CKEDITOR.replace("description", {
-              language: 'ar',
-              height: 250,
-              toolbar: [
-                { name: 'document', items: [ 'Source', '-', 'NewPage', 'Preview', '-', 'Templates' ] },
-                { name: 'clipboard', items: [ 'Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo' ] },
-                { name: 'editing', items: [ 'Find', 'Replace', '-', 'SelectAll', '-', 'Scayt' ] },
-                { name: 'basicstyles', items: [ 'Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'CopyFormatting', 'RemoveFormat' ] },
-                { name: 'paragraph', items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock', '-', 'BidiLtr', 'BidiRtl', 'Language' ] },
-                { name: 'links', items: [ 'Link', 'Unlink', 'Anchor' ] },
-                { name: 'insert', items: [ 'Image', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar' ] },
-                { name: 'styles', items: [ 'Styles', 'Format', 'Font', 'FontSize' ] },
-                { name: 'colors', items: [ 'TextColor', 'BGColor' ] },
-                { name: 'tools', items: [ 'Maximize', 'ShowBlocks' ] }
-              ],
-              contentsLangDirection: 'rtl'
-            });
-          } catch (error) {
-            console.log("Error initializing description editor:", error);
-          }
-          
-        }
-        
-        // استدعاء وظيفة تهيئة المحررات
-        setTimeout(function() {
-          initCKEditors();
-        }, 500);
-
-        // وظيفة لفتح نافذة حذف الموديول
-        function openDeleteModuleModal(moduleId, moduleName) {
-            var deleteModuleIdElement = document.getElementById('deleteModuleId');
-            var deleteModuleNameElement = document.getElementById('deleteModuleName');
-            var deleteModuleModalElement = document.getElementById('deleteModuleModal');
-            
-            if (deleteModuleIdElement && deleteModuleNameElement && deleteModuleModalElement) {
-                deleteModuleIdElement.value = moduleId;
-                deleteModuleNameElement.textContent = moduleName;
-                deleteModuleModalElement.classList.add('show');
-                deleteModuleModalElement.style.display = 'block';
-                document.body.classList.add('modal-open');
-                document.body.appendChild(document.createElement('div')).className = 'modal-backdrop fade show';
-            }
-        }
-
-        // وظيفة لإغلاق نافذة حذف الموديول
-        function closeDeleteModuleModal() {
-            var deleteModuleModalElement = document.getElementById('deleteModuleModal');
-            if (deleteModuleModalElement) {
-                deleteModuleModalElement.classList.remove('show');
-                deleteModuleModalElement.style.display = 'none';
-                document.body.classList.remove('modal-open');
-                var backdrop = document.querySelector('.modal-backdrop');
-                if (backdrop) {
-                    backdrop.remove();
-                }
-            }
-        }
-
-        // وظيفة لحذف الموديول
-        function deleteModule() {
-            var moduleId = document.getElementById('deleteModuleId').value;
-            var courseId = '{{ course.id }}';
-            var moduleDeleteUrl = '/course/' + courseId + '/module/' + moduleId + '/delete/';
-            
-            fetch(moduleDeleteUrl, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'same-origin'
-            })
-            .then(function(response) {
-                if (response.ok) {
-                    closeDeleteModuleModal();
-                    showAlert('تم حذف الموديول بنجاح', 'success');
-                    // إعادة تحميل الصفحة بعد الحذف
-                    setTimeout(function() { window.location.reload(); }, 1500);
-                } else {
-                    throw new Error('حدث خطأ أثناء حذف الموديول');
-                }
-            })
-            .catch(function(error) {
-                closeDeleteModuleModal();
-                showAlert(error.message, 'danger');
-                console.error('Error:', error);
-            });
-        }
-        
-        // وظيفة لعرض تنبيه
-        function showAlert(message, type) {
-            var alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
-            alertDiv.setAttribute('role', 'alert');
-            alertDiv.innerHTML = 
-                message +
-                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
-            
-            var container = document.querySelector('.container');
-            if (container) {
-                container.prepend(alertDiv);
-                
-                // إخفاء التنبيه بعد 3 ثوان
-                setTimeout(function() {
-                    alertDiv.classList.remove('show');
-                    setTimeout(function() {
-                        alertDiv.remove();
-                    }, 300);
-                }, 3000);
-            }
-        }
-
-
-          document.addEventListener('DOMContentLoaded', function() {
-            // التحقق من وجود العناصر قبل استخدامها
-            const dropzone = document.getElementById('video-dropzone');
-            const fileInput = document.querySelector('.file-input');
-            const uploadedFiles = document.getElementById('uploaded-files');
-            const imageInput = document.getElementById('image_course');
-            
-            // إضافة معالج الملفات للصور
-            if (imageInput) {
-                imageInput.addEventListener('change', function(e) {
-                    const fileName = e.target.files[0]?.name || 'لم يتم اختيار ملف';
-                    const fileInfoElement = document.getElementById('file-info');
-                    if (fileInfoElement) {
-                        fileInfoElement.textContent = fileName;
-                    }
-                });
-            }
-            
-            // التعامل مع سحب وإفلات الملفات (إذا كانت العناصر موجودة)
-            if (dropzone) {
-                // Handle drag and drop
-                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                    dropzone.addEventListener(eventName, preventDefaults, false);
-                });
-                
-                ['dragenter', 'dragover'].forEach(eventName => {
-                    dropzone.addEventListener(eventName, highlight, false);
-                });
-                
-                ['dragleave', 'drop'].forEach(eventName => {
-                    dropzone.addEventListener(eventName, unhighlight, false);
-                });
-            }
-            
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            
-            function highlight() {
-                dropzone.classList.add('highlight');
-            }
-            
-            function unhighlight() {
-                dropzone.classList.remove('highlight');
-            }
-            
-            // التعامل مع اختيار الملفات (إذا كان العنصر موجودًا)
-            if (fileInput) {
-                fileInput.addEventListener('change', handleFiles, false);
-            }
-            
-            function handleFiles(e) {
-                const files = e.target.files;
-                if (files.length > 0) {
-                    uploadedFiles.style.display = 'block';
-                    uploadedFiles.innerHTML = `
-                        <p><strong>Selected files (${files.length}):</strong></p>
-                        <ul class="file-list">
-                            ${Array.from(files).map(file => `<li>${file.name}</li>`).join('')}
-                        </ul>
-                    `;
-                }
-            }
-        });
-    </script>
-      
+    
 
 {% endblock dashboard_content %}
 
