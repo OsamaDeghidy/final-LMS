@@ -260,8 +260,8 @@
                           <a href="{% url 'update_course' course.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
                             <i class="fas fa-edit me-1"></i> تعديل
                           </a>
-                          <a href="{% url 'delete_course' course.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-3" 
-                            onclick="return confirm('هل أنت متأكد من حذف هذه الدورة؟');">
+                          <a href="javascript:void(0);" class="btn btn-sm btn-outline-danger rounded-pill px-3" 
+                            onclick="openDeleteCourseModal('{{ course.id }}', '{{ course.name }}');">
                             <i class="fas fa-trash-alt me-1"></i> حذف
                           </a>
                           <a href="{% url 'course_detail' course.id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
@@ -287,6 +287,30 @@
 
     {% endif %}
 </div>
+<!-- Modal لحذف الكورس -->
+<div class="modal fade" id="deleteCourseModal" tabindex="-1" aria-labelledby="deleteCourseModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #ff4757, #ff6b81); color: white;">
+        <h5 class="modal-title" id="deleteCourseModalLabel"><i class="fas fa-trash-alt me-2"></i> حذف الكورس</h5>
+        <button type="button" class="btn-close" onclick="closeDeleteCourseModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center p-4">
+        <div class="mb-4">
+          <i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+        </div>
+        <h4 class="mb-3">هل أنت متأكد من حذف هذا الكورس؟</h4>
+        <p class="mb-1">اسم الكورس: <strong>{{ course.name }}</strong></p>
+        <p class="text-danger">سيتم حذف جميع الموديولات والفيديوهات المرتبطة به!</p>
+        <p class="text-muted">لا يمكن التراجع عن هذا الإجراء</p>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-secondary px-4" onclick="closeDeleteCourseModal()">إلغاء</button>
+        <button type="button" class="btn btn-danger px-4" onclick="deleteCourse()">حذف</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 
   <style>
@@ -308,4 +332,63 @@
         }
   </style>
   
+  <script>
+            // وظيفة لفتح نافذة حذف الكورس
+            function openDeleteCourseModal() {
+            var deleteCourseModalElement = document.getElementById('deleteCourseModal');
+            if (deleteCourseModalElement) {
+                deleteCourseModalElement.classList.add('show');
+                deleteCourseModalElement.style.display = 'block';
+                document.body.classList.add('modal-open');
+                document.body.appendChild(document.createElement('div')).className = 'modal-backdrop fade show';
+            }
+        }
+
+        // وظيفة لإغلاق نافذة حذف الكورس
+        function closeDeleteCourseModal() {
+            var deleteCourseModalElement = document.getElementById('deleteCourseModal');
+            if (deleteCourseModalElement) {
+                deleteCourseModalElement.classList.remove('show');
+                deleteCourseModalElement.style.display = 'none';
+                document.body.classList.remove('modal-open');
+                var backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+            }
+        }
+
+        // وظيفة لحذف الكورس
+        function deleteCourse() {
+            var courseId = '{{ course.id }}';
+            var courseDeleteUrl = '/course/' + courseId + '/delete/';
+            
+            fetch(courseDeleteUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+            .then(function(response) {
+                if (response.ok) {
+                    closeDeleteCourseModal();
+                    showAlert('تم حذف الكورس بنجاح', 'success');
+                    // توجيه المستخدم إلى صفحة الكورسات
+                    setTimeout(function() { window.location.href = '/courses/'; }, 1500);
+                } else {
+                    throw new Error('حدث خطأ أثناء حذف الكورس');
+                }
+            })
+            .catch(function(error) {
+                closeDeleteCourseModal();
+                showAlert(error.message, 'danger');
+                console.error('Error:', error);
+            });
+        }
+  </script>
+
+
+
 {% endblock dashboard_content %}

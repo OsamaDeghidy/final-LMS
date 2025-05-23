@@ -1,40 +1,12 @@
-{% extends 'main/base.html' %} {% block head %} {% endblock %} {% block title %}
-{% endblock %} {% block content %}
-<!-- <div class="container">
-    <h1>Add Module</h1>
-    <hr>
-    <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="module_name">Module Name:</label>
-            <input type="text" class="form-control" id="module_name" name="module_name" required>
-        </div>
-        <div class="form-group">
-            <label for="video">Videos:</label>
-            <input type="file" class="form-control-file" id="video" name="video" accept="video/*" multiple required>
-        </div>
-        <div class="form-group">
-            <label for="additional_notes">Additional Notes:</label>
-            <textarea class="form-control" id="additional_notes" name="notes[]" rows="3"></textarea>
-        </div>
-        <div class="form-group">
-            <label for="video_names">Video Names:</label>
-            <button type="button" class="btn btn-success" onclick="addVideoName()">+</button>
-            <div id="video_names">
-                <div class="video-name-input">
-                    <input type="text" class="form-control" name="video_names[]" required>
-                </div>
-            </div>
-        </div>
-        <button type="submit" class="btn btn-primary">Add Module</button>
-    </form>
-</div> -->
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+{% block head %} {% endblock %} {% block title %}
+{% endblock %} 
+{% block dashboard_content %}
 
-
-
-<div class="container py-5">
+<!-- <div class="col-lg-8">
   <div class="row justify-content-center">
-      <div class="col-lg-8">
+      <div class="col-lg-10">
           <div class="card border-0 shadow-lg">
               <div class="card-header bg-gradient-primary text-white py-3">
                   <h2 class="h4 mb-0"><i class="fas fa-plus-circle me-2"></i> Add New Module</h2>
@@ -43,7 +15,7 @@
                   <form method="POST" enctype="multipart/form-data">
                       {% csrf_token %}
                       
-                      <!-- Module Name -->
+            
                       <div class="mb-4">
                           <label for="module_name" class="form-label fw-bold text-dark">Module Name</label>
                           <div class="input-group">
@@ -51,8 +23,7 @@
                               <input type="text" class="form-control form-control-lg" id="module_name" name="module_name" placeholder="Enter module name" required>
                           </div>
                       </div>
-                      
-                      <!-- Video Upload -->
+                
                       <div class="mb-4">
                           <label for="video" class="form-label fw-bold text-dark">Upload Videos</label>
                           <div class="file-upload-wrapper">
@@ -64,13 +35,13 @@
                           </div>
                       </div>
                       
-                      <!-- Additional Notes -->
+                     
                       <div class="mb-4">
                           <label for="additional_notes" class="form-label fw-bold text-dark">Additional Notes</label>
                           <textarea class="form-control form-control-lg" id="additional_notes" name="notes[]" rows="4" placeholder="Enter any additional notes or instructions..."></textarea>
                       </div>
                       
-                      <!-- Video Names -->
+                    
                       <div class="mb-4">
                           <div class="d-flex justify-content-between align-items-center mb-2">
                               <label class="form-label fw-bold text-dark">Video Titles</label>
@@ -86,7 +57,7 @@
                           </div>
                       </div>
                       
-                      <!-- Submit Button -->
+                  
                       <div class="d-grid gap-2 mt-4">
                           <button type="submit" class="btn btn-primary btn-lg rounded-pill py-3">
                               <i class="fas fa-save me-2"></i> Save Module
@@ -97,7 +68,62 @@
           </div>
       </div>
   </div>
+</div> -->
+
+
+<div class="col-lg-8">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+         <div class="card border-0 shadow-lg">
+        <div class="card-header  text-white py-3" style="background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);">
+          <h2 class="h4 mb-0"><i class="fas fa-plus-circle me-2"></i> إضافة موديول جديد</h2>
+        </div>
+        <div class="card-body p-4">
+          <form method="POST" enctype="multipart/form-data" action="">
+            {% csrf_token %}
+            <div class="mb-4">
+              <label class="form-label fw-bold text-dark">اسم الموديول</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-heading text-primary"></i></span>
+                <input type="text" class="form-control" name="module_name" placeholder="أدخل اسم الموديول" required>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-bold text-dark">تحميل الفيديوهات</label>
+              <input type="file" class="form-control" name="video" accept="video/*" multiple required>
+              <small class="text-muted mt-2 d-block">الصيغ المدعومة: MP4, MOV, AVI</small>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-bold text-dark">ملاحظات إضافية</label>
+              <textarea class="form-control" name="notes[]" rows="4" placeholder="أدخل أي ملاحظات إضافية..."></textarea>
+            </div>
+
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fw-bold text-dark">عناوين الفيديوهات</label>
+                <button type="button" class="btn btn-sm rounded-pill" style="background-color: #2e77b2; color: #ffffff;" onclick="addVideoName()"><i class="fas fa-plus me-1"></i> إضافة عنوان</button>
+              </div>
+              <div id="video_names">
+                <div class="input-group mb-2">
+                  <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+                  <input type="text" class="form-control" name="video_names[]" placeholder="أدخل عنوان الفيديو" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-center mt-4"> 
+              <button type="submit" class="btn btn-lg px-5" style="background-color: #265a84; color: #ffffff;"><i class="fas fa-save ms-2"></i> حفظ </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
 </div>
+
+
+
 
 <style>
   .bg-gradient-primary {
@@ -214,4 +240,4 @@
   }
 </script>
 
-{% endblock %}
+{% endblock dashboard_content %}

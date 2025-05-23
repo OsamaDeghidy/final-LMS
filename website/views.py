@@ -284,8 +284,33 @@ def course_detail(request, course_id):
 
 
 def update_course(request, course_id):
+    import json
     course = get_object_or_404(Course, pk=course_id)
     if(course.teacher.profile == request.user.profile):
+        # Get user profile and student data
+        profile = get_object_or_404(Profile, user=request.user)
+        student = None
+        try:
+            student = Student.objects.get(profile=profile)
+        except Student.DoesNotExist:
+            pass  # User might be a teacher, not a student
+        
+        # Get all modules associated with this course
+        modules = Module.objects.filter(course=course).order_by('number')
+        
+        # Create JSON data for modules
+        modules_json = {}
+        for module in modules:
+            videos = [{'id': video.id, 'name': video.name} for video in module.video_set.all()]
+            modules_json[str(module.id)] = {
+                'id': module.id,
+                'name': module.name,
+                'description': module.description or '',
+                'videos': videos,
+                'total_video': module.total_video,
+                'duration': module.duration or ''
+            }
+        
         if request.method == 'POST':
             course.name = request.POST.get('name')
             course.description = request.POST.get('description')
@@ -302,7 +327,14 @@ def update_course(request, course_id):
                     course.tags.add(obj)
             course.save()
             return redirect('course_detail', course_id=course.id)
-        return render(request, 'website/update_course.html', {'course': course})
+        
+        return render(request, 'website/update_course.html', {
+            'course': course, 
+            'modules': modules,
+            'modules_json': json.dumps(modules_json),
+            'profile': profile,
+            'student': student
+        })
     else:
         return redirect('course_detail', course_id=course.id)
 
@@ -331,6 +363,15 @@ def course(request):
 
 def create_module(request, course_id):
     course = Course.objects.get(id=course_id)
+    
+    # Get user profile and student data
+    profile = get_object_or_404(Profile, user=request.user)
+    student = None
+    try:
+        student = Student.objects.get(profile=profile)
+    except Student.DoesNotExist:
+        pass  # User might be a teacher, not a student
+    
     course.total_module += 1
 
     if request.method == 'POST':
@@ -354,7 +395,11 @@ def create_module(request, course_id):
 
         return redirect('course_modules', course_id=course_id)
 
-    return render(request, 'website/create_module.html', {'course': course})
+    return render(request, 'website/create_module.html', {
+        'course': course,
+        'profile': profile,
+        'student': student
+    })
 
 
 
@@ -407,7 +452,7 @@ def course_modules(request, course_id):
         'course': course,
         'modules': modules,
     }
-    return render(request, 'website/course_module_details.html', context=context)
+    return redirect('update_course', course_id=course.id)
 
 
 def quiz_list(request, video_id):

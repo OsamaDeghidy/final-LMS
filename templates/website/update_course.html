@@ -1,15 +1,1397 @@
-{% extends 'main/base.html' %}
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+{% block head %} {% endblock %} {% block title %}
+Update Course
+{% endblock %} 
+{% block dashboard_content %}
 
-    {% block head %}
+
+
+    <div class="col-lg-8">   
+        <!-- Step Progress Bar -->
+        <div class="container mb-4" dir="rtl">
+          <div class="d-flex justify-content-center align-items-center" id="stepper">
+            <div class="step-item text-center flex-fill position-relative active">
+              <div class="step-circle mx-auto">1</div>
+              <div class="mt-2">بيانات الدورة</div>
+              <div class="step-line"></div>
+            </div>
+            <div class="step-item text-center flex-fill position-relative">
+              <div class="step-circle mx-auto">2</div>
+              <div class="mt-2">الموديول</div>
+              <div class="step-line"></div>
+            </div>
+          </div>
+        </div>
+      
+        <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+          {% csrf_token %}
+      
+          <!-- ====== الخطوة 1: بيانات الدورة ====== -->
+          <div id="step1" class="card border-0 shadow-lg step-card">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);">
+              <h2 class="mb-0 text-center"><i class="fas fa-edit ms-2"></i> تحديث الدورة</h2>
+            </div>
+            <div class="card-body p-4">
+              <div class="mb-3">
+                <label class="form-label fw-bold text-dark">عنوان الدورة</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="fas fa-book text-primary"></i></span>
+                  <input type="text" class="form-control" name="name" required placeholder="أدخل عنوان الدورة" value="{{ course.name }}">
+                </div>
+              </div>
+      
+              <div class="mb-3">
+                <label class="form-label fw-bold text-dark">مستوى الدورة</label>
+                <select class="form-select" name="level" required>
+                  <option value="">-- اختر المستوى --</option>
+                  <option value="beginner" {% if course.level == "beginner" %}selected{% endif %}>مبتدئ</option>
+                  <option value="intermediate" {% if course.level == "intermediate" %}selected{% endif %}>متوسط</option>
+                  <option value="advanced" {% if course.level == "advanced" %}selected{% endif %}>متقدم</option>
+                </select>
+              </div>
+      
+              <div class="mb-3">
+                <label class="form-label fw-bold text-dark">فئة الدورة</label>
+                <select class="form-select" name="category">
+                  <option value="">-- اختر الفئة --</option>
+                  {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if course.category.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+      
+              <div class="mb-3">
+                <label class="form-label fw-bold text-dark">وصف مختصر</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="fas fa-align-left text-primary"></i></span>
+                  <input type="text" class="form-control" name="small_description" value="{{ course.small_description }}">
+                </div>
+              </div>
+      
+              <div class="mb-3">
+                <label class="form-label fw-bold text-dark">السعر ($)</label>
+                <div class="input-group" style="max-width: 200px;">
+                  <span class="input-group-text bg-light">$</span>
+                  <input type="number" class="form-control" name="price" step="0.01" min="0" value="{{ course.price }}">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label fw-bold text-dark">صورة الدورة</label>
+                {% if course.image_course %}
+                  <div class="mb-2">
+                    <img src="{{ course.image_course.url }}" class="img-thumbnail" style="max-width: 200px;">
+                  </div>
+                {% endif %}
+                <div class="card border-dashed p-3 text-center" onclick="document.getElementById('image_course').click()" style="cursor:pointer;">
+                  <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                  <h5 class="text-muted">انقر لتغيير الصورة</h5>
+                  <input type="file" class="d-none" id="image_course" name="image_course" accept="image/*">
+                </div>
+              </div>
+      
+              <div class="mb-3">
+                <label class="form-label fw-bold text-dark">الوصف التفصيلي</label>
+                <textarea class="form-control" name="description" rows="5" required>{{ course.description }}</textarea>
+              </div>
+      
+              <div class="mb-3">
+                <label class="form-label fw-bold text-dark">ما الذي سيتعلمه الطالب؟</label>
+                <textarea class="form-control" name="learned" rows="5">{{ course.learned }}</textarea>
+                <div class="form-text">ضع كل نقطة تعلم في سطر جديد</div>
+              </div>
+  
+      
+              <div class="mb-3">
+                <label class="form-label fw-bold text-dark">وسوم الدورة</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light"><i class="fas fa-tags text-primary"></i></span>
+                  <input type="text" class="form-control" name="tags" value="{% for tag in course.tags.all %}{{ tag.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                </div>
+              </div>      
+
+              <div class="d-flex justify-content-end mt-4">
+                <button type="button" class="btn btn-lg px-4" style="background-color: #265a84; color: #ffffff;" onclick="nextStep()">التالي <i class="fas fa-arrow-left me-1"></i></button>
+              </div>
+            </div>
+          </div>
+      
+          <!-- ====== الخطوة 2: بيانات الموديول ====== -->
+          <div id="step2" class="card border-0 shadow-lg d-none step-card">
+            <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);">
+              <h2 class="h4 mb-0"><i class="fas fa-edit me-2"></i> تحديث الموديول</h2>   
+            </div>
+                 <!-- Module Selection and Edit Section -->
+                 <div class="mb-4">
+                  <div class="module-container-vertical">
+                    <!-- Module List Section -->
+                    <div class="module-list-section">
+                      <h3 class="section-subtitle mb-3">قائمة الموديولات</h3>
+                      {% if modules %}
+                        <div class="accordion" id="modulesAccordion">
+                          {% for module in modules %}
+                            <div class="module-card" data-module-id="{{ module.id }}">
+                              <div class="module-header">
+                                <h3 class="module-title">
+                                  <span class="module-number">موديول {{ forloop.counter }}</span>
+                                  {{ module.name }}
+                                </h3>
+                                <div class="module-actions">
+                                  <button type="button" class="btn btn-delete" onclick="openDeleteModuleModal('{{ module.id }}', '{{ module.name }}')">
+                                    <i class="fas fa-trash-alt"></i> مسح
+                                  </button>
+                                  <button type="button" class="btn btn-select" onclick="selectModule('{{ module.id }}')">
+                                    <i class="fas fa-check"></i> اختيار
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              <div class="module-body">
+                                <div class="module-info">
+                                  <span class="info-badge"><i class="fas fa-video"></i> {{ module.total_video }} فيديو</span>
+                                  <span class="info-badge"><i class="fas fa-clock"></i> {{ module.duration }}</span>
+                                </div>
+                                
+                                {% if module.video_set.all %}
+                                  <div class="module-videos">
+                                    <h4 class="section-subtitle">
+                                      <i class="fas fa-video"></i> الفيديوهات
+                                    </h4>
+                                    <div class="video-grid">
+                                      {% for video in module.video_set.all %}
+                                        <div class="video-card">
+                                          <div class="video-thumbnail">
+                                            <video controls>
+                                              <source src="{{ video.video.url }}" type="video/mp4">
+                                              متصفحك لا يدعم عرض الفيديو.
+                                            </video>
+                                          </div>
+                                          <div class="video-info">
+                                            <h5>{{ video.name }}</h5>
+                                          </div>
+                                        </div>
+                                      {% endfor %}
+                                    </div>
+                                  </div>
+                                {% else %}
+                                  <div class="empty-state">
+                                    <i class="fas fa-video-slash"></i>
+                                    <p>لا توجد فيديوهات مضافة بعد</p>
+                                  </div>
+                                {% endif %}
+                              </div>
+                            </div>
+                          {% endfor %}
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                          <a href="{% url 'create_module' course.id %}" class="btn btn-add-module">
+                            <i class="fas fa-plus me-1"></i> إضافة موديول جديد
+                          </a>
+                        </div>
+                      {% else %}
+                        <div class="empty-state">
+                          <i class="fas fa-folder-open"></i>
+                          <h3>لا توجد موديولات لهذه الدورة بعد</h3>
+                          <p>ابدأ بإضافة أول موديول</p>
+                          <a href="{% url 'create_module' course.id %}" class="btn btn-add-module mt-3">
+                            <i class="fas fa-plus me-1"></i> إضافة موديول جديد
+                          </a>
+                        </div>
+                      {% endif %}
+                    </div>
+                    
+                    <!-- Module Edit Form Section -->
+                    <div class="module-edit-section mt-4" id="moduleEditSection">
+                      <div class="module-edit-card">
+                        <div class="module-edit-header">
+                          <h3 class="edit-title"><i class="fas fa-edit me-2"></i> تحديث الموديول</h3>
+                          <p class="edit-subtitle" id="selected_module_name">اختر موديول من القائمة أعلاه</p>
+                        </div>
+                        <div class="module-edit-body">
+                          <input type="hidden" id="module_id" name="module_id" value="">
+                          
+                          <div class="form-group mb-4">
+                            <label class="form-label">اسم الموديول</label>
+                            <div class="input-group">
+                              <span class="input-group-text"><i class="fas fa-heading"></i></span>
+                              <input type="text" class="form-control" id="module_name" name="module_name" value="" required>
+                            </div>
+                          </div>
+                  
+                          <div class="form-group mb-4">
+                            <label class="form-label">تحميل الفيديوهات</label>
+                            <div class="file-upload-area">
+                              <input type="file" class="form-control" name="video" accept="video/*" multiple>
+                              <small class="form-hint">الصيغ المدعومة: MP4, MOV, AVI</small>
+                            </div>
+                          </div>
+                  
+                          <div class="form-group mb-4">
+                            <label class="form-label">ملاحظات إضافية</label>
+                            <textarea class="form-control" id="module_notes" name="notes" rows="4"></textarea>
+                          </div>
+                  
+                          <div class="form-group mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                              <label class="form-label">عناوين الفيديوهات</label>
+                              <button type="button" class="btn btn-add-video" onclick="addVideoName()">
+                                <i class="fas fa-plus me-1"></i> إضافة عنوان
+                              </button>
+                            </div>
+                            <div id="video_names" class="video-names-container">
+                              <!-- Video names will be populated dynamically -->
+                            </div>
+                          </div>
+                  
+                          <div class="form-actions">
+                            <div class="d-flex justify-content-between">
+                              <button type="button" class="btn btn-save flex-grow-1 me-2" onclick="saveModuleChanges()">
+                                <i class="fas fa-save ms-2"></i> حفظ التعديلات
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+          </div>
+        </form>
+    </div>
+      
+
+      <!-- Modal لحذف الموديول -->
+    <div class="modal fade" id="deleteModuleModal" tabindex="-1" aria-labelledby="deleteModuleModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header" style="background: linear-gradient(135deg, #ff4757, #ff6b81); color: white;">
+            <h5 class="modal-title" id="deleteModuleModalLabel"><i class="fas fa-trash-alt me-2"></i> حذف الموديول</h5>
+            <button type="button" class="btn-close" onclick="closeDeleteModuleModal()" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center p-4">
+            <div class="mb-4">
+              <i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+            </div>
+            <h4 class="mb-3">هل أنت متأكد من حذف هذا الموديول؟</h4>
+            <p class="mb-1">اسم الموديول: <strong id="deleteModuleName"></strong></p>
+            <p class="text-muted">لا يمكن التراجع عن هذا الإجراء</p>
+            <input type="hidden" id="deleteModuleId" value="">
+          </div>
+          <div class="modal-footer justify-content-center">
+            <button type="button" class="btn btn-secondary px-4" onclick="closeDeleteModuleModal()">إلغاء</button>
+            <button type="button" class="btn btn-danger px-4" onclick="deleteModule()">حذف</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CSS -->
+    <style>
+
+      .bg-gradient-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .form-control, .form-control-lg, .input-group-text {
+            border-radius: 8px !important;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .file-upload-wrapper {
+            position: relative;
+        }
+        
+        .file-upload-info {
+            border-left: 3px solid #667eea;
+        }
+        
+        .video-names-container {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+        
+        /* Custom scrollbar */
+        .video-names-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .video-names-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .video-names-container::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+        
+        .video-names-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+
+      .course-form-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            padding: 2.5rem;
+            border: 1px solid #eaeaea;
+        }
+        
+        .form-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 2rem;
+            text-align: center;
+            position: relative;
+            padding-bottom: 1rem;
+        }
+        
+        .form-title:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: linear-gradient(to right, #3a7bd5, #00d2ff);
+            border-radius: 2px;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        .form-input {
+            border: none;
+            border-radius: 0;
+            border-bottom: 2px solid #e2e8f0;
+            padding: 0.75rem 0;
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus {
+            box-shadow: none;
+            border-color: #3a7bd5;
+        }
+        
+        .form-underline {
+            height: 2px;
+            background: linear-gradient(to right, #3a7bd5, #00d2ff);
+            width: 0;
+            transition: width 0.3s ease;
+        }
+        
+        .form-input:focus ~ .form-underline {
+            width: 100%;
+        }
+        
+        .form-textarea {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            min-height: 120px;
+        }
+        
+        .form-textarea:focus {
+            border-color: #3a7bd5;
+            box-shadow: 0 0 0 3px rgba(58, 123, 213, 0.1);
+        }
+        
+        .form-text {
+            color: #718096;
+            font-size: 0.85rem;
+            display: block;
+            margin-top: 0.25rem;
+        }
+        
+        .custom-file-upload {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .custom-file-upload input[type="file"] {
+            position: absolute;
+            font-size: 100px;
+            opacity: 0;
+            right: 0;
+            top: 0;
+        }
+        
+        .file-label {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #f8fafc;
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .file-label:hover {
+            border-color: #3a7bd5;
+            background-color: rgba(58, 123, 213, 0.05);
+        }
+        
+        .file-label i {
+            font-size: 2rem;
+            color: #3a7bd5;
+            margin-bottom: 0.5rem;
+        }
+        
+        .file-text {
+            color: #4a5568;
+            font-weight: 500;
+        }
+        
+        .current-image a {
+            color: #3a7bd5;
+            text-decoration: none;
+        }
+        
+        .current-image a:hover {
+            text-decoration: underline;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .btn-update {
+            background: linear-gradient(135deg, #3a7bd5, #00d2ff);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(58, 123, 213, 0.3);
+        }
+        
+        .btn-update:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(58, 123, 213, 0.4);
+        }
+        
+        .btn-cancel {
+            background: white;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-cancel:hover {
+            background: #f8fafc;
+            border-color: #cbd5e0;
+            color: #2d3748;
+        }
+        
+        @media (max-width: 768px) {
+            .course-form-container {
+                padding: 1.5rem;
+            }
+            
+            .form-title {
+                font-size: 1.7rem;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .btn-update, .btn-cancel {
+                width: 100%;
+            }
+        }
+
+
+        .step-item {
+        position: relative;
+        z-index: 1;
+      }
     
-    {% endblock %}
-
-
-    {% block title %}
+      .step-circle {
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        font-weight: bold;
+        border-radius: 50%;
+        background-color: #ccc;
+        color: #fff;
+      }
     
-    {% endblock %}
+      .step-line {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background-color: #ccc;
+        z-index: -1;
+      }
+    
+      .step-item:first-child .step-line {
+        left: 50%;
+        width: 50%;
+      }
+    
+      .step-item:last-child .step-line {
+        left: 0;
+        width: 50%;
+      }
+    
+      .step-item.active .step-circle,
+      .step-item.completed .step-circle {
+        background-color: #1d3b53;
+      }
+    
+      .step-item.completed .step-line {
+        background-color: #21531d;
+      }
 
-    {% block content %}
+        /* Modules Section */
+  .section-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    position: relative;
+    padding-bottom: 0.5rem;
+    color: #2c3e50;
+  }
+  
+  .section-title:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(to right, #667eea, #764ba2);
+  }
+  
+  .section-subtitle {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 1.5rem 0 1rem;
+    color: #2c3e50;
+  }
+  
+  /* Module Container Layout */
+  .module-container {
+    display: flex;
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+  
+  /* Vertical Container Layout */
+  .module-container-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-top: 1rem;
+  }
+  
+  .module-list-section {
+    width: 100%;
+  }
+  
+  .module-edit-section {
+    width: 100%;
+    margin-top: 2rem;
+    border-top: 1px dashed #e2e8f0;
+    padding-top: 2rem;
+  }
+  
+  /* Module Cards */
+  .module-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    border: 1px solid #eee;
+    transition: all 0.3s ease;
+  }
+  
+  .selected-module {
+    border: 2px solid #667eea;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+    transform: translateY(-3px);
+  }
+  
+  .module-header {
+    background: #f9fafc;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .module-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+    color: #2c3e50;
+  }
+  
+  .module-number {
+    background: #667eea;
+    color: white;
+    padding: 0.2rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    margin-right: 0.8rem;
+  }
+  
+  .module-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .btn-edit, .btn-delete, .btn-select {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-edit {
+    background: #667eea;
+    color: white;
+  }
+  
+  .btn-edit:hover {
+    background: #5a6fd1;
+  }
+  
+  .btn-delete {
+    background: #ff4757;
+    color: white;
+  }
+  
+  .btn-delete:hover {
+    background: #e0404e;
+  }
+  
+  .btn-select {
+    background: #48bb78;
+    color: white;
+  }
+  
+  .btn-select:hover {
+    background: #3da066;
+  }
+  
+  .module-body {
+    padding: 1.5rem;
+  }
+  
+  .module-info {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .info-badge {
+    background: #f1f5f9;
+    color: #64748b;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  
+  .module-description {
+    color: #555;
+    line-height: 1.6;
+  }
+  
+  /* Module Edit Card */
+  .module-edit-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    overflow: hidden;
+    border: 1px solid #eee;
+  }
+  
+  .module-edit-header {
+    background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);
+    padding: 1.5rem;
+    color: white;
+  }
+  
+  .edit-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  
+  .edit-subtitle {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+  }
+  
+  .module-edit-body {
+    padding: 1.5rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+  }
+  
+  .form-hint {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+  
+  .file-upload-area {
+    border: 2px dashed #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    background: #f8fafc;
+  }
+  
+  .video-names-container {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid #e2e8f0;
+  }
+  
+  .btn-add-video {
+    background: #2e77b2;
+    color: white;
+    border: none;
+    padding: 0.4rem 1rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-add-video:hover {
+    background: #265a84;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 2rem;
+  }
+  
+  .btn-save {
+    background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);
+    color: white;
+    border: none;
+    padding: 0.8rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(42, 90, 124, 0.3);
+  }
+  
+  .btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(42, 90, 124, 0.4);
+  }
+  
+  /* Videos Section */
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .video-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    border: 1px solid #eee;
+  }
+  
+  .video-thumbnail video {
+    width: 100%;
+    display: block;
+  }
+  
+  .video-info {
+    padding: 1rem;
+  }
+  
+  .video-info h5 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+  }
+  
+  .video-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .btn-quiz, .btn-quizzes {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+    border-radius: 5px;
+  }
+  
+  .btn-quiz {
+    background: #4cd137;
+    color: white;
+    border: none;
+  }
+  
+  .btn-quizzes {
+    background: #3498db;
+    color: white;
+    border: none;
+  }
+  
+  /* Notes Section */
+  .notes-list {
+    display: grid;
+    gap: 1rem;
+  }
+  
+  .note-card {
+    background: #f9fafc;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+  }
+  
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    color: #64748b;
+  }
+  
+  .empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #cbd5e0;
+  }
+  
+  .empty-state h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #475569;
+  }
+  
+  .btn-add-module {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 0.8rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+  }
+  
+  .btn-add-module:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #5a6fd1, #6a429e);
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 992px) {
+    .module-container {
+      flex-direction: column;
+    }
+    
+    .module-edit-section {
+      position: static;
+    }
+  }
+  
+  /* Loading Message Styles */
+  .loading-message {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+  
+  .loading-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    position: relative;
+    z-index: 10000;
+  }
+  
+  .loading-content p {
+    margin-top: 1rem;
+    font-size: 1.2rem;
+    color: #333;
+  }
+    </style>
+           
+    <!-- JavaScript Logic -->
+    <script>
+        // Variable to store the selected module ID
+        let currentStep = 0;
+
+        function goToNextStep() {
+          const steps = document.querySelectorAll('#stepper .step-item');
+
+          if (currentStep < steps.length - 1) {
+            // الخطوة الحالية تصبح "مكتملة"
+            steps[currentStep].classList.add('completed');
+            steps[currentStep].classList.remove('active');
+
+            // الخطوة التالية تصبح "نشطة"
+            currentStep++;
+            steps[currentStep].classList.add('active');
+          }
+        }
+
+        function nextStep() {
+          goToNextStep();
+          document.getElementById("step1").classList.add("d-none");
+          document.getElementById("step2").classList.remove("d-none");
+        }
+
+        function prevStep() {
+          document.getElementById("step2").classList.add("d-none");
+          document.getElementById("step1").classList.remove("d-none");
+        }
+        
+        // Function to handle module selection
+        function selectModule(moduleId) {
+          console.log('Selecting module with ID:', moduleId);
+          
+          // إلغاء تحديد جميع الموديولات أولاً
+          var allModuleCards = document.querySelectorAll('.module-card');
+          for (var i = 0; i < allModuleCards.length; i++) {
+            allModuleCards[i].classList.remove('selected');
+          }
+
+          // تحديد الموديول المختار
+          var selectedCard = document.querySelector('.module-card[data-module-id="' + moduleId + '"]');
+          if (selectedCard) {
+            selectedCard.classList.add('selected');
+            console.log('Module card selected:', selectedCard);
+            
+            // الحصول على اسم الموديول من العنوان
+            var moduleName = selectedCard.querySelector('.module-title').textContent.trim();
+            
+            // عرض قسم التحرير وتغيير العنوان
+            var moduleEditSection = document.getElementById('moduleEditSection');
+            var selectedModuleName = document.getElementById('selected_module_name');
+            
+            if (moduleEditSection) {
+              moduleEditSection.style.display = 'block';
+            }
+            
+            // ملء نموذج التحرير ببيانات الموديول
+            document.getElementById('module_id').value = moduleId;
+            
+            // الحصول على المعلومات من العنصر المحدد
+            var moduleNameInput = document.getElementById('module_name');
+            var moduleNotesInput = document.getElementById('module_notes');
+            
+            if (moduleNameInput) {
+              // استخراج اسم الموديول من العنصر المحدد
+              var titleElement = selectedCard.querySelector('.module-title');
+              if (titleElement) {
+                // إزالة رقم الموديول من العنوان
+                var fullTitle = titleElement.textContent.trim();
+                var nameOnly = fullTitle.replace(/\u0645\u0648\u062f\u064a\u0648\u0644 \d+/g, '').trim();
+                moduleNameInput.value = nameOnly;
+              }
+            }
+            
+            // تحديث اسم الموديول المحدد في العنوان
+            if (selectedModuleName) {
+              selectedModuleName.textContent = moduleName;
+            }
+            
+            // مسح أي أسماء فيديو موجودة مسبقاً
+            var videoNamesContainer = document.getElementById('video_names');
+            if (videoNamesContainer) {
+              videoNamesContainer.innerHTML = '';
+              
+              // إضافة أسماء الفيديو الحالية من العنصر المحدد
+              var videoElements = selectedCard.querySelectorAll('.video-card h5');
+              if (videoElements && videoElements.length > 0) {
+                for (var i = 0; i < videoElements.length; i++) {
+                  addVideoNameWithValue(videoElements[i].textContent.trim());
+                }
+              }
+            }
+          } else {
+            console.error('Module card not found for ID:', moduleId);
+            showAlert('لم يتم العثور على الموديول', 'danger');
+          }
+        }
+        
+        // Function to save module changes
+        function saveModuleChanges() {
+          // إظهار رسالة التحميل
+          var loadingMsg = document.createElement('div');
+          loadingMsg.className = 'loading-message';
+          loadingMsg.innerHTML = 
+            '<div class="loading-overlay"></div>' +
+            '<div class="loading-content">' +
+              '<div class="spinner-border text-primary" role="status">' +
+                '<span class="visually-hidden">جاري التحميل...</span>' +
+              '</div>' +
+              '<p>جاري حفظ التعديلات...</p>' +
+            '</div>';
+          document.body.appendChild(loadingMsg);
+
+          // جمع بيانات الموديول
+          var moduleId = document.getElementById('module_id').value;
+          var moduleName = document.getElementById('module_name').value;
+          var moduleNotes = document.getElementById('module_notes').value;
+          var courseId = '{{ course.id }}';
+          
+          // التحقق من وجود قيم صالحة
+          if (!moduleId || !moduleName) {
+            alert('الرجاء اختيار موديول وإدخال اسم له');
+            document.body.removeChild(loadingMsg);
+            return;
+          }
+
+          // إنشاء كائن FormData لإرسال البيانات
+          var moduleFormData = new FormData();
+          moduleFormData.append('id', moduleId);
+          moduleFormData.append('name', moduleName);
+          moduleFormData.append('notes', moduleNotes);
+          
+          // جمع أسماء الفيديوهات
+          var videoNameInputs = document.querySelectorAll('input[name="video_names[]"]');
+          if (videoNameInputs && videoNameInputs.length > 0) {
+            for (var i = 0; i < videoNameInputs.length; i++) {
+              moduleFormData.append('video_names[]', videoNameInputs[i].value);
+            }
+          }
+          
+          // إضافة ملفات الفيديو إذا كانت موجودة
+          var videoFiles = document.querySelector('input[name="video"]');
+          if (videoFiles && videoFiles.files && videoFiles.files.length > 0) {
+            for (var i = 0; i < videoFiles.files.length; i++) {
+              moduleFormData.append('videos', videoFiles.files[i]);
+            }
+          }
+
+          // إرسال بيانات الموديول
+          fetch('/course/' + courseId + '/module/' + moduleId + '/update/', {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: moduleFormData
+          })
+          .then(function(response) {
+            if (!response.ok) {
+              throw new Error('فشل حفظ الموديول');
+            }
+            return response.json();
+          })
+          .then(function(result) {
+            console.log('Module saved:', result);
+            // إزالة رسالة التحميل
+            document.body.removeChild(loadingMsg);
+            
+            // عرض رسالة نجاح
+            showAlert('تم حفظ التعديلات بنجاح!', 'success');
+            
+            // إعادة تحميل الصفحة بعد فترة قصيرة
+            setTimeout(function() {
+              window.location.reload();
+            }, 1500);
+          })
+          .catch(function(error) {
+            console.error('Error:', error);
+            // إزالة رسالة التحميل
+            document.body.removeChild(loadingMsg);
+            // عرض رسالة خطأ
+            showAlert('حدث خطأ: ' + error.message, 'danger');
+          });
+        }
+        
+        // Function to add a new video name input
+        function addVideoName() {
+            addVideoNameWithValue('');
+        }
+        
+        // Function to add a video name input with a specific value
+        function addVideoNameWithValue(value) {
+            const videoNamesContainer = document.getElementById('video_names');
+            const newInput = document.createElement('div');
+            newInput.className = 'input-group mb-2';
+            newInput.innerHTML = `
+                <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+                <input type="text" class="form-control" name="video_names[]" value="${value}" required>
+                <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
+            `;
+            videoNamesContainer.appendChild(newInput);
+        }
+
+        // وظيفة لتهيئة محررات CKEDITOR
+        function initCKEditors() {
+          try {
+            if (CKEDITOR.instances.description) {
+              CKEDITOR.instances.description.destroy();
+            }
+            CKEDITOR.replace("description", {
+              language: 'ar',
+              height: 250,
+              toolbar: [
+                { name: 'document', items: [ 'Source', '-', 'NewPage', 'Preview', '-', 'Templates' ] },
+                { name: 'clipboard', items: [ 'Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo' ] },
+                { name: 'editing', items: [ 'Find', 'Replace', '-', 'SelectAll', '-', 'Scayt' ] },
+                { name: 'basicstyles', items: [ 'Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'CopyFormatting', 'RemoveFormat' ] },
+                { name: 'paragraph', items: [ 'NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock', '-', 'BidiLtr', 'BidiRtl', 'Language' ] },
+                { name: 'links', items: [ 'Link', 'Unlink', 'Anchor' ] },
+                { name: 'insert', items: [ 'Image', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar' ] },
+                { name: 'styles', items: [ 'Styles', 'Format', 'Font', 'FontSize' ] },
+                { name: 'colors', items: [ 'TextColor', 'BGColor' ] },
+                { name: 'tools', items: [ 'Maximize', 'ShowBlocks' ] }
+              ],
+              contentsLangDirection: 'rtl'
+            });
+          } catch (error) {
+            console.log("Error initializing description editor:", error);
+          }
+          
+        }
+        
+        // استدعاء وظيفة تهيئة المحررات
+        setTimeout(function() {
+          initCKEditors();
+        }, 500);
+
+        // وظيفة لفتح نافذة حذف الموديول
+        function openDeleteModuleModal(moduleId, moduleName) {
+            var deleteModuleIdElement = document.getElementById('deleteModuleId');
+            var deleteModuleNameElement = document.getElementById('deleteModuleName');
+            var deleteModuleModalElement = document.getElementById('deleteModuleModal');
+            
+            if (deleteModuleIdElement && deleteModuleNameElement && deleteModuleModalElement) {
+                deleteModuleIdElement.value = moduleId;
+                deleteModuleNameElement.textContent = moduleName;
+                deleteModuleModalElement.classList.add('show');
+                deleteModuleModalElement.style.display = 'block';
+                document.body.classList.add('modal-open');
+                document.body.appendChild(document.createElement('div')).className = 'modal-backdrop fade show';
+            }
+        }
+
+        // وظيفة لإغلاق نافذة حذف الموديول
+        function closeDeleteModuleModal() {
+            var deleteModuleModalElement = document.getElementById('deleteModuleModal');
+            if (deleteModuleModalElement) {
+                deleteModuleModalElement.classList.remove('show');
+                deleteModuleModalElement.style.display = 'none';
+                document.body.classList.remove('modal-open');
+                var backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+            }
+        }
+
+        // وظيفة لحذف الموديول
+        function deleteModule() {
+            var moduleId = document.getElementById('deleteModuleId').value;
+            var courseId = '{{ course.id }}';
+            var moduleDeleteUrl = '/course/' + courseId + '/module/' + moduleId + '/delete/';
+            
+            fetch(moduleDeleteUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+            .then(function(response) {
+                if (response.ok) {
+                    closeDeleteModuleModal();
+                    showAlert('تم حذف الموديول بنجاح', 'success');
+                    // إعادة تحميل الصفحة بعد الحذف
+                    setTimeout(function() { window.location.reload(); }, 1500);
+                } else {
+                    throw new Error('حدث خطأ أثناء حذف الموديول');
+                }
+            })
+            .catch(function(error) {
+                closeDeleteModuleModal();
+                showAlert(error.message, 'danger');
+                console.error('Error:', error);
+            });
+        }
+        
+        // وظيفة لعرض تنبيه
+        function showAlert(message, type) {
+            var alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.innerHTML = 
+                message +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+            
+            var container = document.querySelector('.container');
+            if (container) {
+                container.prepend(alertDiv);
+                
+                // إخفاء التنبيه بعد 3 ثوان
+                setTimeout(function() {
+                    alertDiv.classList.remove('show');
+                    setTimeout(function() {
+                        alertDiv.remove();
+                    }, 300);
+                }, 3000);
+            }
+        }
+
+
+          document.addEventListener('DOMContentLoaded', function() {
+            // التحقق من وجود العناصر قبل استخدامها
+            const dropzone = document.getElementById('video-dropzone');
+            const fileInput = document.querySelector('.file-input');
+            const uploadedFiles = document.getElementById('uploaded-files');
+            const imageInput = document.getElementById('image_course');
+            
+            // إضافة معالج الملفات للصور
+            if (imageInput) {
+                imageInput.addEventListener('change', function(e) {
+                    const fileName = e.target.files[0]?.name || 'لم يتم اختيار ملف';
+                    const fileInfoElement = document.getElementById('file-info');
+                    if (fileInfoElement) {
+                        fileInfoElement.textContent = fileName;
+                    }
+                });
+            }
+            
+            // التعامل مع سحب وإفلات الملفات (إذا كانت العناصر موجودة)
+            if (dropzone) {
+                // Handle drag and drop
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, preventDefaults, false);
+                });
+                
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, highlight, false);
+                });
+                
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, unhighlight, false);
+                });
+            }
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            function highlight() {
+                dropzone.classList.add('highlight');
+            }
+            
+            function unhighlight() {
+                dropzone.classList.remove('highlight');
+            }
+            
+            // التعامل مع اختيار الملفات (إذا كان العنصر موجودًا)
+            if (fileInput) {
+                fileInput.addEventListener('change', handleFiles, false);
+            }
+            
+            function handleFiles(e) {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    uploadedFiles.style.display = 'block';
+                    uploadedFiles.innerHTML = `
+                        <p><strong>Selected files (${files.length}):</strong></p>
+                        <ul class="file-list">
+                            ${Array.from(files).map(file => `<li>${file.name}</li>`).join('')}
+                        </ul>
+                    `;
+                }
+            }
+        });
+    </script>
+      
+
+{% endblock dashboard_content %}
+
+
+
+
+
+
    <!--  <div class="container">
         <h1>Update Course</h1>
         <form method="POST" enctype="multipart/form-data" action="{% url 'update_course' course.id %}">
@@ -48,7 +1430,7 @@
         </form>
       </div> -->
       
-      <div class="container py-5">
+      <!-- <div class="container py-5">
         <div class="course-form-container">
             <h1 class="form-title">Update Course</h1>
             
@@ -124,9 +1506,9 @@
                 </div>
             </form>
         </div>
-    </div>
+    </div> -->
     
-    <style>
+    <!-- <style>
         .course-form-container {
             max-width: 900px;
             margin: 0 auto;
@@ -321,20 +1703,6 @@
                 width: 100%;
             }
         }
-    </style>
-      
-      
-      
-      <script>
-        try {
-          CKEDITOR.replace("learned");
-        } catch (error) {
-          console.log(error);
-        }
-        try {
-            CKEDITOR.replace("description");
-          } catch (error) {
-            console.log(error);
-          }
-      </script>
-    {% endblock %}
+    </style> -->
+  
+    
