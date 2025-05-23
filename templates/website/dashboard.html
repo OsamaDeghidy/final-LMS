@@ -334,9 +334,20 @@
   
   <script>
             // وظيفة لفتح نافذة حذف الكورس
-            function openDeleteCourseModal() {
+        function openDeleteCourseModal(courseId, courseName) {
+            // Store the course ID in a data attribute for later use
             var deleteCourseModalElement = document.getElementById('deleteCourseModal');
             if (deleteCourseModalElement) {
+                // Set the course ID and name in the modal
+                deleteCourseModalElement.setAttribute('data-course-id', courseId);
+                
+                // Update the course name in the modal
+                var courseNameElement = deleteCourseModalElement.querySelector('strong');
+                if (courseNameElement) {
+                    courseNameElement.textContent = courseName;
+                }
+                
+                // Show the modal
                 deleteCourseModalElement.classList.add('show');
                 deleteCourseModalElement.style.display = 'block';
                 document.body.classList.add('modal-open');
@@ -360,23 +371,33 @@
 
         // وظيفة لحذف الكورس
         function deleteCourse() {
-            var courseId = '{{ course.id }}';
-            var courseDeleteUrl = '/course/' + courseId + '/delete/';
+            // Get the course ID from the modal's data attribute
+            var deleteCourseModalElement = document.getElementById('deleteCourseModal');
+            var courseId = deleteCourseModalElement.getAttribute('data-course-id');
             
-            fetch(courseDeleteUrl, {
+            if (!courseId) {
+                console.error('Course ID not found');
+                closeDeleteCourseModal();
+                showAlert('حدث خطأ: لم يتم العثور على معرف الدورة', 'danger');
+                return;
+            }
+            
+            // Send the delete request
+            fetch('/course/delete/', {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}',
                     'Content-Type': 'application/json'
                 },
+                body: JSON.stringify({ course_id: courseId }),
                 credentials: 'same-origin'
             })
             .then(function(response) {
                 if (response.ok) {
                     closeDeleteCourseModal();
                     showAlert('تم حذف الكورس بنجاح', 'success');
-                    // توجيه المستخدم إلى صفحة الكورسات
-                    setTimeout(function() { window.location.href = '/courses/'; }, 1500);
+                    // توجيه المستخدم إلى صفحة لوحة التحكم
+                    setTimeout(function() { window.location.href = '/dashboard/'; }, 1500);
                 } else {
                     throw new Error('حدث خطأ أثناء حذف الكورس');
                 }
@@ -385,6 +406,41 @@
                 closeDeleteCourseModal();
                 showAlert(error.message, 'danger');
                 console.error('Error:', error);
+            });
+        }
+        // Function to show alerts
+        function showAlert(message, type) {
+            // Create alert element
+            var alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.style.position = 'fixed';
+            alertDiv.style.top = '20px';
+            alertDiv.style.right = '20px';
+            alertDiv.style.zIndex = '9999';
+            alertDiv.style.maxWidth = '400px';
+            
+            // Add message
+            alertDiv.innerHTML = message + 
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+            
+            // Add to document
+            document.body.appendChild(alertDiv);
+            
+            // Auto remove after 5 seconds
+            setTimeout(function() {
+                alertDiv.classList.remove('show');
+                setTimeout(function() {
+                    alertDiv.remove();
+                }, 500);
+            }, 5000);
+            
+            // Add click event to close button
+            alertDiv.querySelector('.btn-close').addEventListener('click', function() {
+                alertDiv.classList.remove('show');
+                setTimeout(function() {
+                    alertDiv.remove();
+                }, 500);
             });
         }
   </script>

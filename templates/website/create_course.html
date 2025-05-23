@@ -11,166 +11,6 @@ Create a Course
 
 {% block dashboard_content %}
 
-  <!-- <div class="col-lg-8" dir="rtl">
-      <div class="card shadow-lg border-0">
-        <div class="card-header text-white text-right" style="background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);">
-          <h2 class="mb-0 text-center">
-            <i class="fas fa-plus-circle ms-2"></i> إنشاء دورة جديدة
-          </h2>
-        </div>
-        <div class="card-body p-4">
-          <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
-            {% csrf_token %}
-            <input type="hidden" name="teacher_id" value="{{ request.user.teacher.id }}">
-    
-     
-            <div class="mb-3">
-              <label class="form-label fw-bold" style="color: #265a84;">عنوان الدورة</label>
-              <div class="input-group">
-                <span class="input-group-text bg-light"><i class="fas fa-book text-primary"></i></span>
-                <input type="text" class="form-control form-control-lg border-end-0" name="name" required placeholder="أدخل عنوان الدورة">
-              </div>
-            </div>
-    
-      
-            <div class="mb-3">
-              <label class="form-label fw-bold" style="color: #265a84;">وصف مختصر</label>
-              <div class="input-group">
-                <span class="input-group-text bg-light"><i class="fas fa-align-left text-primary"></i></span>
-                <input type="text" class="form-control border-end-0" name="small_description" placeholder="ملخص يظهر في بطاقة الدورة">
-              </div>
-            </div>
-    
-      
-            <div class="mb-3">
-              <label class="form-label fw-bold" style="color: #265a84;">السعر ($)</label>
-              <div class="input-group" style="max-width: 200px;">
-                <span class="input-group-text bg-light">$</span>
-                <input type="number" class="form-control border-end-0" name="price" step="0.01" min="0" placeholder="0.00" required>
-              </div>
-            </div>
-    
-            <div class="mb-4">
-              <label class="form-label fw-bold" style="color: #265a84;">صورة الدورة</label>
-              <div class="card border-dashed p-3 text-center" style="cursor: pointer;" onclick="document.getElementById('image_course').click()">
-                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
-                <h5 class="text-muted">انقر لتحميل صورة</h5>
-                <p class="small text-muted">الحجم الموصى به: 800x450 بكسل</p>
-                <input type="file" class="d-none" id="image_course" name="image_course" accept="image/*">
-              </div>
-            </div>
-    
-         
-            <div class="mb-3">
-              <label class="form-label fw-bold" style="color: #265a84;">الوصف التفصيلي</label>
-              <textarea class="form-control" name="description" rows="5" required placeholder="اشرح محتوى الدورة بشكل تفصيلي..."></textarea>
-            </div>
-    
-        
-            <div class="mb-3">
-              <label class="form-label fw-bold" style="color: #265a84;">ما الذي سيتعلمه الطالب؟</label>
-              <textarea class="form-control" name="learned" rows="5" placeholder="أدخل كل نقطة في سطر منفصل..."></textarea>
-              <div class="form-text">ضع كل نقطة تعلم في سطر جديد</div>
-            </div>
-    
-          
-            <div class="mb-3">
-              <label class="form-label fw-bold" style="color: #265a84;">وسوم الدورة</label>
-              <div class="input-group">
-                <span class="input-group-text bg-light"><i class="fas fa-tags text-primary"></i></span>
-                <input type="text" class="form-control border-end-0" name="tags" placeholder="برمجة، تطوير، تصميم (افصل بينهم بفاصلة)">
-              </div>
-            </div>
-    
-          
-            <div class="mb-3">
-              <label class="form-label fw-bold" style="color: #265a84;">مستوى الدورة</label>
-              <select class="form-select" name="level" required>
-                <option value="">-- اختر المستوى --</option>
-                <option value="beginner">مبتدئ</option>
-                <option value="intermediate">متوسط</option>
-                <option value="advanced">متقدم</option>
-              </select>
-            </div>
-    
-    
-            <div class="mb-3">
-              <label class="form-label fw-bold" style="color: #265a84;">فئة الدورة</label>
-              <select class="form-select" name="category">
-                <option value="">-- اختر الفئة --</option>
-                {% for cat in categories %}
-                  <option value="{{ cat.id }}">{{ cat.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-    
-
-            <div class="mb-3">
-              <label class="form-label fw-bold" style="color: #265a84;">المؤسسة</label>
-              <select class="form-select" name="organization">
-                <option value="">-- اختر المؤسسة --</option>
-                {% for org in organizations %}
-                  <option value="{{ org.id }}">{{ org.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-    
- 
-            <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">
-              <button type="submit" class="btn btn-lg px-4" style="background-color: #265a84; color: #ffffff;">
-                <i class="fas fa-save ms-2"></i> حفظ الدورة
-              </button>
-              <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">
-                <i class="fas fa-times ms-2"></i> إلغاء
-              </a>
-            </div>
-    
-          </form>
-        </div>
-      </div>
-    </div> -->
- 
-<!-- <script>
-  // Initialize CKEditor
-  document.addEventListener('DOMContentLoaded', function() {
-    try {
-      CKEDITOR.replace("description", {
-        toolbar: [
-          { name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike'] },
-          { name: 'paragraph', items: ['NumberedList', 'BulletedList'] },
-          { name: 'links', items: ['Link', 'Unlink'] },
-          { name: 'insert', items: ['Image', 'Table'] }
-        ]
-      });
-      CKEDITOR.replace("learned");
-    } catch (error) {
-      console.log(error);
-    }
-    
-    // Preview image when selected
-    document.getElementById('image_course').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          const uploadArea = e.target.parentElement;
-          uploadArea.innerHTML = `
-            <div class="text-center">
-              <img src="${event.target.result}" class="img-thumbnail mb-2" style="max-height: 200px;">
-              <p class="small text-muted">${file.name}</p>
-              <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); this.parentElement.innerHTML = '<i class=\\'fas fa-cloud-upload-alt fa-3x text-muted mb-2\\'></i><h5 class=\\'text-muted\\'>Click to upload image</h5><p class=\\'small text-muted\\'>Recommended size: 800x450px</p>'; document.getElementById('image_course').value = '';">
-                Change Image
-              </button>
-            </div>
-          `;
-        }
-        reader.readAsDataURL(file);
-      }
-    });
-  });
-</script> -->
-
-
     <div class="col-lg-8">   
       
       <!-- Step Progress Bar -->
@@ -532,3 +372,163 @@ let currentStep = 0;
 
 
 {% endblock dashboard_content %}
+
+  <!-- <div class="col-lg-8" dir="rtl">
+      <div class="card shadow-lg border-0">
+        <div class="card-header text-white text-right" style="background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);">
+          <h2 class="mb-0 text-center">
+            <i class="fas fa-plus-circle ms-2"></i> إنشاء دورة جديدة
+          </h2>
+        </div>
+        <div class="card-body p-4">
+          <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="teacher_id" value="{{ request.user.teacher.id }}">
+    
+     
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">عنوان الدورة</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-book text-primary"></i></span>
+                <input type="text" class="form-control form-control-lg border-end-0" name="name" required placeholder="أدخل عنوان الدورة">
+              </div>
+            </div>
+    
+      
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">وصف مختصر</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-align-left text-primary"></i></span>
+                <input type="text" class="form-control border-end-0" name="small_description" placeholder="ملخص يظهر في بطاقة الدورة">
+              </div>
+            </div>
+    
+      
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">السعر ($)</label>
+              <div class="input-group" style="max-width: 200px;">
+                <span class="input-group-text bg-light">$</span>
+                <input type="number" class="form-control border-end-0" name="price" step="0.01" min="0" placeholder="0.00" required>
+              </div>
+            </div>
+    
+            <div class="mb-4">
+              <label class="form-label fw-bold" style="color: #265a84;">صورة الدورة</label>
+              <div class="card border-dashed p-3 text-center" style="cursor: pointer;" onclick="document.getElementById('image_course').click()">
+                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                <h5 class="text-muted">انقر لتحميل صورة</h5>
+                <p class="small text-muted">الحجم الموصى به: 800x450 بكسل</p>
+                <input type="file" class="d-none" id="image_course" name="image_course" accept="image/*">
+              </div>
+            </div>
+    
+         
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">الوصف التفصيلي</label>
+              <textarea class="form-control" name="description" rows="5" required placeholder="اشرح محتوى الدورة بشكل تفصيلي..."></textarea>
+            </div>
+    
+        
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">ما الذي سيتعلمه الطالب؟</label>
+              <textarea class="form-control" name="learned" rows="5" placeholder="أدخل كل نقطة في سطر منفصل..."></textarea>
+              <div class="form-text">ضع كل نقطة تعلم في سطر جديد</div>
+            </div>
+    
+          
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">وسوم الدورة</label>
+              <div class="input-group">
+                <span class="input-group-text bg-light"><i class="fas fa-tags text-primary"></i></span>
+                <input type="text" class="form-control border-end-0" name="tags" placeholder="برمجة، تطوير، تصميم (افصل بينهم بفاصلة)">
+              </div>
+            </div>
+    
+          
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">مستوى الدورة</label>
+              <select class="form-select" name="level" required>
+                <option value="">-- اختر المستوى --</option>
+                <option value="beginner">مبتدئ</option>
+                <option value="intermediate">متوسط</option>
+                <option value="advanced">متقدم</option>
+              </select>
+            </div>
+    
+    
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">فئة الدورة</label>
+              <select class="form-select" name="category">
+                <option value="">-- اختر الفئة --</option>
+                {% for cat in categories %}
+                  <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+    
+
+            <div class="mb-3">
+              <label class="form-label fw-bold" style="color: #265a84;">المؤسسة</label>
+              <select class="form-select" name="organization">
+                <option value="">-- اختر المؤسسة --</option>
+                {% for org in organizations %}
+                  <option value="{{ org.id }}">{{ org.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+    
+ 
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">
+              <button type="submit" class="btn btn-lg px-4" style="background-color: #265a84; color: #ffffff;">
+                <i class="fas fa-save ms-2"></i> حفظ الدورة
+              </button>
+              <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">
+                <i class="fas fa-times ms-2"></i> إلغاء
+              </a>
+            </div>
+    
+          </form>
+        </div>
+      </div>
+    </div> -->
+ 
+<!-- <script>
+  // Initialize CKEditor
+  document.addEventListener('DOMContentLoaded', function() {
+    try {
+      CKEDITOR.replace("description", {
+        toolbar: [
+          { name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike'] },
+          { name: 'paragraph', items: ['NumberedList', 'BulletedList'] },
+          { name: 'links', items: ['Link', 'Unlink'] },
+          { name: 'insert', items: ['Image', 'Table'] }
+        ]
+      });
+      CKEDITOR.replace("learned");
+    } catch (error) {
+      console.log(error);
+    }
+    
+    // Preview image when selected
+    document.getElementById('image_course').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const uploadArea = e.target.parentElement;
+          uploadArea.innerHTML = `
+            <div class="text-center">
+              <img src="${event.target.result}" class="img-thumbnail mb-2" style="max-height: 200px;">
+              <p class="small text-muted">${file.name}</p>
+              <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); this.parentElement.innerHTML = '<i class=\\'fas fa-cloud-upload-alt fa-3x text-muted mb-2\\'></i><h5 class=\\'text-muted\\'>Click to upload image</h5><p class=\\'small text-muted\\'>Recommended size: 800x450px</p>'; document.getElementById('image_course').value = '';">
+                Change Image
+              </button>
+            </div>
+          `;
+        }
+        reader.readAsDataURL(file);
+      }
+    });
+  });
+</script> -->
+
