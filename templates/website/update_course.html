@@ -10,7 +10,6 @@ Update Course
 {% block dashboard_content %}
 
 
-
     <div class="col-lg-8">   
         <!-- Step Progress Bar -->
         <div class="container mb-4" dir="rtl">
@@ -125,147 +124,151 @@ Update Course
             <div class="card-header text-white py-3" style="background: linear-gradient(135deg, #1d3b53 0%, #2a5a7c 100%);">
               <h2 class="h4 mb-0"><i class="fas fa-edit me-2"></i> تحديث الموديول</h2>   
             </div>
-                 <!-- Module Selection and Edit Section -->
-                 <div class="mb-4">
-                  <div class="module-container-vertical">
-                    <!-- Module List Section -->
-                    <div class="module-list-section">
-                      <h3 class="section-subtitle mb-3">قائمة الموديولات</h3>
-                      {% if modules %}
-                        <div class="accordion" id="modulesAccordion">
-                          {% for module in modules %}
-                            <div class="module-card" data-module-id="{{ module.id }}">
-                              <div class="module-header">
-                                <h3 class="module-title">
-                                  <span class="module-number">موديول {{ forloop.counter }}</span>
-                                  {{ module.name }}
-                                </h3>
-                                <div class="module-actions">
-                                  <button type="button" class="btn btn-delete" onclick="openDeleteModuleModal('{{ module.id }}', '{{ module.name }}')">
-                                    <i class="fas fa-trash-alt"></i> مسح
-                                  </button>
-                                  <button type="button" class="btn btn-select" onclick="selectModule('{{ module.id }}')">
-                                    <i class="fas fa-check"></i> اختيار
-                                  </button>
-                                </div>
+            <div class="card-body p-4">
+              <div class="row">
+                <!-- القسم الأيمن: قائمة الموديولات -->
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                  <div class="module-list-container p-3 border rounded">
+                    <h3 class="section-subtitle mb-3">قائمة الموديولات</h3>
+                    {% if modules %}
+                      <div class="accordion" id="modulesAccordion">
+                        {% for module in modules %}
+                          <div class="module-card mb-3" data-module-id="{{ module.id }}">
+                            <div class="module-header">
+                              <h3 class="module-title">
+                                <span class="module-number">موديول {{ forloop.counter }}</span>
+                                {{ module.name }}
+                              </h3>
+                              <div class="module-actions">
+                                <button type="button" class="btn btn-delete" onclick="openDeleteModuleModal('{{ module.id }}', '{{ module.name }}')">
+                                  <i class="fas fa-trash-alt"></i> مسح
+                                </button>
+                                <button type="button" class="btn btn-select" onclick="selectModule('{{ module.id }}')">
+                                  <i class="fas fa-check"></i> اختيار
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <div class="module-body">
+                              <div class="module-info">
+                                <span class="info-badge"><i class="fas fa-video"></i> {{ module.total_video }} فيديو</span>
+                                <span class="info-badge"><i class="fas fa-clock"></i> {{ module.duration }}</span>
                               </div>
                               
-                              <div class="module-body">
-                                <div class="module-info">
-                                  <span class="info-badge"><i class="fas fa-video"></i> {{ module.total_video }} فيديو</span>
-                                  <span class="info-badge"><i class="fas fa-clock"></i> {{ module.duration }}</span>
-                                </div>
-                                
-                                {% if module.video_set.all %}
-                                  <div class="module-videos">
-                                    <h4 class="section-subtitle">
-                                      <i class="fas fa-video"></i> الفيديوهات
-                                    </h4>
-                                    <div class="video-grid">
-                                      {% for video in module.video_set.all %}
-                                        <div class="video-card">
-                                          <div class="video-thumbnail">
-                                            <video controls>
-                                              <source src="{{ video.video.url }}" type="video/mp4">
-                                              متصفحك لا يدعم عرض الفيديو.
-                                            </video>
-                                          </div>
-                                          <div class="video-info">
-                                            <h5>{{ video.name }}</h5>
-                                          </div>
+                              {% if module.video_set.all %}
+                                <div class="module-videos">
+                                  <h4 class="section-subtitle">
+                                    <i class="fas fa-video"></i> الفيديوهات
+                                  </h4>
+                                  <div class="video-grid">
+                                    {% for video in module.video_set.all %}
+                                      <div class="video-card">
+                                        <div class="video-thumbnail">
+                                          <video controls>
+                                            <source src="{{ video.video.url }}" type="video/mp4">
+                                            متصفحك لا يدعم عرض الفيديو.
+                                          </video>
                                         </div>
-                                      {% endfor %}
-                                    </div>
+                                        <div class="video-info">
+                                          <h5>{{ video.name }}</h5>
+                                        </div>
+                                      </div>
+                                    {% endfor %}
                                   </div>
-                                {% else %}
-                                  <div class="empty-state">
-                                    <i class="fas fa-video-slash"></i>
-                                    <p>لا توجد فيديوهات مضافة بعد</p>
-                                  </div>
-                                {% endif %}
-                              </div>
+                                </div>
+                              {% else %}
+                                <div class="empty-state">
+                                  <i class="fas fa-video-slash"></i>
+                                  <p>لا توجد فيديوهات مضافة بعد</p>
+                                </div>
+                              {% endif %}
                             </div>
-                          {% endfor %}
-                        </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                      
+                      <div class="text-center mt-4">
+                        <a href="{% url 'create_module' course.id %}" class="btn btn-add-module w-100">
+                          <i class="fas fa-plus me-1"></i> إضافة موديول جديد
+                        </a>
+                      </div>
+                    {% else %}
+                      <div class="empty-state">
+                        <i class="fas fa-folder-open"></i>
+                        <h3>لا توجد موديولات لهذه الدورة بعد</h3>
+                        <p>ابدأ بإضافة أول موديول</p>
+                        <a href="{% url 'create_module' course.id %}" class="btn btn-add-module mt-3 w-100">
+                          <i class="fas fa-plus me-1"></i> إضافة موديول جديد
+                        </a>
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+                
+                <!-- القسم الأيسر: تحرير الموديول -->
+                <div class="col-lg-6">
+                  <div class="module-edit-section" id="moduleEditSection">
+                    <div class="module-edit-card">
+                      <div class="module-edit-header">
+                        <h3 class="edit-title"><i class="fas fa-edit me-2"></i> تحديث الموديول</h3>
+                        <p class="edit-subtitle" id="selected_module_name">اختر موديول من القائمة</p>
+                      </div>
+                      <div class="module-edit-body">
+                        <input type="hidden" id="module_id" name="module_id" value="">
                         
-                        <div class="text-center mt-4">
-                          <a href="{% url 'create_module' course.id %}" class="btn btn-add-module">
-                            <i class="fas fa-plus me-1"></i> إضافة موديول جديد
-                          </a>
+                        <div class="form-group mb-4">
+                          <label class="form-label">اسم الموديول</label>
+                          <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-heading"></i></span>
+                            <input type="text" class="form-control" id="module_name" name="module_name" value="" required>
+                          </div>
                         </div>
-                      {% else %}
-                        <div class="empty-state">
-                          <i class="fas fa-folder-open"></i>
-                          <h3>لا توجد موديولات لهذه الدورة بعد</h3>
-                          <p>ابدأ بإضافة أول موديول</p>
-                          <a href="{% url 'create_module' course.id %}" class="btn btn-add-module mt-3">
-                            <i class="fas fa-plus me-1"></i> إضافة موديول جديد
-                          </a>
+                
+                        <div class="form-group mb-4">
+                          <label class="form-label">تحميل الفيديوهات</label>
+                          <div class="file-upload-area">
+                            <input type="file" class="form-control" name="video" accept="video/*" multiple>
+                            <small class="form-hint">الصيغ المدعومة: MP4, MOV, AVI</small>
+                          </div>
                         </div>
-                      {% endif %}
-                    </div>
-                    
-                    <!-- Module Edit Form Section -->
-                    <div class="module-edit-section mt-4" id="moduleEditSection">
-                      <div class="module-edit-card">
-                        <div class="module-edit-header">
-                          <h3 class="edit-title"><i class="fas fa-edit me-2"></i> تحديث الموديول</h3>
-                          <p class="edit-subtitle" id="selected_module_name">اختر موديول من القائمة أعلاه</p>
+                
+                        <div class="form-group mb-4">
+                          <label class="form-label">ملاحظات إضافية</label>
+                          <textarea class="form-control" id="module_notes" name="notes" rows="4"></textarea>
                         </div>
-                        <div class="module-edit-body">
-                          <input type="hidden" id="module_id" name="module_id" value="">
-                          
-                          <div class="form-group mb-4">
-                            <label class="form-label">اسم الموديول</label>
-                            <div class="input-group">
-                              <span class="input-group-text"><i class="fas fa-heading"></i></span>
-                              <input type="text" class="form-control" id="module_name" name="module_name" value="" required>
-                            </div>
+                
+                        <div class="form-group mb-4">
+                          <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label">عناوين الفيديوهات</label>
+                            <button type="button" class="btn btn-add-video" onclick="addVideoName()">
+                              <i class="fas fa-plus me-1"></i> إضافة عنوان
+                            </button>
                           </div>
-                  
-                          <div class="form-group mb-4">
-                            <label class="form-label">تحميل الفيديوهات</label>
-                            <div class="file-upload-area">
-                              <input type="file" class="form-control" name="video" accept="video/*" multiple>
-                              <small class="form-hint">الصيغ المدعومة: MP4, MOV, AVI</small>
-                            </div>
-                          </div>
-                  
-                          <div class="form-group mb-4">
-                            <label class="form-label">ملاحظات إضافية</label>
-                            <textarea class="form-control" id="module_notes" name="notes" rows="4"></textarea>
-                          </div>
-                  
-                          <div class="form-group mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                              <label class="form-label">عناوين الفيديوهات</label>
-                              <button type="button" class="btn btn-add-video" onclick="addVideoName()">
-                                <i class="fas fa-plus me-1"></i> إضافة عنوان
-                              </button>
-                            </div>
-                            <div id="video_names" class="video-names-container">
-                              <!-- Video names will be populated dynamically -->
-                            </div>
-                          </div>
-                  
-                          <div class="form-actions">
-                            <div class="d-flex justify-content-between mt-4 ">
-                              <button type="button" class="btn btn-secondary btn-lg px-4" onclick="prevStep()"><i class="fas fa-arrow-right ms-1"></i> السابق</button>
-                              <button type="button" class="btn btn-lg px-4" style="background-color: #265a84; color: #ffffff;" onclick="saveCourseAndModule()">
-                                <i class="fas fa-save ms-2"></i> حفظ
-                              </button>
-                            </div>
+                          <div id="video_names" class="video-names-container">
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
+              
+              <!-- أزرار التنقل والحفظ -->
+              <div class="row mt-4">
+                <div class="col-12">
+                  <div class="d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary btn-lg px-4" onclick="prevStep()"><i class="fas fa-arrow-right ms-1"></i> السابق</button>
+                    <button type="button" class="btn btn-lg px-4" style="background-color: #265a84; color: #ffffff;" onclick="saveCourseAndModule()">
+                      <i class="fas fa-save ms-2"></i> حفظ
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </form>
     </div>
       
-
       <!-- Modal لحذف الموديول -->
     <div class="modal fade" id="deleteModuleModal" tabindex="-1" aria-labelledby="deleteModuleModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
@@ -1589,10 +1592,6 @@ Update Course
     
 
 {% endblock dashboard_content %}
-
-
-
-
 
 
    <!--  <div class="container">
