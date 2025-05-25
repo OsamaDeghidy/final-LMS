@@ -1,12 +1,10 @@
-/*body background css*/
-body{
+/* body{
     padding: 0;
     margin: 0;
     background: url(background.jpg)no-repeat;
     background-size: cover;
 }
 
-/*login form css*/
 .form{
     font-family: "Roboto", sans-serif;
     position: relative;
@@ -16,14 +14,12 @@ body{
     max-width: 260px;
     margin: 200px auto 100px;
     padding: 10px 45px 30px 45px;
-    /* text-align: center; */
     box-shadow: 0 0 20px 0 rgba(0, 0, 0, 0.2), 0 5px 5px 0 rgba(0, 0, 0, 0.24);
     border-radius: 10px;
 }
 .form p{
     font-size: 15px;
     padding: 1px;
-    /* text-align: center; */
 }
 .form input{
     outline: 0;
@@ -68,4 +64,57 @@ body{
 .form .message a{
     color: #06C5CF;
     text-decoration: none;
+} */
+
+
+.login-container {
+    min-height: 40vh;
 }
+  
+  
+.form-column {
+    padding-left: 3rem;
+  }
+  
+  .card {
+    border: none;
+    transition: all 0.3s ease;
+  }
+  
+  .card:hover {
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+  }
+  
+  .bg-gradient-danger {
+    background: linear-gradient(135deg, #ff4d4d, #f94449);
+  }
+  
+  .btn-icon {
+    width: 45px;
+    height: 45px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-icon:hover {
+    transform: translateY(-3px);
+  }
+  
+  .divider:after,
+  .divider:before {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #eee;
+  }
+  
+  @media (max-width: 992px) {
+    
+    
+    .form-column {
+      padding-left: 15px;
+      padding-right: 15px;
+    }
+  }
