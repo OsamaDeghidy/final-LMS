@@ -8,62 +8,53 @@
       <!-- Student Dashboard -->
       <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-0 py-3">
-          <h4 class="mb-0"><i class="fas fa-graduation-cap me-2 text-primary"></i> My Courses</h4>
+          <h4 class="mb-0"><i class="fas fa-graduation-cap me-2 text-primary"></i> دوراتي</h4>
         </div>
         <div class="card-body">
-          <!-- Course Item 1 -->
-          <div class="course-card mb-3 p-3 border rounded">
-            <div class="row align-items-center">
-              <div class="col-md-2">
-                <img src="{% static '/images/course/01.jpg' %}" class="img-fluid rounded" alt="Javascript Course">
-              </div>
-              <div class="col-md-5">
-                <h5 class="mb-1">Javascript Advanced</h5>
-                <p class="text-muted small mb-2">Programming • Intermediate Level</p>
-                <div class="d-flex align-items-center">
-                  <div class="progress flex-grow-1 me-2" style="height: 6px;">
-                    <div class="progress-bar bg-danger" style="width: 50%"></div>
+          {% if enrollments %}
+            {% for enrollment in enrollments %}
+              <div class="course-card mb-3 p-3 border rounded {% if enrollment.completed %}bg-light{% endif %}">
+                <div class="row align-items-center">
+                  <div class="col-md-2">
+                    <img src="{{ enrollment.course.image_course.url }}" class="img-fluid rounded" alt="{{ enrollment.course.name }}">
                   </div>
-                  <span class="text-danger fw-bold">50%</span>
+                  <div class="col-md-5">
+                    <h5 class="mb-1">{{ enrollment.course.name }}</h5>
+                    <p class="text-muted small mb-2">{{ enrollment.course.tags.all|join:", " }} • {{ enrollment.course.level }}</p>
+                    <div class="d-flex align-items-center">
+                      <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                        <div class="progress-bar {% if enrollment.completed %}bg-success{% else %}bg-danger{% endif %}" style="width: {{ enrollment.course.courseprogress.total_progress_percent }}%"></div>
+                      </div>
+                      <span class="{% if enrollment.completed %}text-success{% else %}text-danger{% endif %} fw-bold">{{ enrollment.course.courseprogress.total_progress_percent }}%</span>
+                    </div>
+                  </div>
+                  <div class="col-md-5 text-end">
+                    {% if enrollment.completed %}
+                      <button class="btn btn-success btn-sm me-2">
+                        <i class="fas fa-check-circle me-1"></i> مكتمل
+                      </button>
+                      <button class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-redo me-1"></i> إعادة
+                      </button>
+                    {% else %}
+                      <a href="{% url 'course_detail' enrollment.course.id %}" class="btn btn-outline-primary btn-sm me-2">
+                        <i class="fas fa-play-circle me-1"></i> متابعة
+                      </a>
+                      <a href="{% url 'course_detail' enrollment.course.id %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-info-circle me-1"></i> التفاصيل
+                      </a>
+                    {% endif %}
+                  </div>
                 </div>
               </div>
-              <div class="col-md-5 text-end">
-                <button class="btn btn-outline-primary btn-sm me-2">
-                  <i class="fas fa-play-circle me-1"></i> Continue
-                </button>
-                <button class="btn btn-outline-secondary btn-sm">
-                  <i class="fas fa-info-circle me-1"></i> Details
-                </button>
-              </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-5">
+              <i class="fas fa-book-open text-muted mb-3" style="font-size: 3rem;"></i>
+              <h5 class="text-muted">لم تشترك في أي دورات بعد</h5>
+              <a href="{% url 'allcourses' %}" class="btn btn-primary mt-3">تصفح الدورات</a>
             </div>
-          </div>
-
-          <!-- Course Item 2 -->
-          <div class="course-card p-3 border rounded bg-light">
-            <div class="row align-items-center">
-              <div class="col-md-2">
-                <img src="{% static '/images/course/02.jpg' %}" class="img-fluid rounded" alt="Photoshop Course">
-              </div>
-              <div class="col-md-5">
-                <h5 class="mb-1">Photoshop Advanced</h5>
-                <p class="text-muted small mb-2">Design • Advanced Level</p>
-                <div class="d-flex align-items-center">
-                  <div class="progress flex-grow-1 me-2" style="height: 6px;">
-                    <div class="progress-bar bg-success" style="width: 100%"></div>
-                  </div>
-                  <span class="text-success fw-bold">100%</span>
-                </div>
-              </div>
-              <div class="col-md-5 text-end">
-                <button class="btn btn-success btn-sm me-2">
-                  <i class="fas fa-check-circle me-1"></i> Completed
-                </button>
-                <button class="btn btn-outline-danger btn-sm">
-                  <i class="fas fa-redo me-1"></i> Restart
-                </button>
-              </div>
-            </div>
-          </div>
+          {% endif %}
         </div>
       </div>
 
