@@ -31,10 +31,17 @@ ALLOWED_HOSTS = []
 SITE_ID = 1
 
 AUTHENTICATION_BACKENDS = [
-    'axes.backends.AxesStandaloneBackend',
+    'axes.backends.AxesBackend',  # Using AxesBackend instead of AxesStandaloneBackend
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
+
+# Axes configuration
+AXES_ENABLED = True
+AXES_FAILURE_LIMIT = 5  # Number of failed login attempts before lockout
+AXES_COOLOFF_TIME = 1  # 1 hour lockout after too many failed attempts
+AXES_LOCKOUT_TEMPLATE = 'account/lockout.html'  # Create this template
+AXES_RESET_ON_SUCCESS = True
 
 
 # Application definition

@@ -16,26 +16,34 @@ def coursebase(request):
 # @login_required(login_url='login')
 
 def loginUser(request):
-    page = 'login'
     if request.user.is_authenticated:
         return redirect('index')
 
     if request.method == 'POST':
-        email = request.POST['email']
-        password = request.POST['password']
-
-        try:
-            user = User.objects.get(username=email)
-        except:
-            messages.error(request,'User not found')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        
+        if not email or not password:
+            messages.error(request, 'الرجاء إدخال البريد الإلكتروني وكلمة المرور')
+            return render(request, 'user/login.html')
+        
+        # First try to authenticate
         user = authenticate(request, username=email, password=password)
-
+        
         if user is not None:
+            # Authentication successful
             login(request, user)
+            messages.success(request, 'تم تسجيل الدخول بنجاح')
             return redirect('index')
         else:
-            messages.error(request,'Username or password is incorrect')
-    return render(request,'user/login.html',)
+            # Check if user exists but password is wrong
+            try:
+                User.objects.get(username=email)
+                messages.error(request, 'كلمة المرور غير صحيحة')
+            except User.DoesNotExist:
+                messages.error(request, 'لا يوجد حساب بهذا البريد الإلكتروني')
+    
+    return render(request, 'user/login.html')
 
 def logoutUser(request):
     logout(request)
@@ -60,13 +68,13 @@ def registerUser(request):
                     if not user.exists():
                         user=User.objects.create_user(username=email,email=email)
                         user.set_password(pwd)
-                        profile=Profile.objects.create(user=user,name=username,email=email,phone=phone)
+                        profile=Profile.objects.create(user=user,name=username,email=email,phone=phone,status='Student')
                         student=Student.objects.create(profile=profile)
                         user.save()
                         profile.save()
                         student.save()
-                        login(request, user)
-                        return redirect('index')
+                        messages.success(request, 'Account created successfully. Please login.')
+                        return redirect('login')
                     else:
                         return render(request, 'user/register.html',{"msg": "User already exists"})
                 else:
@@ -74,7 +82,8 @@ def registerUser(request):
                    
             except Exception as e:
                 return HttpResponse(e)
-        return render(request, 'user/register.html')        
+        return render(request, 'user/register.html')
+
 
 
 def update_profile(request):
