@@ -127,70 +127,59 @@ def update_profile(request):
             r_profile.linkedin=linkedin
 
             r_profile.save()
-            if(r_profile.status=="Student"):
+            if r_profile.status == "Student":
                 date_of_birth = request.POST.get('date_of_birth')
                 department = request.POST.get('department')
-                student = Student.objects.filter(profile=r_profile)
-
-                if student.exists():
-                    student=Student.objects.get(profile=r_profile)
-                else:
-                    student=Student()  
+                student = Student.objects.filter(profile=r_profile).first()
                 
-                student.profile = r_profile
-                student.department = department
-                if(date_of_birth is not None ):
+                if not student:
+                    student = Student(profile=r_profile)
+                
+                student.department = department if department else None
+                if date_of_birth:  # Only set if date_of_birth is not empty
                     student.date_of_birth = date_of_birth
                 student.save()
-                return redirect('profile_detail',profile_id=r_profile.id)   
+                return redirect('profile_detail', profile_id=r_profile.id)
 
-
-
-            elif(r_profile.status=="Teacher"):
+            elif r_profile.status == "Teacher":
                 date_of_birth = request.POST.get('date_of_birth')
                 department = request.POST.get('department')
                 qualification = request.POST.get('qualification')
                 bio = request.POST.get('bio')
                 research_interests = request.POST.get('research_interests')
-                teacher = Teacher.objects.filter(profile=r_profile)
-
-                if teacher.exists():
-                    teacher=Teacher.objects.get(profile=r_profile)
-                else:
-                    teacher=Teacher()  
-                 
-                teacher.profile = r_profile
-                teacher.department = department
-                teacher.qualification = qualification
-                teacher.bio = bio
-                teacher.research_interests = research_interests
-
-                if(date_of_birth is not None ):
+                
+                teacher = Teacher.objects.filter(profile=r_profile).first()
+                if not teacher:
+                    teacher = Teacher(profile=r_profile)
+                
+                teacher.department = department if department else None
+                teacher.qualification = qualification if qualification else None
+                teacher.bio = bio if bio else None
+                teacher.research_interests = research_interests if research_interests else None
+                
+                if date_of_birth:  # Only set if date_of_birth is not empty
                     teacher.date_of_birth = date_of_birth
                 teacher.save()
-                return redirect('profile_detail',profile_id=r_profile.id)  
+                return redirect('profile_detail', profile_id=r_profile.id)
             
-
-            elif(r_profile.status=="Organization"):
-                location=request.POST.get('location')
+            elif r_profile.status == "Organization":
+                location = request.POST.get('location')
                 website = request.POST.get('website')
                 founded_year = request.POST.get('founded_year')
                 employees = request.POST.get('employees')
-
-                organization = Organization.objects.filter(profile=r_profile)
-                if organization.exists():
-                    organization=Organization.objects.get(profile=r_profile)
-                else:
-                    organization=Organization()  
-                organization.profile = r_profile
-                organization.location = location
-                organization.website = website
-                organization.employees = employees
-
-                if(founded_year is not "" ):
+                
+                organization = Organization.objects.filter(profile=r_profile).first()
+                if not organization:
+                    organization = Organization(profile=r_profile)
+                
+                organization.location = location if location else None
+                organization.website = website if website else None
+                organization.employees = int(employees) if employees and employees.isdigit() else 0
+                
+                if founded_year:  # Only set if founded_year is not empty
                     organization.founded_year = founded_year
                 organization.save()
-                return redirect('profile_detail',profile_id=r_profile.id)   
+                return redirect('profile_detail', profile_id=r_profile.id)
             else:
                 return HttpResponse("Something went wrong")
         return render(request, 'user/update_profile.html', context)
