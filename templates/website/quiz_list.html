@@ -1,10 +1,6 @@
-{% extends 'main/base.html' %}
-
-{% block title %}
-  Quiz List
-{% endblock %}
-
-{% block content %}
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+{% block dashboard_content %}
   <div class="container">
     <div class="row justify-content-center mt-5">
       <div class="col-md-8">
@@ -39,4 +35,4 @@
       </div>
     </div>
   </div>
-{% endblock %}
+{% endblock dashboard_content %}

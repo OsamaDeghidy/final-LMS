@@ -1,21 +1,19 @@
-from datetime import datetime
-from django.http import HttpResponse
+from datetime import datetime, timedelta
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.utils import timezone
-from .models import Course, Module, Video, Comment, SubComment, Notes,Monitor, Tags, Quiz, Question, Answer, Enrollment
+from django.urls import reverse
+from django.core.exceptions import ObjectDoesNotExist
+
+from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment
 from user.models import Profile, Student, Organization, Teacher
-from datetime import datetime, timedelta
+from .utils import searchCourses
+
 from django.contrib.gis.geoip2 import GeoIP2
 from django_user_agents.utils import get_user_agent
 import requests
 import json
-from django.urls import reverse
-from .utils import searchCourses
-from django.shortcuts import redirect
-from django.core.exceptions import ObjectDoesNotExist
-from django.http import JsonResponse
 
 def batch(iterable, n=1):
     """
@@ -188,13 +186,141 @@ def create_course(request):
                 )
                 course.save()
                 course.tags.set(tags)
+                
+                # Process modules and quizzes
+                module_keys = [key for key in request.POST.keys() if key.startswith('module_name_module_')]
+                module_ids = [key.split('module_name_module_')[1] for key in module_keys]
+                
+                for module_id in module_ids:
+                    module_name = request.POST.get(f'module_name_module_{module_id}')
+                    if not module_name:
+                        continue
+                    
+                    # Create module
+                    module = Module(
+                        name=module_name,
+                        course=course,
+                        number=course.total_module + 1
+                    )
+                    module.save()
+                    course.total_module += 1
+                    
+                    # Process module videos
+                    module_videos = request.FILES.getlist(f'module_videos_module_{module_id}')
+                    video_names = []
+                    
+                    # Get video names
+                    video_name_keys = [k for k in request.POST.keys() if k.startswith(f'video_name_module_{module_id}_')]
+                    for key in video_name_keys:
+                        video_name = request.POST.get(key)
+                        if video_name and video_name.strip():
+                            video_names.append(video_name)
+                    
+                    # Create videos
+                    for i, video in enumerate(module_videos):
+                        video_name = video_names[i] if i < len(video_names) else video.name.split('.')[0]
+                        Video.objects.create(
+                            name=video_name,
+                            module=module,
+                            course=course,
+                            video=video,
+                            number=i+1
+                        )
+                    
+                    # Process module notes
+                    note_keys = [k for k in request.POST.keys() if k.startswith(f'module_notes_module_{module_id}_')]
+                    for i, key in enumerate(note_keys):
+                        note_text = request.POST.get(key)
+                        if note_text and note_text.strip():
+                            module.total_notes += 1
+                            Notes.objects.create(
+                                user=request.user,
+                                module=module,
+                                description=note_text,
+                                number=module.total_notes
+                            )
+                    
+                    # Process quiz if exists
+                    has_quiz = request.POST.get(f'has_quiz_module_{module_id}')
+                    if has_quiz == 'on':
+                        quiz_title = request.POST.get(f'quiz_title_module_{module_id}')
+                        quiz_description = request.POST.get(f'quiz_description_module_{module_id}')
+                        quiz_pass_mark = request.POST.get(f'quiz_pass_mark_module_{module_id}', 50)
+                        quiz_time_limit = request.POST.get(f'quiz_time_limit_module_{module_id}', 10)
+                        
+                        # Create quiz
+                        quiz = Quiz.objects.create(
+                            title=quiz_title,
+                            description=quiz_description,
+                            module=module,
+                            course=course,
+                            quiz_type='module',
+                            pass_mark=float(quiz_pass_mark),
+                            time_limit=int(quiz_time_limit),
+                            is_active=True
+                        )
+                        
+                        # Process questions
+                        question_text_keys = [k for k in request.POST.keys() if k.startswith(f'question_text_module_{module_id}_')]
+                        for key in question_text_keys:
+                            question_index = key.split(f'question_text_module_{module_id}_')[1]
+                            question_text = request.POST.get(key)
+                            if not question_text or not question_text.strip():
+                                continue
+                                
+                            question_type = request.POST.get(f'question_type_module_{module_id}_{question_index}')
+                            
+                            # Create question
+                            question = Question.objects.create(
+                                quiz=quiz,
+                                text=question_text,
+                                question_type=question_type,
+                                points=1,
+                                order=int(question_index)
+                            )
+                            
+                            # Process answers based on question type
+                            if question_type == 'short_answer':
+                                # For short answer, create a single answer
+                                answer_text = request.POST.get(f'answer_short_question_module_{module_id}_{question_index}')
+                                if answer_text:
+                                    Answer.objects.create(
+                                        question=question,
+                                        text=answer_text,
+                                        is_correct=True,
+                                        order=0
+                                    )
+                            else:
+                                # For multiple choice or true/false
+                                correct_answer = request.POST.get(f'correct_answer_question_module_{module_id}_{question_index}')
+                                
+                                # Get all answers for this question
+                                answer_keys = [k for k in request.POST.keys() if k.startswith(f'answer_text_question_module_{module_id}_{question_index}_')]
+                                
+                                for answer_key in answer_keys:
+                                    answer_index = answer_key.split('_')[-1]
+                                    answer_text = request.POST.get(answer_key)
+                                    
+                                    if answer_text and answer_text.strip():
+                                        is_correct = (correct_answer == answer_index)
+                                        Answer.objects.create(
+                                            question=question,
+                                            text=answer_text,
+                                            is_correct=is_correct,
+                                            order=int(answer_index)
+                                        )
+                
+                course.save()
                 return redirect('course_detail', course_id=course.id)
             except ObjectDoesNotExist:
                 return HttpResponse("Error: Teacher matching query does not exist.", status=404)
+            except Exception as e:
+                return HttpResponse(f"Error creating course: {str(e)}", status=500)
         
         # Get the profile for the dashboard_base.html template
         profile = Profile.objects.get(user=request.user)
-        context = {"profile": profile}
+        categories = Category.objects.all()
+        context = {"profile": profile, "categories": categories}
         return render(request, 'website/create_course.html', context)
     else:
         return redirect('index')
@@ -398,22 +524,93 @@ def create_module(request, course_id):
     if request.method == 'POST':
         module_name = request.POST['module_name']
         module_number = course.total_module
-        module=Module()
+        module = Module()
         module.name = module_name
-        module.course=course
+        module.course = course
         module.number = module_number
         module.save()
-        number=0
+        number = 0
+        
+        # Handle video uploads
         for video in request.FILES.getlist('video'):
             video_name = video.name.split('.')[0]
             number += 1
             Video.objects.create(module=module, video=video, name=video_name, course=course, number=number)
 
+
+        # Handle notes
         for note in request.POST.getlist('notes[]'):
             if note.strip():
                 module.total_notes += 1
                 Notes.objects.create(user=request.user, module=module, description=note, number=module.total_notes)
 
+        # Handle quiz creation if exists
+        quiz_title = request.POST.get('quiz_title')
+        if quiz_title:
+            quiz = Quiz.objects.create(
+                title=quiz_title,
+                description=request.POST.get('quiz_description', ''),
+                module=module,
+                course=course,
+                quiz_type='module',
+                time_limit=int(request.POST.get('quiz_time_limit', 10)),
+                pass_mark=float(request.POST.get('quiz_pass_mark', 50)),
+                is_active=True
+            )
+            
+            # Process questions
+            for i, question_text in enumerate(request.POST.getlist('question_text[]')):
+                if not question_text.strip():
+                    continue
+                    
+                question_type = request.POST.getlist('question_type[]')[i]
+                question = Question.objects.create(
+                    quiz=quiz,
+                    text=question_text,
+                    question_type=question_type,
+                    points=1,
+                    order=i
+                )
+                
+                if question_type == 'short_answer':
+                    # For short answer, create a single answer
+                    answer_text = request.POST.get(f'answer_short_{i}')
+                    if answer_text:
+                        Answer.objects.create(
+                            question=question,
+                            text=answer_text,
+                            is_correct=True,
+                            order=0
+                        )
+                else:
+                    # For multiple choice or true/false
+                    answer_index = 0
+                    while True:
+                        answer_key = f'answer_text_{i}_{answer_index}'
+                        if answer_key in request.POST:
+                            answer_text = request.POST[answer_key]
+                            is_correct = False
+                            
+                            if question_type == 'true_false':
+                                # For true/false, check if this is the selected radio
+                                correct_answer = request.POST.get(f'correct_answer_{i}')
+                                is_correct = (correct_answer == str(answer_index))
+                            else:
+                                # For multiple choice, check radio button
+                                correct_answer = request.POST.get(f'correct_answer_{i}')
+                                is_correct = (correct_answer == str(answer_index))
+                            
+                            Answer.objects.create(
+                                question=question,
+                                text=answer_text,
+                                is_correct=is_correct,
+                                order=answer_index
+                            )
+                            answer_index += 1
+                        else:
+                            break
+        
+        course.save()
         return redirect('course_modules', course_id=course_id)
 
     return render(request, 'website/create_module.html', {
