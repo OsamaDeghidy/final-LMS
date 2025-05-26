@@ -1,10 +1,9 @@
-/* General */
+/* 
 
 body {
     font-family: "Roboto", sans-serif;
   }
   
-  /* Navigation bar */
   .nav-item {
       padding-left: 10px;
       padding-right: 10px;
@@ -58,7 +57,7 @@ body {
   .nav-icon {
     position: relative;
     top: 5px;
-    /* margin: 0 9px 15px 9px; */
+    
     width: 2rem;
   }
   
@@ -85,14 +84,14 @@ body {
     border-radius: 5px;
   }
   
-  /* Flexbox container */
+  
   
   .container {
     display: flex;
     justify-content: space-between;
   }
   
-  /* Main video */
+  
   
   .video-and-comments {
     width: 65%;
@@ -105,7 +104,7 @@ body {
     border: 0;
   }
   
-  /* Information about video */
+
   
   .video-stats {
     display: flex;
@@ -154,8 +153,7 @@ body {
     height: 1.5px;
     border: none;
   }
-  
-  /* Comment section */
+
   
   .comment {
     margin-left: 5px;
@@ -179,7 +177,7 @@ body {
     font-weight: 700;
   }
   
-  /*Aside bar*/
+
   
   aside {
     width: 32%;
@@ -434,4 +432,4 @@ body {
     }
     .floating-card-hover:hover {
       transform: translateY(-10px) rotateY(10deg);
-    }
+    } */

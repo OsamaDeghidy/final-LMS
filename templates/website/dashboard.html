@@ -1,5 +1,12 @@
 {% extends 'main/dashboard_base.html' %}
 {% load static %}
+
+{% block head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'main/css/dashboard.css' %}">
+<script src="{% static 'main/js/dashboard.js' %}" defer></script>
+{% endblock %}
+
 {% block dashboard_content %}
 
   <!-- Main Content -->
@@ -22,8 +29,8 @@
                     <h5 class="mb-1">{{ enrollment.course.name }}</h5>
                     <p class="text-muted small mb-2">{{ enrollment.course.tags.all|join:", " }} • {{ enrollment.course.level }}</p>
                     <div class="d-flex align-items-center">
-                      <div class="progress flex-grow-1 me-2" style="height: 6px;">
-                        <div class="progress-bar {% if enrollment.completed %}bg-success{% else %}bg-danger{% endif %}" style="width: {{ enrollment.course.courseprogress.total_progress_percent }}%"></div>
+                      <div class="progress flex-grow-1 me-2 course-progress">
+                        <div class="progress-bar {% if enrollment.completed %}bg-success{% else %}bg-danger{% endif %}" style="--progress: {{ enrollment.course.courseprogress.total_progress_percent }}%;"></div>
                       </div>
                       <span class="{% if enrollment.completed %}text-success{% else %}text-danger{% endif %} fw-bold">{{ enrollment.course.courseprogress.total_progress_percent }}%</span>
                     </div>
@@ -303,139 +310,5 @@
   </div>
 </div>
 
-
-  <style>
-     .icon-circle {
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-      
-        .card {
-          border-radius: 12px;
-        }
-      
-        h3 {
-          font-weight: 600;
-        }
-  </style>
-  
-  <script>
-            // وظيفة لفتح نافذة حذف الكورس
-        function openDeleteCourseModal(courseId, courseName) {
-            // Store the course ID in a data attribute for later use
-            var deleteCourseModalElement = document.getElementById('deleteCourseModal');
-            if (deleteCourseModalElement) {
-                // Set the course ID and name in the modal
-                deleteCourseModalElement.setAttribute('data-course-id', courseId);
-                
-                // Update the course name in the modal
-                var courseNameElement = deleteCourseModalElement.querySelector('strong');
-                if (courseNameElement) {
-                    courseNameElement.textContent = courseName;
-                }
-                
-                // Show the modal
-                deleteCourseModalElement.classList.add('show');
-                deleteCourseModalElement.style.display = 'block';
-                document.body.classList.add('modal-open');
-                document.body.appendChild(document.createElement('div')).className = 'modal-backdrop fade show';
-            }
-        }
-
-        // وظيفة لإغلاق نافذة حذف الكورس
-        function closeDeleteCourseModal() {
-            var deleteCourseModalElement = document.getElementById('deleteCourseModal');
-            if (deleteCourseModalElement) {
-                deleteCourseModalElement.classList.remove('show');
-                deleteCourseModalElement.style.display = 'none';
-                document.body.classList.remove('modal-open');
-                var backdrop = document.querySelector('.modal-backdrop');
-                if (backdrop) {
-                    backdrop.remove();
-                }
-            }
-        }
-
-        // وظيفة لحذف الكورس
-        function deleteCourse() {
-            // Get the course ID from the modal's data attribute
-            var deleteCourseModalElement = document.getElementById('deleteCourseModal');
-            var courseId = deleteCourseModalElement.getAttribute('data-course-id');
-            
-            if (!courseId) {
-                console.error('Course ID not found');
-                closeDeleteCourseModal();
-                showAlert('حدث خطأ: لم يتم العثور على معرف الدورة', 'danger');
-                return;
-            }
-            
-            // Send the delete request
-            fetch('/course/delete/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ course_id: courseId }),
-                credentials: 'same-origin'
-            })
-            .then(function(response) {
-                if (response.ok) {
-                    closeDeleteCourseModal();
-                    showAlert('تم حذف الكورس بنجاح', 'success');
-                    // توجيه المستخدم إلى صفحة لوحة التحكم
-                    setTimeout(function() { window.location.href = '/dashboard/'; }, 1500);
-                } else {
-                    throw new Error('حدث خطأ أثناء حذف الكورس');
-                }
-            })
-            .catch(function(error) {
-                closeDeleteCourseModal();
-                showAlert(error.message, 'danger');
-                console.error('Error:', error);
-            });
-        }
-        // Function to show alerts
-        function showAlert(message, type) {
-            // Create alert element
-            var alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
-            alertDiv.setAttribute('role', 'alert');
-            alertDiv.style.position = 'fixed';
-            alertDiv.style.top = '20px';
-            alertDiv.style.right = '20px';
-            alertDiv.style.zIndex = '9999';
-            alertDiv.style.maxWidth = '400px';
-            
-            // Add message
-            alertDiv.innerHTML = message + 
-                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
-            
-            // Add to document
-            document.body.appendChild(alertDiv);
-            
-            // Auto remove after 5 seconds
-            setTimeout(function() {
-                alertDiv.classList.remove('show');
-                setTimeout(function() {
-                    alertDiv.remove();
-                }, 500);
-            }, 5000);
-            
-            // Add click event to close button
-            alertDiv.querySelector('.btn-close').addEventListener('click', function() {
-                alertDiv.classList.remove('show');
-                setTimeout(function() {
-                    alertDiv.remove();
-                }, 500);
-            });
-        }
-  </script>
-
-
-
 {% endblock dashboard_content %}
+

@@ -1,5 +1,30 @@
-/* Googlefont Poppins CDN Link */
+/* 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap');
+
+/* Progress Bar Styles */
+.course-progress {
+    height: 6px;
+    background-color: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.course-progress .progress-bar {
+    height: 100%;
+    width: var(--progress, 0%);
+    background-color: #0d6efd; /* Default blue color */
+    transition: width 0.6s ease;
+    border-radius: 3px;
+}
+
+.course-progress .progress-bar.bg-success {
+    background-color: #198754; /* Green for completed */
+}
+
+.course-progress .progress-bar.bg-danger {
+    background-color: #dc3545; /* Red for in-progress */
+}
+
 
 .home-section .home-content{
   position: relative;
@@ -85,10 +110,10 @@
 .home-content .sales-boxes{
   display: flex;
   justify-content: space-between;
-  /* padding: 0 20px; */
+
 }
 
-/* left box */
+
 .home-content .sales-boxes .recent-sales{
   width: 65%;
   background: #fff;
@@ -105,7 +130,6 @@
 .sales-boxes .box .title{
   font-size: 24px;
   font-weight: 500;
-  /* margin-bottom: 10px; */
 }
 .sales-boxes .sales-details li.topic{
   font-size: 20px;
@@ -140,7 +164,7 @@
   background:  #0d3073;
 }
 
-/* Right box */
+
 .home-content .sales-boxes .top-sales{
   width: 35%;
   background: #fff;
@@ -173,4 +197,22 @@
   font-size: 17px;
   font-weight: 400;
   color: #333;
+} */
+
+
+.icon-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+h3 {
+  font-weight: 600;
 }
