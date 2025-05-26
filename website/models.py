@@ -121,6 +121,47 @@ class Module(models.Model):
     total_notes = models.IntegerField(null=True, blank=True, default=0)
     duration = models.CharField(max_length=2000, blank=True, null=True)
 
+    def get_ordered_content(self):
+        """
+        Returns a list of all content (videos and quizzes) in the module in the correct order.
+        Each item is a dictionary with a 'type' field ('video' or 'quiz') and the object.
+        """
+        content = []
+        
+        # Add videos
+        for video in self.video_set.all().order_by('number'):
+            content.append({
+                'type': 'video',
+                'id': video.id,
+                'name': video.name,
+                'duration': video.duration,
+                'object': video
+            })
+            
+            # Add quizzes for this video
+            for quiz in video.quiz_set.all():
+                content.append({
+                    'type': 'quiz',
+                    'id': quiz.id,
+                    'title': quiz.title,
+                    'video': video,
+                    'questions_count': quiz.questions.count(),
+                    'object': quiz
+                })
+        
+        # Add module-level quizzes
+        for quiz in self.module_quizzes.all():
+            content.append({
+                'type': 'quiz',
+                'id': quiz.id,
+                'title': quiz.title,
+                'video': None,
+                'questions_count': quiz.questions.count(),
+                'object': quiz
+            })
+            
+        return content
+
     def save(self, *args, **kwargs):
         # Save the instance first to ensure it has a primary key
         if not self.pk:
@@ -135,7 +176,7 @@ class Module(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-            return self.name + " - " + self.course.name
+        return self.name + " - " + self.course.name
 
 
 

@@ -103,21 +103,41 @@
                                         <h3>{{ module.name }}</h3>
                                         <span class="module-meta">{{ module.videos.count }} فيديو • {{ module.duration }}</span>
                                     </div>
-                                    <div class="module-videos">
-                                        {% for video in module.video_set.all %}
-                                            <div class="video-item">
-                                                <i class="fas fa-play-circle"></i>
-                                                <span>{{ video.name }}</span>
-                                                <span class="video-duration">
-                                                    {% if video.duration %}
-                                                        {{ video.duration }} seconds
+                                    <div class="module-content">
+                                        {% for item in module.get_ordered_content %}
+                                            {% if item.type == 'video' %}
+                                                <div class="content-item video-item">
+                                                    <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=item.id %}" class="content-link">
+                                                        <div class="content-header">
+                                                            <i class="fas fa-play-circle"></i>
+                                                            <span class="content-title">{{ item.name }}</span>
+                                                            <span class="content-meta">
+                                                                {% if item.duration %}
+                                                                    {{ item.duration|time:"H:i:s" }}
+                                                                {% else %}
+                                                                    00:00
+                                                                {% endif %}
+                                                            </span>
+                                                        </div>
+                                                    </a>
+                                                </div>
+                                            {% elif item.type == 'quiz' %}
+                                                <div class="content-item quiz-item">
+                                                    {% if item.video %}
+                                                        <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=item.video.id %}" class="content-link">
                                                     {% else %}
-                                                        00:00
+                                                        <a href="#" class="content-link" onclick="alert('هذا اختبار خاص بالوحدة')">
                                                     {% endif %}
-                                                </span>
-                                            </div>
+                                                            <div class="content-header">
+                                                                <i class="fas fa-question-circle"></i>
+                                                                <span class="content-title">اختبار: {{ item.title|default:"اختبار الفيديو" }}</span>
+                                                                <span class="content-meta">{{ item.questions_count }} سؤال</span>
+                                                            </div>
+                                                        </a>
+                                                </div>
+                                            {% endif %}
                                         {% empty %}
-                                            <div class="no-videos">لا توجد فيديوهات في هذه الوحدة</div>
+                                            <div class="no-content">لا يوجد محتوى في هذه الوحدة</div>
                                         {% endfor %}
                                     </div>
                                 </div>
@@ -239,7 +259,7 @@
                 </div>
 
                 <!-- Course Content -->
-                <section class="content-accordion">
+                <!-- <section class="content-accordion">
                     <h2 class="section-title">محتوى الدورة</h2>
                     <p>{{ course.modules }} وحدة • {{ course.videos }} محاضرة • إجمالي المدة {{ course.vidoes_time }}</p>
                     
@@ -291,7 +311,7 @@
                         </div>
                     </div>
                     {% endfor %}
-                </section>
+                </section> -->
 
                 <!-- Requirements -->
                 <section>

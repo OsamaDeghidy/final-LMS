@@ -191,19 +191,135 @@
         padding: 15px 20px;
     }
 
-    .lecture {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 0;
-        border-bottom: 1px solid #f2f2f2;
+    /* Module Content Styles */
+    .module-content {
+        margin-top: 15px;
     }
 
-    .lecture-title {
+    .content-item {
+        margin-bottom: 10px;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+        transition: all 0.2s ease;
+        background-color: #f8f9fa;
+    }
+
+    .content-item:hover {
+        background-color: #f1f3f5;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .content-link {
         display: flex;
         align-items: center;
-        gap: 15px;
+        padding: 12px 15px;
+        text-decoration: none;
+        color: #1c1d1f;
     }
+
+    .content-item i {
+        font-size: 1.2rem;
+        min-width: 24px;
+        text-align: center;
+        margin-left: 10px;
+    }
+
+    .video-item i {
+        color: #a435f0;
+    }
+
+    .quiz-item i {
+        color: #ec5252;
+    }
+
+    .content-title {
+        flex: 1;
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+
+    .content-meta {
+        font-size: 0.85rem;
+        color: #6a6f73;
+        white-space: nowrap;
+        background-color: #e9ecef;
+        padding: 2px 8px;
+        border-radius: 10px;
+        margin-right: 5px;
+    }
+
+    .no-content {
+        padding: 15px;
+        text-align: center;
+        color: #6a6f73;
+        font-style: italic;
+    }
+
+.video-header i {
+    margin-left: 10px;
+    color: #6a6f73;
+}
+
+.video-header span:first-of-type {
+    flex-grow: 1;
+}
+
+.video-duration {
+    background-color: #e9ecef;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #495057;
+}
+
+.video-quizzes {
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 10px 15px 10px 35px;
+}
+
+.quiz-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    color: #1c1d1f;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.quiz-item:hover {
+    background-color: #f1f3f5;
+}
+
+.quiz-item i {
+    margin-left: 10px;
+    color: #6f42c1;
+    font-size: 0.9rem;
+}
+
+.quiz-item span:first-of-type {
+    flex-grow: 1;
+}
+
+.quiz-questions {
+    background-color: #e9ecef;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    color: #495057;
+}
+
+.lecture {
+    display: flex;
+    justify-content: space-between;
+}
+
+.lecture-title {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
 
     .lecture-status {
         width: 24px;
