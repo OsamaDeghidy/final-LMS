@@ -174,7 +174,7 @@
           <div class="row g-4">
             {% for course in courses %}
             <div class="col-12">
-              <div class="card mb-4 shadow-sm border-0" style="border-radius: 12px;">
+              <div id="course-{{ course.id }}" class="card mb-4 shadow-sm border-0" style="border-radius: 12px;">
                 <div class="row g-0 align-items-stretch">
                   <!-- Course Image -->
                   <div class="col-md-4" >
@@ -286,7 +286,7 @@
     {% endif %}
 </div>
 <!-- Modal لحذف الكورس -->
-<div class="modal fade" id="deleteCourseModal" tabindex="-1" aria-labelledby="deleteCourseModalLabel" aria-hidden="true">
+<div class="modal fade" id="deleteCourseModal" tabindex="-1" aria-labelledby="deleteCourseModalLabel" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header" style="background: linear-gradient(135deg, #ff4757, #ff6b81); color: white;">
@@ -298,14 +298,17 @@
           <i class="fas fa-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
         </div>
         <h4 class="mb-3">هل أنت متأكد من حذف هذا الكورس؟</h4>
-        <p class="mb-1">اسم الكورس: <strong>{{ course.name }}</strong></p>
+        <p class="mb-1">اسم الكورس: <strong id="courseNameToDelete"></strong></p>
         <p class="text-danger">سيتم حذف جميع الموديولات والفيديوهات المرتبطة به!</p>
         <p class="text-muted">لا يمكن التراجع عن هذا الإجراء</p>
       </div>
-      <div class="modal-footer justify-content-center">
-        <button type="button" class="btn btn-secondary px-4" onclick="closeDeleteCourseModal()">إلغاء</button>
-        <button type="button" class="btn btn-danger px-4" onclick="deleteCourse()">حذف</button>
-      </div>
+      <form method="post" id="deleteCourseForm">
+        {% csrf_token %}
+        <div class="modal-footer justify-content-center">
+          <button type="button" class="btn btn-secondary px-4" onclick="closeDeleteCourseModal()">إلغاء</button>
+          <button type="button" class="btn btn-danger px-4" onclick="deleteCourse()">حذف</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>

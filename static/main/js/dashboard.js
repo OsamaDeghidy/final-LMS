@@ -1,81 +1,81 @@
+// Global variable to store the current course ID for deletion
+let courseIdToDelete = null;
+
 // Function to open the delete course modal
 function openDeleteCourseModal(courseId, courseName) {
-    const modal = document.getElementById('deleteCourseModal');
+    // Store the course ID for later use
+    courseIdToDelete = courseId;
+    
+    // Update the course name in the modal
     const courseNameElement = document.getElementById('courseNameToDelete');
-    const confirmButton = document.getElementById('confirmDeleteButton');
-    
-    // Set the course name in the modal
-    courseNameElement.textContent = courseName;
-    
-    // Update the confirm button's onclick handler
-    confirmButton.onclick = function() {
-        deleteCourse(courseId);
-    };
+    if (courseNameElement) {
+        courseNameElement.textContent = courseName;
+    }
     
     // Show the modal
-    modal.classList.add('show');
-    modal.style.display = 'block';
-    document.body.classList.add('modal-open');
-    
-    // Add a backdrop
-    const backdrop = document.createElement('div');
-    backdrop.className = 'modal-backdrop fade show';
-    document.body.appendChild(backdrop);
+    const modal = new bootstrap.Modal(document.getElementById('deleteCourseModal'));
+    modal.show();
 }
 
 // Function to close the delete course modal
 function closeDeleteCourseModal() {
-    const modal = document.getElementById('deleteCourseModal');
-    modal.classList.remove('show');
-    modal.style.display = 'none';
-    document.body.classList.remove('modal-open');
+    // Try to get the modal instance using Bootstrap's API
+    try {
+        const modalElement = document.getElementById('deleteCourseModal');
+        const bsModal = bootstrap.Modal.getInstance(modalElement);
+        if (bsModal) {
+            bsModal.hide();
+            return;
+        }
+    } catch (error) {
+        console.error('Error using Bootstrap Modal API:', error);
+    }
     
-    // Remove the backdrop
-    const backdrop = document.querySelector('.modal-backdrop');
-    if (backdrop) {
-        backdrop.remove();
+    // Fallback method if Bootstrap API fails
+    const modalElement = document.getElementById('deleteCourseModal');
+    if (modalElement) {
+        modalElement.classList.remove('show');
+        modalElement.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        
+        // Remove the backdrop
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
     }
 }
 
 // Function to delete a course
-function deleteCourse(courseId) {
-    // Get the CSRF token
-    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+function deleteCourse() {
+    // Check if we have a course ID to delete
+    if (!courseIdToDelete) {
+        alert('No course ID found for deletion');
+        return;
+    }
     
-    // Send a DELETE request to the server
-    fetch(`/courses/delete/${courseId}/`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRFToken': csrftoken,
-            'Content-Type': 'application/json'
-        },
-        credentials: 'same-origin'
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            // Close the modal
-            closeDeleteCourseModal();
-            // Show success message
-            showAlert('تم حذف الكورس بنجاح', 'success');
-            // Remove the course card from the DOM
-            const courseCard = document.getElementById(`course-${courseId}`);
-            if (courseCard) {
-                courseCard.remove();
-            }
-        } else {
-            throw new Error(data.message || 'حدث خطأ أثناء حذف الكورس');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showAlert(error.message || 'حدث خطأ أثناء حذف الكورس', 'danger');
-    });
+    // Create a form to submit
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/course/delete/';
+    
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    form.appendChild(csrfInput);
+    
+    // Add course ID
+    const courseIdInput = document.createElement('input');
+    courseIdInput.type = 'hidden';
+    courseIdInput.name = 'course_id';
+    courseIdInput.value = courseIdToDelete;
+    form.appendChild(courseIdInput);
+    
+    // Add to document and submit
+    document.body.appendChild(form);
+    form.submit();
 }
 
 // Function to show alerts
@@ -120,6 +120,8 @@ function initializePopovers() {
 
 // Initialize the dashboard when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard initialized');
+    
     // Initialize tooltips and popovers
     initializeTooltips();
     initializePopovers();
@@ -127,17 +129,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add event listeners for the delete course modal
     const modal = document.getElementById('deleteCourseModal');
     if (modal) {
-        // Close modal when clicking the close button
+        console.log('Delete course modal found');
+        
+        // Add event listeners for close buttons
         const closeButtons = modal.querySelectorAll('[data-bs-dismiss="modal"]');
         closeButtons.forEach(button => {
-            button.addEventListener('click', closeDeleteCourseModal);
-        });
-        
-        // Close modal when clicking outside
-        modal.addEventListener('click', function(event) {
-            if (event.target === modal) {
+            button.addEventListener('click', function() {
                 closeDeleteCourseModal();
-            }
+            });
         });
+    } else {
+        console.error('Delete course modal not found');
     }
 });
