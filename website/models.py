@@ -20,6 +20,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 import os
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Category(models.Model):
@@ -111,8 +112,6 @@ class Enrollment(models.Model):
 
 
 
-
-
 class Module(models.Model):
     name = models.CharField(max_length=2000, blank=True, null=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, blank=True, null=True)
@@ -140,8 +139,6 @@ class Module(models.Model):
 
 
 
-
-
 class Video(models.Model):
     name = models.CharField(max_length=2000, null=True, blank=True)
     number=models.IntegerField(blank=True,null=True, default=0)
@@ -164,8 +161,6 @@ class Video(models.Model):
 
 
 
-
-
 class Comment(models.Model):
     user=models.ForeignKey(User, on_delete=models.CASCADE,null=True,blank=True)
     description=RichTextField(null=True, blank=True)
@@ -185,8 +180,6 @@ class Comment(models.Model):
 
 
 
-
-
 class SubComment(models.Model):
     user=models.ForeignKey(User, on_delete=models.CASCADE,null=True,blank=True)
     comment=models.ForeignKey(Comment, on_delete=models.CASCADE,null=True,blank=True)
@@ -197,7 +190,6 @@ class SubComment(models.Model):
         #desc = self.description if self.description else ""
         user_name = self.user.profile.name
         return f"{user_name} - {video_name} - {course_name}"
-
 
 
 
@@ -698,6 +690,33 @@ class BookCategory(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Review(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    comment = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('course', 'user')
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.user.username}'s review for {self.course.name}"
+    
+    def save(self, *args, **kwargs):
+        # Call the original save method
+        super().save(*args, **kwargs)
+        # Update the course's average rating
+        course = self.course
+        reviews = Review.objects.filter(course=course)
+        if reviews.exists():
+            avg_rating = reviews.aggregate(models.Avg('rating'))['rating__avg']
+            course.rating = round(avg_rating, 1)
+            course.save(update_fields=['rating'])
 
 
 class Book(models.Model):

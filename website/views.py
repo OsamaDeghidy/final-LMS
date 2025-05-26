@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment
+from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, Review
 from user.models import Profile, Student, Organization, Teacher
 from .utils import searchCourses
 
@@ -328,7 +328,18 @@ def create_course(request):
 def course_detail(request, course_id):
     course = get_object_or_404(Course, pk=course_id)
     monitor = None
+    user_review = None
+    is_enrolled = False
+    
     if request.user.is_authenticated:
+        # Check if user is enrolled in the course
+        enrollment = Enrollment.objects.filter(course=course, student=request.user).first()
+        if enrollment:
+            is_enrolled = True
+            
+        # Get user's review if it exists
+        user_review = Review.objects.filter(course=course, user=request.user).first()
+        
         try:
             monitor = Monitor.objects.get(user=request.user, landing_page=request.META.get('HTTP_HOST') + request.META.get('PATH_INFO'), ip=request.META.get('REMOTE_ADDR'))
             monitor.frequency += 1
@@ -358,6 +369,29 @@ def course_detail(request, course_id):
         monitor.landing_page = request.META.get('HTTP_HOST') + request.META.get('PATH_INFO')
         monitor.frequency = 1
         monitor.save()
+    
+    # Handle review submission
+    if request.method == 'POST' and request.user.is_authenticated and 'review_rating' in request.POST:
+        rating = int(request.POST.get('review_rating'))
+        comment = request.POST.get('review_comment', '')
+        
+        # Create or update review
+        if user_review:
+            user_review.rating = rating
+            user_review.comment = comment
+            user_review.save()
+            messages.success(request, 'تم تحديث تقييمك بنجاح!')
+        else:
+            Review.objects.create(
+                course=course,
+                user=request.user,
+                rating=rating,
+                comment=comment
+            )
+            messages.success(request, 'تم إضافة تقييمك بنجاح!')
+        
+        # Refresh user review after submission
+        user_review = Review.objects.filter(course=course, user=request.user).first()
         
     if not request.user.is_authenticated:
         profile_context = {"status": "none"}
@@ -367,7 +401,32 @@ def course_detail(request, course_id):
         if profile.exists():
             profile=Profile.objects.get(user=request.user)
             profile_context=profile
-    context = {"profile": profile_context, "course": course}        
+    
+    # Get all modules for this course with their videos
+    modules = Module.objects.filter(course=course).order_by('number').prefetch_related('video_set')
+    
+    # Get course reviews
+    reviews = Review.objects.filter(course=course).select_related('user')
+    
+    # Check if the user is a teacher and if they own this course
+    is_owner = False
+    if request.user.is_authenticated:
+        try:
+            teacher = Teacher.objects.get(profile__user=request.user)
+            if teacher == course.teacher:
+                is_owner = True
+        except Teacher.DoesNotExist:
+            pass
+    
+    context = {
+        "profile": profile_context, 
+        "course": course,
+        "modules": modules,
+        "reviews": reviews,
+        "user_review": user_review,
+        "is_enrolled": is_enrolled,
+        "is_owner": is_owner
+    }        
     return render(request, 'website/course_detail.html', context)
 
 def update_course(request, course_id):

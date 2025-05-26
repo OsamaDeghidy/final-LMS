@@ -1,5 +1,6 @@
 {% extends 'main/base.html' %}
-{% load static %} {% block head %}
+{% load static %}
+{% block head %}
 {% endblock %} {% block title %}
 {% endblock %} {% block content %}
 
@@ -61,25 +62,174 @@
 
                 <!-- Course Tabs -->
                 <div class="course-tabs">
-                    <div class="tab active">عن الدورة</div>
-                    <div class="tab">المحتوى</div>
-                    <div class="tab">التقييمات</div>
-                    <div class="tab">الأسئلة الشائعة</div>
+                    <div class="tab active" data-tab="about">عن الدورة</div>
+                    <div class="tab" data-tab="content">المحتوى</div>
+                    <div class="tab" data-tab="reviews">التقييمات</div>
+                    <div class="tab" data-tab="faq">الأسئلة الشائعة</div>
                 </div>
 
-                <!-- What You'll Learn -->
-                <section>
-                    <h2 class="section-title">ما الذي ستتعلمه في هذه الدورة</h2>
-                    <div class="learn-list">
-                        {% if course.learned %}
-                            {{ course.learned|safe }}
-                        {% else %}
-                            <div class="alert alert-info">
-                                لم يتم إضافة أهداف تعليمية بعد.
+                <!-- Tab Content -->
+                <div class="tab-content" id="about-tab" style="display: block;">
+                    <!-- What You'll Learn -->
+                    <section>
+                        <h2 class="section-title">ما الذي ستتعلمه في هذه الدورة</h2>
+                        <div class="learn-list">
+                            {% if course.learned %}
+                                {{ course.learned|safe }}
+                            {% else %}
+                                <div class="alert alert-info">
+                                    لم يتم إضافة أهداف تعليمية بعد.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </section>
+                </div>
+                
+                <div class="tab-content" id="content-tab" style="display: none;">
+                    <!-- Course Content Tab -->
+                    <section>
+                        <h2 class="section-title">محتوى الدورة</h2>
+                        <div class="course-modules">
+                            {% for module in modules %}
+                                <div class="module-item">
+                                    <div class="module-header">
+                                        <h3>{{ module.name }}</h3>
+                                        <span class="module-meta">{{ module.videos.count }} فيديو • {{ module.duration }}</span>
+                                    </div>
+                                    <div class="module-videos">
+                                        {% for video in module.video_set.all %}
+                                            <div class="video-item">
+                                                <i class="fas fa-play-circle"></i>
+                                                <span>{{ video.name }}</span>
+                                                <span class="video-duration">
+                                                    {% if video.duration %}
+                                                        {{ video.duration }} seconds
+                                                    {% else %}
+                                                        00:00
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                        {% empty %}
+                                            <div class="no-videos">لا توجد فيديوهات في هذه الوحدة</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="alert alert-info">لم يتم إضافة وحدات بعد</div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                </div>
+                
+                <div class="tab-content" id="reviews-tab" style="display: none;">
+                    <!-- Reviews Tab -->
+                    <section>
+                        <h2 class="section-title">تقييمات الطلاب</h2>
+                        
+                        <!-- Review Statistics -->
+                        <div class="review-stats">
+                            <div class="rating-summary">
+                                <div class="average-rating">{{ course.rating|floatformat:1 }}</div>
+                                <div class="stars">
+                                    {% for i in "12345"|make_list %}
+                                        {% if forloop.counter <= course.rating|floatformat:0|add:"0" %}
+                                            <i class="fas fa-star"></i>
+                                        {% elif forloop.counter <= course.rating|floatformat:1|add:"0.5" %}
+                                            <i class="fas fa-star-half-alt"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <div class="total-reviews">{{ reviews.count }} تقييم</div>
                             </div>
+                        </div>
+                        
+                        <!-- Add Review Form -->
+                        {% if user.is_authenticated and is_enrolled %}
+                            <div class="add-review-section">
+                                <h3>أضف تقييمك</h3>
+                                <form method="POST" action="{% url 'course_detail' course_id=course.id %}" class="review-form">
+                                    {% csrf_token %}
+                                    <div class="rating-input">
+                                        <label>تقييمك:</label>
+                                        <div class="star-rating">
+                                            {% for i in "12345"|make_list %}
+                                                <input type="radio" id="star{{ i }}" name="review_rating" value="{{ i }}" {% if user_review and user_review.rating == forloop.counter %}checked{% endif %} required>
+                                                <label for="star{{ i }}"><i class="fas fa-star"></i></label>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="review_comment">تعليقك:</label>
+                                        <textarea id="review_comment" name="review_comment" rows="4" class="form-control">{{ user_review.comment|default:'' }}</textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">{{ user_review|yesno:"تحديث التقييم,إضافة تقييم" }}</button>
+                                </form>
+                            </div>
+                        {% elif user.is_authenticated and not is_enrolled %}
+                            <div class="alert alert-info">يجب أن تكون مسجلاً في الدورة لإضافة تقييم</div>
+                        {% elif not user.is_authenticated %}
+                            <div class="alert alert-info">يجب تسجيل الدخول لإضافة تقييم</div>
                         {% endif %}
-                    </div>
-                </section>
+                        
+                        <!-- Reviews List -->
+                        <div class="reviews-list">
+                            {% for review in reviews %}
+                                <div class="review-item">
+                                    <div class="review-header">
+                                        <div class="reviewer-info">
+                                            {% if review.user.profile.image %}
+                                                <img src="{{ review.user.profile.image.url }}" alt="{{ review.user.username }}" class="reviewer-avatar">
+                                            {% else %}
+                                                <div class="reviewer-avatar">{{ review.user.username|slice:":1"|upper }}</div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="reviewer-name">{{ review.user.username }}</div>
+                                                <div class="review-date">{{ review.created_at|date:"d/m/Y" }}</div>
+                                            </div>
+                                        </div>
+                                        <div class="review-rating">
+                                            {% for i in "12345"|make_list %}
+                                                {% if forloop.counter <= review.rating %}
+                                                    <i class="fas fa-star"></i>
+                                                {% else %}
+                                                    <i class="far fa-star"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <div class="review-content">
+                                        {{ review.comment|linebreaks|default:"" }}
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="no-reviews">لا توجد تقييمات بعد. كن أول من يقيم هذه الدورة!</div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                </div>
+                
+                <div class="tab-content" id="faq-tab" style="display: none;">
+                    <!-- FAQ Tab -->
+                    <section>
+                        <h2 class="section-title">الأسئلة الشائعة</h2>
+                        <div class="faq-list">
+                            <div class="faq-item">
+                                <div class="faq-question">هل يمكنني الوصول إلى المحتوى بعد انتهاء الدورة؟</div>
+                                <div class="faq-answer">نعم، بمجرد التسجيل في الدورة، يمكنك الوصول إلى جميع المحتويات مدى الحياة.</div>
+                            </div>
+                            <div class="faq-item">
+                                <div class="faq-question">هل هناك شهادة عند إكمال الدورة؟</div>
+                                <div class="faq-answer">نعم، ستحصل على شهادة إتمام بعد إكمال جميع وحدات الدورة.</div>
+                            </div>
+                            <div class="faq-item">
+                                <div class="faq-question">هل يمكنني تنزيل الفيديوهات؟</div>
+                                <div class="faq-answer">لا، الفيديوهات متاحة للمشاهدة عبر الإنترنت فقط.</div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
 
                 <!-- Course Content -->
                 <section class="content-accordion">
@@ -1096,7 +1246,286 @@
             font-size: 0.6rem;
             margin-left: 10px;
         }
+        /* Tab System Styles */
+        .course-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .tab.active {
+            border-bottom: 3px solid #3a7bd5;
+            color: #3a7bd5;
+        }
+        
+        .tab-content {
+            margin-bottom: 30px;
+        }
+        
+        /* Reviews Section Styles */
+        .review-stats {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .rating-summary {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .average-rating {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #3a7bd5;
+        }
+        
+        .stars {
+            color: #e59819;
+            font-size: 1.5rem;
+        }
+        
+        .total-reviews {
+            color: #6c757d;
+        }
+        
+        .add-review-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .review-form {
+            margin-top: 15px;
+        }
+        
+        .rating-input {
+            margin-bottom: 15px;
+        }
+        
+        .star-rating {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+        
+        .star-rating input {
+            display: none;
+        }
+        
+        .star-rating label {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #ddd;
+            margin-right: 5px;
+        }
+        
+        .star-rating label:hover,
+        .star-rating label:hover ~ label,
+        .star-rating input:checked ~ label {
+            color: #e59819;
+        }
+        
+        .reviews-list {
+            margin-top: 30px;
+        }
+        
+        .review-item {
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .reviewer-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .reviewer-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #3a7bd5;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-left: 15px;
+        }
+        
+        .reviewer-name {
+            font-weight: 500;
+        }
+        
+        .review-date {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .review-rating {
+            color: #e59819;
+        }
+        
+        .review-content {
+            line-height: 1.6;
+        }
+        
+        .no-reviews {
+            text-align: center;
+            padding: 30px;
+            color: #6c757d;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        /* FAQ Styles */
+        .faq-list {
+            margin-top: 20px;
+        }
+        
+        .faq-item {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .faq-question {
+            padding: 15px;
+            background-color: #f8f9fa;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .faq-answer {
+            padding: 15px;
+            border-top: 1px solid #ddd;
+        }
+        
+        /* Course Content Tab Styles */
+        .course-modules {
+            margin-top: 20px;
+        }
+        
+        .module-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        
+        .module-header {
+            padding: 15px;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .module-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        
+        .module-meta {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .module-videos {
+            padding: 15px;
+        }
+        
+        .video-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .video-item:last-child {
+            border-bottom: none;
+        }
+        
+        .video-item i {
+            color: #3a7bd5;
+            margin-left: 10px;
+        }
+        
+        .video-duration {
+            margin-right: auto;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .no-videos {
+            padding: 10px;
+            color: #6c757d;
+            text-align: center;
+        }
     </style>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching functionality
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => t.classList.remove('active'));
+                    
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    
+                    // Hide all tab contents
+                    tabContents.forEach(content => {
+                        content.style.display = 'none';
+                    });
+                    
+                    // Show the corresponding tab content
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId + '-tab').style.display = 'block';
+                });
+            });
+            
+            // FAQ toggle functionality
+            const faqQuestions = document.querySelectorAll('.faq-question');
+            
+            faqQuestions.forEach(question => {
+                question.addEventListener('click', function() {
+                    const answer = this.nextElementSibling;
+                    if (answer.style.display === 'none' || !answer.style.display) {
+                        answer.style.display = 'block';
+                    } else {
+                        answer.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
 
 {% endblock %}
 
