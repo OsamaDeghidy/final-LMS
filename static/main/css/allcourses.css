@@ -1,0 +1,141 @@
+/* All Courses Page Styles */
+
+/* Text Gradient */
+.text-gradient-primary {
+  background: linear-gradient(90deg, #ff4d4d 0%, #f95700 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+}
+
+/* Search Hero Section */
+.search-hero {
+  padding: 3rem 0;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1d3b53 0%, #0e2439 100%);
+}
+
+.search-container {
+  max-width: 650px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.search-input {
+  border-radius: 40px !important;
+  padding-left: 2.5rem !important;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  height: 50px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  z-index: 4;
+}
+
+.search-btn {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  bottom: 4px;
+  border-radius: 40px;
+  padding: 0 1.2rem;
+  font-weight: 600;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+}
+
+/* Course Cards */
+.course-card {
+  border-radius: 10px !important;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  margin-bottom: 1.5rem;
+}
+
+.course-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  height: 100%;
+}
+
+.course-img-container {
+  position: relative;
+  overflow: hidden;
+  height: 180px;
+}
+
+.course-img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.course-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%);
+  opacity: 0.25;
+  transition: opacity 0.25s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 12px 25px rgba(0,0,0,0.12) !important;
+}
+
+.hover-lift:hover .course-img {
+  transform: scale(1.03);
+}
+
+.hover-lift:hover .course-overlay {
+  opacity: 0.4;
+}
+
+.course-badge .badge {
+  font-size: 0.65rem;
+  padding: 0.35em 0.65em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Additional Utility Classes */
+.btn-primary-gradient {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .search-hero {
+    padding: 2rem 0;
+  }
+  
+  .search-input {
+    height: 45px;
+    font-size: 0.9rem;
+  }
+  
+  .search-btn {
+    padding: 0 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .course-img-container {
+    height: 160px;
+  }
+}
