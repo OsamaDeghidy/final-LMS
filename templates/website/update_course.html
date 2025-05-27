@@ -7,6 +7,12 @@
 <link rel="stylesheet" href="{% static 'css/course-creation.css' %}">
 <script src="{% static 'js/course-image-upload.js' %}"></script>
 <script src="{% static 'js/course-creation.js' %}"></script>
+<script src="{% static 'js/course-update.js' %}"></script>
+<style>
+  .bg-danger-light {
+    background-color: rgba(220, 53, 69, 0.1);
+  }
+</style>
 {% endblock %}
 
 {% block dashboard_content %}
@@ -102,6 +108,54 @@
                 <textarea class="form-control" name="learned" rows="5" placeholder="أدخل كل نقطة في سطر منفصل...">{{ course.learned }}</textarea>
                 <div class="form-text">ضع كل نقطة تعلم في سطر جديد</div>
               </div>
+
+              <!-- PDF Files Section -->
+              <div class="card mb-4 border-primary">
+                <div class="card-header bg-light">
+                  <h5 class="mb-0"><i class="fas fa-file-pdf text-danger me-2"></i>ملفات PDF للدورة</h5>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <!-- Syllabus PDF -->
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label fw-bold">منهج الدورة التفصيلي (PDF)</label>
+                      {% if course.syllabus_pdf %}
+                      <div class="mb-2">
+                        <div class="d-flex align-items-center p-2 bg-light rounded">
+                          <i class="fas fa-file-pdf text-danger me-2 fa-lg"></i>
+                          <div class="flex-grow-1 text-truncate">{{ course.syllabus_pdf.name }}</div>
+                          <div class="form-check ms-2">
+                            <input class="form-check-input delete-checkbox" type="checkbox" name="delete_syllabus_pdf" id="delete_syllabus_pdf" value="1">
+                            <label class="form-check-label text-danger" for="delete_syllabus_pdf">حذف</label>
+                          </div>
+                        </div>
+                      </div>
+                      {% endif %}
+                      <input type="file" class="form-control" name="syllabus_pdf" accept="application/pdf">
+                      <small class="text-muted">اختياري. حجم الملف الأقصى: 10 ميجابايت</small>
+                    </div>
+                    
+                    <!-- Materials PDF -->
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label fw-bold">مواد إضافية للدورة (PDF)</label>
+                      {% if course.materials_pdf %}
+                      <div class="mb-2">
+                        <div class="d-flex align-items-center p-2 bg-light rounded">
+                          <i class="fas fa-file-pdf text-danger me-2 fa-lg"></i>
+                          <div class="flex-grow-1 text-truncate">{{ course.materials_pdf.name }}</div>
+                          <div class="form-check ms-2">
+                            <input class="form-check-input delete-checkbox" type="checkbox" name="delete_materials_pdf" id="delete_materials_pdf" value="1">
+                            <label class="form-check-label text-danger" for="delete_materials_pdf">حذف</label>
+                          </div>
+                        </div>
+                      </div>
+                      {% endif %}
+                      <input type="file" class="form-control" name="materials_pdf" accept="application/pdf">
+                      <small class="text-muted">اختياري. حجم الملف الأقصى: 10 ميجابايت</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
               
               <div class="row mb-3">
                 <div class="col-md-6">
@@ -154,9 +208,10 @@
                 <div class="card mb-4 module-card" id="existing_module_{{ module.id }}">
                   <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-layer-group text-primary me-2"></i>الموديول {{ module.number }}</h5>
-                    <button type="button" class="btn btn-sm btn-outline-danger remove-module-btn">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-module-btn" data-module-id="{{ module.id }}">
                       <i class="fas fa-trash"></i>
                     </button>
+                    <input type="hidden" name="delete_module_{{ module.id }}" id="delete_module_{{ module.id }}" value="0">
                   </div>
                   <div class="card-body">
                     <!-- Module Info -->
@@ -177,7 +232,7 @@
                             {{ video.name }}
                           </div>
                           <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="delete_video_{{ video.id }}" id="delete_video_{{ video.id }}">
+                            <input class="form-check-input delete-checkbox" type="checkbox" name="delete_video_{{ video.id }}" id="delete_video_{{ video.id }}" value="1">
                             <label class="form-check-label text-danger" for="delete_video_{{ video.id }}">
                               حذف
                             </label>
@@ -204,7 +259,7 @@
                             {{ note.description|truncatechars:50 }}
                           </div>
                           <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="delete_note_{{ note.id }}" id="delete_note_{{ note.id }}">
+                            <input class="form-check-input delete-checkbox" type="checkbox" name="delete_note_{{ note.id }}" id="delete_note_{{ note.id }}" value="1">
                             <label class="form-check-label text-danger" for="delete_note_{{ note.id }}">
                               حذف
                             </label>
@@ -224,7 +279,7 @@
                       <div class="notes-container" id="notes_container_existing_{{ module.id }}">
                         <div class="input-group mb-2">
                           <textarea class="form-control" name="module_notes_existing_{{ module.id }}_0" rows="2" placeholder="أدخل ملاحظة"></textarea>
-                          <button type="button" class="btn btn-outline-danger remove-note-btn">
+                          <button type="button" class="btn btn-outline-danger remove-note-btn" data-note-id="{{ note.id }}">
                             <i class="fas fa-times"></i>
                           </button>
                         </div>
@@ -244,9 +299,10 @@
                         <div class="input-group mb-2">
                           <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
                           <input type="text" class="form-control" name="video_name_existing_{{ module.id }}_0" placeholder="أدخل عنوان الفيديو">
-                          <button type="button" class="btn btn-outline-danger remove-video-name-btn">
-                            <i class="fas fa-times"></i>
-                          </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-module-btn" data-module-id="{{ module.id }}">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                    <input type="hidden" name="delete_module_{{ module.id }}" id="delete_module_{{ module.id }}" value="0">
                         </div>
                       </div>
                     </div>
@@ -293,9 +349,10 @@
                             <div class="card-body">
                               <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="mb-0">سؤال #{{ forloop.counter }}</h6>
-                                <button type="button" class="btn btn-sm btn-outline-danger remove-question-btn">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-question-btn" data-question-id="{{ question.id }}">
                                   <i class="fas fa-times"></i>
                                 </button>
+                                <input type="hidden" name="delete_question_{{ question.id }}" id="delete_question_{{ question.id }}" value="0" class="delete-question-input">
                               </div>
                               
                               <div class="mb-3">
@@ -321,9 +378,10 @@
                                         <input class="form-check-input mt-0" type="radio" name="correct_answer_existing_{{ question.id }}" value="{{ forloop.counter0 }}" {% if answer.is_correct %}checked{% endif %}>
                                       </div>
                                       <input type="text" class="form-control" name="answer_text_existing_{{ question.id }}_{{ forloop.counter0 }}" placeholder="الإجابة {{ forloop.counter }}" required value="{{ answer.text }}">
-                                      <button type="button" class="btn btn-outline-danger remove-answer-btn">
-                                        <i class="fas fa-times"></i>
-                                      </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-answer-btn" data-answer-id="{{ answer.id }}">
+                                  <i class="fas fa-times"></i>
+                                </button>
+                                <input type="hidden" name="delete_answer_{{ answer.id }}" id="delete_answer_{{ answer.id }}" value="0" class="delete-answer-input">
                                     </div>
                                   </div>
                                   {% endfor %}

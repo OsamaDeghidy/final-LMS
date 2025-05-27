@@ -186,7 +186,12 @@ function setupModuleEventListeners(moduleElement, moduleId) {
   // Remove module button
   const removeModuleBtn = moduleElement.querySelector('.remove-module-btn');
   removeModuleBtn.addEventListener('click', function() {
-    removeModule(moduleId);
+    const moduleIdAttr = this.getAttribute('data-module-id');
+    if (moduleIdAttr) {
+      removeModule('existing_module_' + moduleIdAttr);
+    } else {
+      removeModule(moduleId);
+    }
   });
   
   // Quiz toggle
@@ -231,20 +236,46 @@ function setupModuleEventListeners(moduleElement, moduleId) {
 }
 
 function removeModule(moduleId) {
-  if (confirm('هل أنت متأكد من حذف هذا الموديول؟')) {
-    document.getElementById(moduleId).remove();
-    delete questionCounts[moduleId];
+  const moduleElement = document.getElementById(moduleId);
+  if (moduleElement) {
+    // If this is an existing module, mark it for deletion instead of removing it
+    if (moduleId.startsWith('existing_module_')) {
+      const realModuleId = moduleId.replace('existing_module_', '');
+      const deleteInput = document.getElementById(`delete_module_${realModuleId}`);
+      if (deleteInput) {
+        deleteInput.value = '1';
+        moduleElement.style.display = 'none';
+      } else {
+        moduleElement.remove();
+      }
+    } else {
+      moduleElement.remove();
+    }
   }
 }
 
 function toggleQuiz(moduleElement, isChecked) {
   const quizSection = moduleElement.querySelector('.quiz-section');
-  quizSection.style.display = isChecked ? 'block' : 'none';
-  
-  // Add first question if enabling quiz and no questions exist
-  if (isChecked && moduleElement.querySelectorAll('.question-card').length === 0) {
-    const moduleId = moduleElement.id;
-    addQuestion(moduleElement, moduleId);
+  if (quizSection) {
+    quizSection.style.display = isChecked ? 'block' : 'none';
+    
+    // If showing the quiz section, make sure at least one question exists
+    if (isChecked) {
+      const questionsContainer = quizSection.querySelector('.questions-container');
+      const visibleQuestions = Array.from(questionsContainer.querySelectorAll('.question-card'))
+        .filter(q => q.style.display !== 'none');
+      
+      if (visibleQuestions.length === 0) {
+        // Get the module ID from the add-question-btn
+        const addQuestionBtn = quizSection.querySelector('.add-question-btn');
+        if (addQuestionBtn) {
+          const moduleId = addQuestionBtn.getAttribute('data-module-id');
+          if (moduleId) {
+            addQuestion(moduleElement, moduleId);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -313,7 +344,7 @@ function addQuestion(moduleElement, moduleId) {
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="mb-0">سؤال #${questionIndex}</h6>
-          <button type="button" class="btn btn-sm btn-outline-danger remove-question-btn">
+          <button type="button" class="btn btn-sm btn-outline-danger remove-question-btn" data-question-id="${questionId}">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -355,32 +386,57 @@ function addQuestion(moduleElement, moduleId) {
 }
 
 function setupQuestionEventListeners(questionElement, moduleElement, moduleId, questionId) {
-  // Remove question button
-  const removeQuestionBtn = questionElement.querySelector('.remove-question-btn');
-  removeQuestionBtn.addEventListener('click', function() {
-    removeQuestion(questionElement, moduleElement);
-  });
-  
-  // Question type select
+  // Setup question type change
   const questionTypeSelect = questionElement.querySelector('.question-type-select');
-  questionTypeSelect.addEventListener('change', function() {
-    updateAnswerFields(questionElement, this.value, moduleId, questionId.split('_')[2]);
-  });
+  if (questionTypeSelect) {
+    questionTypeSelect.addEventListener('change', function() {
+      updateAnswerFields(questionElement, this.value, moduleId, questionId);
+    });
+  }
   
-  // Add answer button
-  const addAnswerBtn = questionElement.querySelector('.add-answer-btn');
-  addAnswerBtn.addEventListener('click', function() {
-    addAnswer(questionElement, moduleId, questionId.split('_')[2]);
-  });
+  // Setup remove question button
+  const removeQuestionBtn = questionElement.querySelector('.remove-question-btn');
+  if (removeQuestionBtn) {
+    removeQuestionBtn.addEventListener('click', function() {
+      const questionIdAttr = this.getAttribute('data-question-id');
+      if (questionIdAttr) {
+        // This is an existing question, mark it for deletion
+        const deleteInput = document.getElementById(`delete_question_${questionIdAttr}`);
+        if (deleteInput) {
+          deleteInput.value = '1';
+          questionElement.style.display = 'none';
+        } else {
+          removeQuestion(questionElement, moduleElement);
+        }
+      } else {
+        removeQuestion(questionElement, moduleElement);
+      }
+    });
+  }
 }
 
 function removeQuestion(questionElement, moduleElement) {
+  // Get the parent container
   const questionsContainer = moduleElement.querySelector('.questions-container');
-  if (questionsContainer.querySelectorAll('.question-card').length > 1) {
-    questionElement.remove();
+  
+  // Check if this is an existing question
+  if (questionElement.id && questionElement.id.startsWith('existing_question_')) {
+    const questionId = questionElement.getAttribute('id').replace('existing_question_', '');
+    const deleteInput = document.getElementById(`delete_question_${questionId}`);
+    
+    if (deleteInput) {
+      deleteInput.value = '1';
+      questionElement.style.display = 'none';
+    } else {
+      questionElement.remove();
+    }
   } else {
-    alert('يجب أن يحتوي الاختبار على سؤال واحد على الأقل');
+    // For new questions, just remove the element
+    questionElement.remove();
   }
+  
+  // Update question numbering
+  updateQuestionNumbering(questionsContainer);
 }
 
 function updateAnswerFields(questionElement, questionType, moduleId, questionIndex) {
@@ -581,4 +637,130 @@ document.addEventListener('DOMContentLoaded', function() {
       submitCourse();
     });
   }
+
+  // Initialize existing modules
+  initExistingModules();
+  
+  // Initialize PDF delete checkboxes
+  const pdfDeleteCheckboxes = document.querySelectorAll('input[name^="delete_"]');
+  pdfDeleteCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+      // If checkbox is checked, add a visual indication
+      const parentElement = this.closest('.d-flex');
+      if (parentElement) {
+        if (this.checked) {
+          parentElement.classList.add('bg-danger', 'bg-opacity-10');
+        } else {
+          parentElement.classList.remove('bg-danger', 'bg-opacity-10');
+        }
+      }
+    });
+  });
 });
+
+// Add a function to update question numbering
+function updateQuestionNumbering(questionsContainer) {
+  const visibleQuestions = Array.from(questionsContainer.querySelectorAll('.question-card'))
+    .filter(q => q.style.display !== 'none');
+  
+  visibleQuestions.forEach((question, index) => {
+    const questionHeader = question.querySelector('h6');
+    if (questionHeader) {
+      questionHeader.textContent = `سؤال #${index + 1}`;
+    }
+  });
+}
+
+// Function to initialize event listeners for existing modules
+function initExistingModules() {
+  // Setup event listeners for existing modules
+  const existingModules = document.querySelectorAll('.module-card[id^="existing_module_"]');
+  
+  existingModules.forEach(moduleElement => {
+    const moduleId = moduleElement.id;
+    
+    // Setup module event listeners
+    setupModuleEventListeners(moduleElement, moduleId);
+    
+    // Setup quiz toggle
+    const quizToggle = moduleElement.querySelector('.quiz-toggle');
+    if (quizToggle) {
+      quizToggle.addEventListener('change', function() {
+        toggleQuiz(moduleElement, this.checked);
+      });
+      
+      // Initialize quiz section visibility
+      const quizSection = moduleElement.querySelector('.quiz-section');
+      if (quizSection) {
+        quizSection.style.display = quizToggle.checked ? 'block' : 'none';
+      }
+    }
+    
+    // Setup add note button
+    const addNoteBtn = moduleElement.querySelector('.add-note-btn');
+    if (addNoteBtn) {
+      addNoteBtn.addEventListener('click', function() {
+        const moduleIdAttr = this.getAttribute('data-module-id');
+        addNote(moduleElement, moduleIdAttr || moduleId);
+      });
+    }
+    
+    // Setup remove note buttons
+    const removeNoteBtns = moduleElement.querySelectorAll('.remove-note-btn');
+    removeNoteBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        removeNote(this);
+      });
+    });
+    
+    // Setup add video name button
+    const addVideoNameBtn = moduleElement.querySelector('.add-video-name-btn');
+    if (addVideoNameBtn) {
+      addVideoNameBtn.addEventListener('click', function() {
+        const moduleIdAttr = this.getAttribute('data-module-id');
+        addVideoName(moduleElement, moduleIdAttr || moduleId);
+      });
+    }
+    
+    // Setup remove video name buttons
+    const removeVideoNameBtns = moduleElement.querySelectorAll('.remove-video-name-btn');
+    removeVideoNameBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        removeVideoName(this);
+      });
+    });
+    
+    // Setup add question button
+    const addQuestionBtn = moduleElement.querySelector('.add-question-btn');
+    if (addQuestionBtn) {
+      addQuestionBtn.addEventListener('click', function() {
+        const moduleIdAttr = this.getAttribute('data-module-id');
+        addQuestion(moduleElement, moduleIdAttr || moduleId);
+      });
+    }
+    
+    // Setup existing questions
+    const existingQuestions = moduleElement.querySelectorAll('.question-card');
+    existingQuestions.forEach(questionElement => {
+      const questionId = questionElement.id.replace('existing_question_', '');
+      setupQuestionEventListeners(questionElement, moduleElement, moduleId, questionId);
+      
+      // Setup add answer button
+      const addAnswerBtn = questionElement.querySelector('.add-answer-btn');
+      if (addAnswerBtn) {
+        addAnswerBtn.addEventListener('click', function() {
+          addAnswer(questionElement, moduleId, questionId);
+        });
+      }
+      
+      // Setup remove answer buttons
+      const removeAnswerBtns = questionElement.querySelectorAll('.remove-answer-btn');
+      removeAnswerBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const answersContainer = questionElement.querySelector('.answers-container');
+          removeAnswer(this, answersContainer);
+        });
+      });
+    });
+  });
+}
