@@ -159,6 +159,8 @@ def create_course(request):
             name = request.POST.get('name')
             description = request.POST.get('description')
             image_course = request.FILES.get('image_course')
+            syllabus_pdf = request.FILES.get('syllabus_pdf')
+            materials_pdf = request.FILES.get('materials_pdf')
             price = request.POST.get('price')
             small_description = request.POST.get('small_description')
             learned = request.POST.get('learned')
@@ -176,6 +178,8 @@ def create_course(request):
                     name=name,
                     description=description,
                     image_course=image_course,
+                    syllabus_pdf=syllabus_pdf,
+                    materials_pdf=materials_pdf,
                     price=price,
                     small_description=small_description,
                     learned=learned,

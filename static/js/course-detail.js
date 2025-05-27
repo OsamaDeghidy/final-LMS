@@ -37,41 +37,64 @@
     });
 
 
-    document.addEventListener('DOMContentLoaded', function() {
-        // Tab switching functionality
-        const tabs = document.querySelectorAll('.tab');
-        const tabContents = document.querySelectorAll('.tab-content');
-        
-        tabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                // Remove active class from all tabs
-                tabs.forEach(t => t.classList.remove('active'));
-                
-                // Add active class to clicked tab
-                this.classList.add('active');
-                
-                // Hide all tab contents
-                tabContents.forEach(content => {
-                    content.style.display = 'none';
-                });
-                
-                // Show the corresponding tab content
-                const tabId = this.getAttribute('data-tab');
-                document.getElementById(tabId + '-tab').style.display = 'block';
+document.addEventListener('DOMContentLoaded', function() {
+    // Main Tab switching functionality
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Remove active class from all tabs
+            tabs.forEach(t => t.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            this.classList.add('active');
+            
+            // Hide all tab contents
+            tabContents.forEach(content => {
+                content.style.display = 'none';
             });
-        });
-        
-        // FAQ toggle functionality
-        const faqQuestions = document.querySelectorAll('.faq-question');
-        
-        faqQuestions.forEach(question => {
-            question.addEventListener('click', function() {
-                const answer = this.nextElementSibling;
-                if (answer.style.display === 'none' || !answer.style.display) {
-                    answer.style.display = 'block';
-                } else {
-                    answer.style.display = 'none';
-                }
-            });
+            
+            // Show the corresponding tab content
+            const tabId = this.getAttribute('data-tab');
+            document.getElementById(tabId + '-tab').style.display = 'block';
         });
     });
+    
+    // Content Sub-tabs functionality
+    const subtabs = document.querySelectorAll('.subtab');
+    const subtabContents = document.querySelectorAll('.subtab-content');
+    
+    subtabs.forEach(subtab => {
+        subtab.addEventListener('click', function() {
+            // Remove active class from all subtabs
+            subtabs.forEach(t => t.classList.remove('active'));
+            
+            // Add active class to clicked subtab
+            this.classList.add('active');
+            
+            // Hide all subtab contents
+            subtabContents.forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // Show the corresponding subtab content
+            const subtabId = this.getAttribute('data-subtab');
+            document.getElementById(subtabId + '-subtab').style.display = 'block';
+        });
+    });
+    
+    // FAQ toggle functionality
+    const faqQuestions = document.querySelectorAll('.faq-question');
+    
+    faqQuestions.forEach(question => {
+        question.addEventListener('click', function() {
+            const answer = this.nextElementSibling;
+            if (answer.style.display === 'none' || !answer.style.display) {
+                answer.style.display = 'block';
+            } else {
+                answer.style.display = 'none';
+            }
+        });
+    });
+});

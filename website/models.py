@@ -76,6 +76,9 @@ class Course(models.Model):
     vidoes_time=models.CharField(max_length=2000,null=True, blank = True)
     total_module=models.IntegerField(blank=True, null=True, default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    syllabus_pdf = models.FileField(upload_to='course_pdfs/syllabus/', null=True, blank=True, help_text='Upload course syllabus PDF')
+    materials_pdf = models.FileField(upload_to='course_pdfs/materials/', null=True, blank=True, help_text='Upload additional course materials PDF')
+    
     def save(self, *args, **kwargs):
         # First save the course if it's a new instance
         is_new = not self.pk  # Check if this is a new course

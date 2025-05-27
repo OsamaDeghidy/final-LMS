@@ -90,61 +90,130 @@
                             {% endif %}
                         </div>
                     </section>
+                    
+                    <!-- Course Materials -->
+                    <section>
+                        <h2 class="section-title">مواد الدورة</h2>
+                        <div class="course-materials">
+                            <div class="row">
+                                {% if course.syllabus_pdf or course.materials_pdf %}
+                                    <div class="col-12 mb-3">
+                                        <div class="alert alert-info">
+                                            يمكنك الوصول إلى مواد الدورة التفصيلية من خلال تبويب "المحتوى".
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            لم يتم إضافة مواد تعليمية بعد.
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </section>
                 </div>
                 
                 <div class="tab-content" id="content-tab" style="display: none;">
                     <!-- Course Content Tab -->
                     <section>
                         <h2 class="section-title">محتوى الدورة</h2>
-                        <div class="course-modules">
-                            {% for module in modules %}
-                                <div class="module-item">
-                                    <div class="module-header">
-                                        <h3>{{ module.name }}</h3>
-                                        <span class="module-meta">{{ module.videos.count }} فيديو • {{ module.duration }}</span>
-                                    </div>
-                                    <div class="module-content">
-                                        {% for item in module.get_ordered_content %}
-                                            {% if item.type == 'video' %}
-                                                <div class="content-item video-item">
-                                                    <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=item.id %}" class="content-link">
-                                                        <div class="content-header">
-                                                            <i class="fas fa-play-circle"></i>
-                                                            <span class="content-title">{{ item.name }}</span>
-                                                            <span class="content-meta">
-                                                                {% if item.duration %}
-                                                                    {{ item.duration|time:"H:i:s" }}
-                                                                {% else %}
-                                                                    00:00
-                                                                {% endif %}
-                                                            </span>
-                                                        </div>
-                                                    </a>
-                                                </div>
-                                            {% elif item.type == 'quiz' %}
-                                                <div class="content-item quiz-item">
-                                                    {% if item.video %}
-                                                        <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=item.video.id %}" class="content-link">
-                                                    {% else %}
-                                                        <a href="#" class="content-link" onclick="alert('هذا اختبار خاص بالوحدة')">
-                                                    {% endif %}
+                        
+                        <!-- Content Sub-Tabs -->
+                        <div class="content-subtabs">
+                            <div class="subtab active" data-subtab="modules">الوحدات</div>
+                            {% if course.syllabus_pdf %}
+                            <div class="subtab" data-subtab="syllabus">منهج الدورة</div>
+                            {% endif %}
+                            {% if course.materials_pdf %}
+                            <div class="subtab" data-subtab="materials">مواد إضافية</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Modules Sub-Tab Content -->
+                        <div class="subtab-content" id="modules-subtab" style="display: block;">
+                            <div class="course-modules">
+                                {% for module in modules %}
+                                    <div class="module-item">
+                                        <div class="module-header">
+                                            <h3>{{ module.name }}</h3>
+                                            <span class="module-meta">{{ module.videos.count }} فيديو • {{ module.duration }}</span>
+                                        </div>
+                                        <div class="module-content">
+                                            {% for item in module.get_ordered_content %}
+                                                {% if item.type == 'video' %}
+                                                    <div class="content-item video-item">
+                                                        <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=item.id %}" class="content-link">
                                                             <div class="content-header">
-                                                                <i class="fas fa-question-circle"></i>
-                                                                <span class="content-title">اختبار: {{ item.title|default:"اختبار الفيديو" }}</span>
-                                                                <span class="content-meta">{{ item.questions_count }} سؤال</span>
+                                                                <i class="fas fa-play-circle"></i>
+                                                                <span class="content-title">{{ item.name }}</span>
+                                                                <span class="content-meta">
+                                                                    {% if item.duration %}
+                                                                        {{ item.duration|time:"H:i:s" }}
+                                                                    {% else %}
+                                                                        00:00
+                                                                    {% endif %}
+                                                                </span>
                                                             </div>
                                                         </a>
-                                                </div>
-                                            {% endif %}
-                                        {% empty %}
-                                            <div class="no-content">لا يوجد محتوى في هذه الوحدة</div>
-                                        {% endfor %}
+                                                    </div>
+                                                {% elif item.type == 'quiz' %}
+                                                    <div class="content-item quiz-item">
+                                                        {% if item.video %}
+                                                            <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=item.video.id %}" class="content-link">
+                                                        {% else %}
+                                                            <a href="#" class="content-link" onclick="alert('هذا اختبار خاص بالوحدة')">
+                                                        {% endif %}
+                                                                <div class="content-header">
+                                                                    <i class="fas fa-question-circle"></i>
+                                                                    <span class="content-title">اختبار: {{ item.title|default:"اختبار الفيديو" }}</span>
+                                                                    <span class="content-meta">{{ item.questions_count }} سؤال</span>
+                                                                </div>
+                                                            </a>
+                                                    </div>
+                                                {% endif %}
+                                            {% empty %}
+                                                <div class="no-content">لا يوجد محتوى في هذه الوحدة</div>
+                                            {% endfor %}
+                                        </div>
                                     </div>
-                                </div>
-                            {% empty %}
-                                <div class="alert alert-info">لم يتم إضافة وحدات بعد</div>
-                            {% endfor %}
+                                {% empty %}
+                                    <div class="alert alert-info">لم يتم إضافة وحدات بعد</div>
+                                {% endfor %}
+                            </div>
                         </div>
+                        
+                        <!-- Syllabus PDF Sub-Tab Content -->
+                        {% if course.syllabus_pdf %}
+                        <div class="subtab-content" id="syllabus-subtab" style="display: none;">
+                            <div class="pdf-viewer">
+                                <h3>منهج الدورة التفصيلي</h3>
+                                <div class="pdf-container">
+                                    <!-- محاولة 1: استخدام وسم embed -->
+                                    <embed src="{{ course.syllabus_pdf.url }}" type="application/pdf" width="100%" height="600px" style="border: none;">
+                                </div>
+                                <div class="pdf-fallback" style="text-align: center; margin-top: 15px;">
+                                    <p>إذا لم يظهر الملف أعلاه، يمكنك <a href="{{ course.syllabus_pdf.url }}" target="_blank" style="color: #3a7bd5; text-decoration: underline;">فتحه في نافذة جديدة</a></p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Materials PDF Sub-Tab Content -->
+                        {% if course.materials_pdf %}
+                        <div class="subtab-content" id="materials-subtab" style="display: none;">
+                            <div class="pdf-viewer">
+                                <h3>مواد إضافية للدورة</h3>
+                                <div class="pdf-container">
+                                    <!-- محاولة 1: استخدام وسم embed -->
+                                    <embed src="{{ course.materials_pdf.url }}" type="application/pdf" width="100%" height="600px" style="border: none;">
+                                </div>
+                                <div class="pdf-fallback" style="text-align: center; margin-top: 15px;">
+                                    <p>إذا لم يظهر الملف أعلاه، يمكنك <a href="{{ course.materials_pdf.url }}" target="_blank" style="color: #3a7bd5; text-decoration: underline;">فتحه في نافذة جديدة</a></p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </section>
                 </div>
                 
@@ -503,7 +572,7 @@
         <section class="instructor-courses">
             <h2 class="section-title">دورات أخرى للمدرب</h2>
             <div class="courses-grid">
-                {% for instructor_course in course.teacher.course_set.all|slice:":4" %}
+                {% for instructor_course in course.teacher.course_set.all|slice:":3" %}
                     {% if instructor_course.id != course.id %}
                         <div class="course-card">
                             <div class="course-card-img">
