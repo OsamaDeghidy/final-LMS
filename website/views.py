@@ -3,6 +3,8 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+import json
+from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -929,6 +931,37 @@ def enroll_course(request, course_id):
 
 def analytics(request):
     return render(request, 'website/analytics.html')
+
+
+@login_required
+def delete_pdf(request, course_id, pdf_type):
+    """Delete a PDF file from a course"""
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Check if user is authorized to modify this course
+    if request.user.profile != course.teacher.profile:
+        messages.error(request, 'غير مسموح لك بتعديل هذه الدورة')
+        return redirect('course_detail', course_id=course_id)
+    
+    # Handle different PDF types
+    if pdf_type == 'syllabus_pdf' and course.syllabus_pdf:
+        # Delete the file
+        course.syllabus_pdf.delete(save=False)
+        course.syllabus_pdf = None
+        course.save()
+        messages.success(request, 'تم حذف ملف منهج الدورة بنجاح')
+        
+    elif pdf_type == 'materials_pdf' and course.materials_pdf:
+        # Delete the file
+        course.materials_pdf.delete(save=False)
+        course.materials_pdf = None
+        course.save()
+        messages.success(request, 'تم حذف ملف المواد الإضافية بنجاح')
+    else:
+        messages.error(request, 'لم يتم العثور على الملف المطلوب')
+    
+    # Redirect back to the update course page
+    return redirect('update_course', course_id=course_id)
 
 
 # def create_quiz(request, video_id):
