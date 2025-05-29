@@ -413,87 +413,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Set initial state
                 quizSection.style.display = toggle.checked ? 'block' : 'none';
                 console.log(`Initial quiz section ${quizSectionId} display set to ${toggle.checked ? 'block' : 'none'}`);
-            }
-        });
-    }
-
-    // Function to initialize add buttons
-    function initializeAddButtons() {
-        // Add module button
-        const addModuleBtn = document.getElementById('add-module-btn');
-        if (addModuleBtn) {
-            // Remove any existing event listeners to prevent duplicates
-            addModuleBtn.removeEventListener('click', addNewModule);
-            addModuleBtn.addEventListener('click', addNewModule);
         }
+    });
 
-        // Use event delegation for dynamically added elements
-        // This attaches event listeners to the document and checks if the clicked element matches our selector
-        
-        // For add question buttons
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.add-question-btn')) {
-                const btn = e.target.closest('.add-question-btn');
-                const moduleId = btn.getAttribute('data-module-id');
-                if (moduleId) {
-                    console.log(`Adding new question to module ${moduleId}`);
-                    addNewQuestion(moduleId);
-                }
+    // For add note buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.add-note-btn')) {
+            const btn = e.target.closest('.add-note-btn');
+            const moduleId = btn.getAttribute('data-module-id');
+            if (moduleId) {
+                console.log(`Adding new note to module ${moduleId}`);
+                addNewNote(moduleId);
             }
-        });
-
-        // For add answer buttons
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.add-answer-btn')) {
-                const btn = e.target.closest('.add-answer-btn');
-                const questionCard = btn.closest('.question-card');
-                if (questionCard) {
-                    const answersContainer = questionCard.querySelector('.answers-container');
-                    if (answersContainer) {
-                        // Extract moduleId and questionId from the container ID
-                        const containerId = answersContainer.id;
-                        let moduleId, questionId;
-                        const match = containerId.match(/answers_(?:existing_question_|new_)?(\d+)(?:_(\d+))?/);
-                        if (match) {
-                            moduleId = match[1];
-                            questionId = match[2] || '';
-                            console.log(`Adding new answer to question ${questionId} in module ${moduleId}`);
-                            addNewAnswer(answersContainer, moduleId, questionId);
-                        }
-                    }
-                }
-            }
-        });
-
-        // For add note buttons
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.add-note-btn')) {
-                const btn = e.target.closest('.add-note-btn');
-                const moduleId = btn.getAttribute('data-module-id');
-                if (moduleId) {
-                    console.log(`Adding new note to module ${moduleId}`);
-                    addNewNote(moduleId);
-                }
-            }
-        });
-        
-        // For add video name buttons
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.add-video-name-btn')) {
-                const btn = e.target.closest('.add-video-name-btn');
-                const moduleId = btn.getAttribute('data-module-id');
-                if (moduleId) {
-                    console.log(`Adding new video name to module ${moduleId}`);
-                    addNewVideoName(moduleId);
-                }
-            }
-        });
-    }
-    
-// Function to add a new module
-function addNewModule() {
-    const modulesContainer = document.getElementById('modules-container');
-    if (!modulesContainer) return;
     
     // Get the current number of modules (including deleted ones)
     const moduleCount = modulesContainer.querySelectorAll('.module-card').length;
@@ -860,24 +791,41 @@ function addNewAnswer(answersContainer, moduleId, questionId) {
     const answerCount = answersContainer.querySelectorAll('.answer-item').length;
     const newAnswerNumber = answerCount;
     
-    // Extract moduleId and questionId from the container ID if not provided
-    if (!moduleId || !questionId) {
-        const containerId = answersContainer.id;
-        const match = containerId.match(/answers_(?:existing_question_|new_)?(\d+)(?:_(\d+))?/);
-        if (match) {
-            moduleId = moduleId || match[1];
-            questionId = questionId || match[2] || '';
+    // Check if this is an existing question by examining the container ID
+    const containerId = answersContainer.id;
+    console.log('Adding answer to container:', containerId);
+    
+    let radioName, textName;
+    
+    // Handle existing questions (from the database)
+    if (containerId.includes('answers_existing_question_')) {
+        // Format: answers_existing_question_123
+        const questionIdMatch = containerId.match(/answers_existing_question_(\d+)/);
+        if (questionIdMatch) {
+            questionId = questionIdMatch[1];
+            console.log('Found existing question ID:', questionId);
+            
+            // Set the correct name attributes for existing questions
+            radioName = `correct_answer_existing_${questionId}`;
+            textName = `answer_text_existing_${questionId}_${newAnswerNumber}`;
         }
+    } else {
+        // This is a new question
+        // Use the provided moduleId and questionId
+        radioName = `correct_answer_${moduleId}_${questionId}`;
+        textName = `answer_text_${moduleId}_${questionId}_${newAnswerNumber}`;
     }
+    
+    console.log(`Creating new answer with radio name: ${radioName} and text name: ${textName}`);
     
     // Create the answer HTML
     const answerHtml = `
     <div class="answer-item mb-2">
         <div class="input-group">
             <div class="input-group-text">
-                <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${questionId}" value="${newAnswerNumber}">
+                <input class="form-check-input mt-0" type="radio" name="${radioName}" value="${newAnswerNumber}">
             </div>
-            <input type="text" class="form-control" name="answer_text_${moduleId}_${questionId}_${newAnswerNumber}" placeholder="الإجابة ${newAnswerNumber + 1}" required>
+            <input type="text" class="form-control" name="${textName}" placeholder="الإجابة ${newAnswerNumber + 1}" required>
             <button type="button" class="btn btn-outline-danger remove-answer-btn">
                 <i class="fas fa-times"></i>
             </button>
@@ -999,18 +947,54 @@ function submitCourse() {
             const quizSection = moduleCard.querySelector('.quiz-section');
             
             if (quizToggle && quizSection) {
-                // If quiz toggle is checked, make sure quiz section is visible for form submission
-                if (quizToggle.checked && quizSection.style.display === 'none') {
-                    quizSection.style.display = 'block';
-                    console.log(`Showing quiz section for module ${moduleId} for form submission`);
+                // Important: Always make quiz sections visible during form submission
+                // This ensures all form fields are included in the submission
+                // The server will check the toggle value to determine if the quiz should be saved
+                quizSection.style.display = 'block';
+                console.log(`Ensuring quiz section for module ${moduleId} is visible for form submission`);
+                
+                // Make sure the has_quiz field is properly set based on the toggle
+                if (!quizToggle.checked) {
+                    console.log(`Quiz toggle for module ${moduleId} is not checked`);
                 }
                 
-                // If quiz toggle is not checked, hide the quiz section
-                // If quiz section is displayed but toggle is not checked, hide it
-                if (!quizToggle.checked && quizSection.style.display !== 'none') {
-                    quizSection.style.display = 'none';
-                    console.log(`Hiding quiz section for module ${moduleId} for form submission`);
+                // Ensure quiz data is properly included for new modules
+                if (moduleId.startsWith('new_')) {
+                    // Make sure the quiz toggle value is properly set
+                    const quizToggleInput = document.createElement('input');
+                    quizToggleInput.type = 'hidden';
+                    quizToggleInput.name = `has_quiz_${moduleId}`;
+                    quizToggleInput.value = quizToggle.checked ? '1' : '0';
+                    moduleCard.appendChild(quizToggleInput);
+                    
+                    // Add quiz title and description if not already present
+                    const quizTitleInput = quizSection.querySelector(`input[name="quiz_title_${moduleId}"]`);
+                    if (!quizTitleInput && quizToggle.checked) {
+                        const defaultTitle = `اختبار ${moduleCard.querySelector('.module-title').value || 'الموديول'}`;
+                        const titleInput = document.createElement('input');
+                        titleInput.type = 'hidden';
+                        titleInput.name = `quiz_title_${moduleId}`;
+                        titleInput.value = defaultTitle;
+                        moduleCard.appendChild(titleInput);
+                    }
                 }
+            }
+            
+            // Ensure all question data is properly included
+            const questionsContainer = moduleCard.querySelector('.questions-container');
+            if (questionsContainer) {
+                const questions = questionsContainer.querySelectorAll('.question-card');
+                questions.forEach((question, index) => {
+                    // Make sure question index is properly set
+                    const questionIndexInput = question.querySelector('input[name^="question_index"]');
+                    if (!questionIndexInput) {
+                        const indexInput = document.createElement('input');
+                        indexInput.type = 'hidden';
+                        indexInput.name = `question_index_${moduleId}_${index}`;
+                        indexInput.value = index;
+                        question.appendChild(indexInput);
+                    }
+                });
             }
         });
         
@@ -1034,6 +1018,19 @@ function submitCourse() {
         
         // Use FormData to ensure proper file upload
         const formData = new FormData(form);
+        
+        // Add a flag to indicate this is a form submission
+        formData.append('is_form_submit', 'true');
+        
+        // Debug: Log all form data being submitted
+        console.log('Submitting form with the following data:');
+        for (let [key, value] of formData.entries()) {
+            if (typeof value !== 'object') { // Don't log file objects
+                console.log(`${key}: ${value}`);
+            } else {
+                console.log(`${key}: [File object]`);
+            }
+        }
         
         // Show loading indicator
         const submitBtn = document.getElementById('submit-course-btn');
@@ -1107,3 +1104,4 @@ function validateForm() {
     
     return true;
 }
+// End of file

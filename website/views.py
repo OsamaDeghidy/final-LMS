@@ -584,25 +584,267 @@ def update_course(request, course_id):
                         logger.warning(f"Could not delete module with ID {module_id} for course {course_id}")
                         continue
             
-            # Process new modules
-            new_module_names = request.POST.getlist('new_module_name', [])
-            new_module_descriptions = request.POST.getlist('new_module_description', [])
+            # Process new modules from dynamic form
+            # First identify all new modules by looking for keys that match the pattern
+            new_module_ids = set()
+            for key in request.POST.keys():
+                # Look for module_name_new_TIMESTAMP pattern
+                if key.startswith('module_name_new_'):
+                    module_id = key.replace('module_name_new_', '')
+                    new_module_ids.add(module_id)
+                # Also check for the pattern from the JavaScript-generated modules
+                elif key.startswith('module_title_new_'):
+                    module_id = key.replace('module_title_new_', '')
+                    new_module_ids.add(module_id)
             
-            for i, name in enumerate(new_module_names):
-                if name.strip():
-                    description = new_module_descriptions[i] if i < len(new_module_descriptions) else ''
-                    new_module = Module.objects.create(
+            logger.info(f"Found {len(new_module_ids)} new modules to process")
+            
+            # Process each new module
+            for module_id in new_module_ids:
+                # Get module name from either naming convention
+                module_name = request.POST.get(f'module_name_new_{module_id}') or \
+                              request.POST.get(f'module_title_new_{module_id}')
+                
+                if not module_name or not module_name.strip():
+                    logger.warning(f"Skipping new module {module_id} with empty name")
+                    continue
+                
+                # Get module description
+                module_description = request.POST.get(f'module_description_new_{module_id}', '')
+                
+                # Create the new module
+                new_module = Module.objects.create(
+                    course=course,
+                    name=module_name,
+                    description=module_description,
+                    number=course.total_module + 1  # Set number to be after existing modules
+                )
+                course.total_module += 1
+                logger.info(f"Created new module {new_module.id} for course {course_id}")
+                
+                # Process videos for this module if any
+                video_files = request.FILES.getlist(f'module_videos_new_{module_id}')
+                video_names = []
+                
+                # Get video names
+                for key in request.POST.keys():
+                    if key.startswith(f'video_name_new_{module_id}_'):
+                        video_name = request.POST.get(key)
+                        if video_name and video_name.strip():
+                            video_names.append(video_name)
+                
+                # Create videos
+                for i, video in enumerate(video_files):
+                    video_name = video_names[i] if i < len(video_names) else video.name.split('.')[0]
+                    Video.objects.create(
+                        name=video_name,
+                        module=new_module,
                         course=course,
-                        name=name,
-                        description=description,
-                        number=i+1+len(modules)  # Set number to be after existing modules
+                        video=video,
+                        number=i+1
                     )
-                    logger.info(f"Created new module {new_module.id} for course {course_id}")
+                    new_module.total_video += 1
+                
+                # Process notes for this module
+                for key in request.POST.keys():
+                    if key.startswith(f'note_new_{module_id}_'):
+                        note_text = request.POST.get(key)
+                        if note_text and note_text.strip():
+                            Notes.objects.create(
+                                user=request.user,
+                                module=new_module,
+                                description=note_text
+                            )
+                            new_module.total_notes += 1
+                
+                # Process quiz if exists
+                has_quiz = request.POST.get(f'has_quiz_new_{module_id}')
+                if has_quiz == '1' or has_quiz == 'on':
+                    quiz_title = request.POST.get(f'quiz_title_new_{module_id}', f'Quiz for {module_name}')
+                    quiz_description = request.POST.get(f'quiz_description_new_{module_id}', '')
+                    quiz_pass_mark = request.POST.get(f'quiz_pass_mark_new_{module_id}', 50)
+                    quiz_time_limit = request.POST.get(f'quiz_time_limit_new_{module_id}', 10)
+                    
+                    # Create quiz
+                    quiz = Quiz.objects.create(
+                        title=quiz_title,
+                        description=quiz_description,
+                        module=new_module,
+                        course=course,
+                        quiz_type='module',
+                        pass_mark=float(quiz_pass_mark),
+                        time_limit=int(quiz_time_limit),
+                        is_active=True
+                    )
+                    
+                    # Process questions
+                    question_indices = set()
+                    for key in request.POST.keys():
+                        if key.startswith(f'question_text_new_{module_id}_'):
+                            question_index = key.split(f'question_text_new_{module_id}_')[1]
+                            question_indices.add(question_index)
+                    
+                    for question_index in question_indices:
+                        question_text = request.POST.get(f'question_text_new_{module_id}_{question_index}')
+                        if not question_text or not question_text.strip():
+                            continue
+                        
+                        question_type = request.POST.get(f'question_type_new_{module_id}_{question_index}', 'multiple_choice')
+                        
+                        # Create question
+                        question = Question.objects.create(
+                            quiz=quiz,
+                            text=question_text,
+                            question_type=question_type,
+                            points=1,
+                            order=int(question_index) if question_index.isdigit() else 0
+                        )
+                        
+                        # Process answers based on question type
+                        if question_type == 'multiple_choice':
+                            correct_answer = request.POST.get(f'correct_answer_new_{module_id}_{question_index}')
+                            
+                            # Get all answers for this question
+                            answer_indices = set()
+                            for answer_key in request.POST.keys():
+                                if answer_key.startswith(f'answer_text_new_{module_id}_{question_index}_'):
+                                    answer_index = answer_key.split('_')[-1]
+                                    answer_indices.add(answer_index)
+                            
+                            for answer_index in answer_indices:
+                                answer_text = request.POST.get(f'answer_text_new_{module_id}_{question_index}_{answer_index}')
+                                if answer_text and answer_text.strip():
+                                    is_correct = (correct_answer == answer_index)
+                                    Answer.objects.create(
+                                        question=question,
+                                        text=answer_text,
+                                        is_correct=is_correct,
+                                        order=int(answer_index) if answer_index.isdigit() else 0
+                                    )
+                        elif question_type == 'true_false':
+                            correct_answer = request.POST.get(f'correct_answer_new_{module_id}_{question_index}')
+                            
+                            # Create True answer
+                            Answer.objects.create(
+                                question=question,
+                                text="صح",
+                                is_correct=correct_answer == '0',
+                                order=0
+                            )
+                            
+                            # Create False answer
+                            Answer.objects.create(
+                                question=question,
+                                text="خطأ",
+                                is_correct=correct_answer == '1',
+                                order=1
+                            )
+                        elif question_type == 'short_answer':
+                            answer_text = request.POST.get(f'answer_short_new_{module_id}_{question_index}', '')
+                            Answer.objects.create(
+                                question=question,
+                                text=answer_text,
+                                is_correct=True,
+                                order=0
+                            )
+                
+                # Save the module with all updates
+                new_module.save()
             
             # Process quizzes
+            # Process existing questions first
             for key, value in request.POST.items():
-                # Handle quiz questions
-                if key.startswith('question_text_'):
+                # Handle existing questions
+                if key.startswith('question_text_existing_'):
+                    parts = key.split('_')
+                    if len(parts) >= 5:  # Format: question_text_existing_MODULE_ID_QUESTION_ID
+                        module_id_str = parts[3]
+                        question_id_str = parts[4]
+                        
+                        # If we have a question ID, use it directly
+                        if question_id_str and question_id_str.isdigit():
+                            question_id = int(question_id_str)
+                            try:
+                                # Get the existing question
+                                question = Question.objects.get(id=question_id)
+                                quiz = question.quiz
+                                module = quiz.module
+                                
+                                # Make sure this question belongs to this course
+                                if module.course.id != course.id:
+                                    logger.warning(f"Question {question_id} does not belong to course {course_id}")
+                                    continue
+                                
+                                # Update question
+                                question_type = request.POST.get(f'question_type_existing_{module_id_str}_{question_id}', question.question_type)
+                                question.text = value
+                                question.question_type = question_type
+                                question.save()
+                                logger.info(f"Updated existing question {question_id} for module {module.id}")
+                                
+                                # Process answers based on question type
+                                if question_type == 'multiple_choice':
+                                    # Get all answer texts for this question
+                                    answer_keys = [k for k in request.POST.keys() if k.startswith(f'answer_text_existing_{question_id}_')]
+                                    
+                                    # Delete existing answers for this question
+                                    Answer.objects.filter(question=question).delete()
+                                    
+                                    # Get the correct answer value
+                                    correct_answer_value = request.POST.get(f'correct_answer_existing_{question_id}', '')
+                                    logger.info(f"Correct answer value for question {question_id}: {correct_answer_value}")
+                                    
+                                    # Create new answers
+                                    for answer_key in answer_keys:
+                                        answer_index = answer_key.split('_')[-1]
+                                        answer_text = request.POST.get(answer_key)
+                                        is_correct = (correct_answer_value == answer_index)
+                                        
+                                        Answer.objects.create(
+                                            question=question,
+                                            text=answer_text,
+                                            is_correct=is_correct
+                                        )
+                                        logger.info(f"Created answer for question {question_id}: {answer_text}, correct: {is_correct}")
+                                        
+                                elif question_type == 'true_false':
+                                    # Delete existing answers
+                                    Answer.objects.filter(question=question).delete()
+                                    
+                                    # Get the correct answer value
+                                    correct_answer_value = request.POST.get(f'correct_answer_existing_{question_id}', '')
+                                    
+                                    # Create True answer
+                                    Answer.objects.create(
+                                        question=question,
+                                        text="صح",
+                                        is_correct=correct_answer_value == '0'
+                                    )
+                                    
+                                    # Create False answer
+                                    Answer.objects.create(
+                                        question=question,
+                                        text="خطأ",
+                                        is_correct=correct_answer_value == '1'
+                                    )
+                                elif question_type == 'short_answer':
+                                    # Delete existing answers
+                                    Answer.objects.filter(question=question).delete()
+                                    
+                                    # Create the correct answer
+                                    correct_answer = request.POST.get(f'answer_short_existing_{question_id}', '')
+                                    Answer.objects.create(
+                                        question=question,
+                                        text=correct_answer,
+                                        is_correct=True
+                                    )
+                            except Question.DoesNotExist:
+                                logger.warning(f"Question with ID {question_id} not found")
+                                continue
+            
+            # Then process new questions for existing modules
+            for key, value in request.POST.items():
+                if key.startswith('question_text_') and not key.startswith('question_text_existing_'):
                     parts = key.split('_')
                     if len(parts) >= 3:
                         module_id = parts[2]
@@ -628,10 +870,10 @@ def update_course(request, course_id):
                             # Check if this is an existing question or a new one
                             question_id = request.POST.get(f'question_id_{module_id}_{question_index}', '')
                             
-                            if question_id:
+                            if question_id and question_id.isdigit():
                                 # Update existing question
                                 try:
-                                    question = Question.objects.get(id=question_id, quiz=quiz)
+                                    question = Question.objects.get(id=int(question_id), quiz=quiz)
                                     question.text = question_text
                                     question.question_type = question_type
                                     question.save()
@@ -655,11 +897,14 @@ def update_course(request, course_id):
                                 # Delete existing answers for this question
                                 Answer.objects.filter(question=question).delete()
                                 
+                                # Get the correct answer value
+                                correct_answer_value = request.POST.get(f'correct_answer_{module_id}_{question_index}', '')
+                                
                                 # Create new answers
                                 for answer_key in answer_keys:
                                     answer_index = answer_key.split('_')[-1]
                                     answer_text = request.POST.get(answer_key)
-                                    is_correct = request.POST.get(f'answer_correct_{module_id}_{question_index}_{answer_index}') == 'on'
+                                    is_correct = correct_answer_value == answer_index
                                     
                                     Answer.objects.create(
                                         question=question,
