@@ -14,52 +14,112 @@
     {% if profile.status == 'Student' %}
       <!-- Student Dashboard -->
       <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white border-0 py-3">
+        <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
           <h4 class="mb-0"><i class="fas fa-graduation-cap me-2 text-primary"></i> دوراتي</h4>
+          <a href="{% url 'allcourses' %}" class="btn btn-primary rounded-pill">
+            <i class="fas fa-plus me-2"></i> تصفح الدورات
+          </a>
         </div>
-        <div class="card-body">
+        
+        <div class="card-body p-4">
           {% if enrollments %}
             {% for enrollment in enrollments %}
-              <div class="course-card mb-3 p-3 border rounded {% if enrollment.completed %}bg-light{% endif %}">
-                <div class="row align-items-center">
-                  <div class="col-md-2">
-                    <img src="{{ enrollment.course.image_course.url }}" class="img-fluid rounded" alt="{{ enrollment.course.name }}">
-                  </div>
-                  <div class="col-md-5">
-                    <h5 class="mb-1">{{ enrollment.course.name }}</h5>
-                    <p class="text-muted small mb-2">{{ enrollment.course.tags.all|join:", " }} • {{ enrollment.course.level }}</p>
-                    <div class="d-flex align-items-center">
-                      <div class="progress flex-grow-1 me-2 course-progress">
-                        <div class="progress-bar {% if enrollment.completed %}bg-success{% else %}bg-danger{% endif %}" style="--progress: {{ enrollment.course.courseprogress.total_progress_percent }}%;"></div>
-                      </div>
-                      <span class="{% if enrollment.completed %}text-success{% else %}text-danger{% endif %} fw-bold">{{ enrollment.course.courseprogress.total_progress_percent }}%</span>
+              <div class="course-card mb-4 bg-white rounded-4 shadow-sm overflow-hidden hover-lift">
+                <div class="row g-0">
+                  <!-- Course Image -->
+                  <div class="col-md-3">
+                    <div class="course-image h-100 min-height-200">
+                      {% if enrollment.course.image_course %}
+                        <img src="{{ enrollment.course.image_course.url }}" 
+                             class="img-fluid w-100 h-100 object-fit-cover" 
+                             alt="{{ enrollment.course.name }}">
+                      {% else %}
+                        <div class="h-100 bg-light d-flex align-items-center justify-content-center">
+                          <i class="fas fa-book-open fa-3x text-muted"></i>
+                        </div>
+                      {% endif %}
                     </div>
                   </div>
-                  <div class="col-md-5 text-end">
-                    {% if enrollment.completed %}
-                      <button class="btn btn-success btn-sm me-2">
-                        <i class="fas fa-check-circle me-1"></i> مكتمل
-                      </button>
-                      <button class="btn btn-outline-danger btn-sm">
-                        <i class="fas fa-redo me-1"></i> إعادة
-                      </button>
-                    {% else %}
-                      <a href="{% url 'course_detail' enrollment.course.id %}" class="btn btn-outline-primary btn-sm me-2">
-                        <i class="fas fa-play-circle me-1"></i> متابعة
-                      </a>
-                      <a href="{% url 'course_detail' enrollment.course.id %}" class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-info-circle me-1"></i> التفاصيل
-                      </a>
-                    {% endif %}
+                  
+                  <!-- Course Info -->
+                  <div class="col-md-9">
+                    <div class="p-4">
+                      <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="mb-0 fw-bold">{{ enrollment.course.name }}</h5>
+                        {% if enrollment.completed %}
+                          <span class="badge bg-success rounded-pill px-3 py-2">
+                            <i class="fas fa-check-circle me-1"></i> مكتمل
+                          </span>
+                        {% endif %}
+                      </div>
+                      
+                      <!-- Course Meta -->
+                      <div class="d-flex align-items-center text-muted small mb-3">
+                        <span class="me-3">
+                          <i class="fas fa-tag me-1"></i>
+                          {{ enrollment.course.tags.all|join:", " }}
+                        </span>
+                        <span class="me-3">
+                          <i class="fas fa-signal me-1"></i>
+                          {{ enrollment.course.get_level_display }}
+                        </span>
+                        <span>
+                          <i class="fas fa-clock me-1"></i>
+                          {{ enrollment.course.vidoes_time }}
+                        </span>
+                      </div>
+                      
+                      <!-- Progress Bar -->
+                      <div class="progress mb-3 progress-thin">
+                        <div class="progress-bar {% if enrollment.completed %}bg-success{% else %}bg-primary{% endif %} progress-bar-striped progress-bar-animated"
+                             role="progressbar"
+                             style="width: {{ enrollment.course.courseprogress.total_progress_percent }}%"></div>
+                      </div>
+                      
+                      <!-- Progress Info & Actions -->
+                      <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-muted small">
+                          <span class="fw-bold {% if enrollment.completed %}text-success{% else %}text-primary{% endif %}">
+                            {{ enrollment.course.courseprogress.total_progress_percent }}%
+                          </span> مكتمل
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                          {% if enrollment.completed %}
+                            <button class="btn btn-success btn-sm rounded-pill px-3">
+                              <i class="fas fa-award me-1"></i> الشهادة
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                              <i class="fas fa-redo me-1"></i> إعادة
+                            </button>
+                          {% else %}
+                            <a href="{% url 'courseviewpage' enrollment.course.id %}" 
+                               class="btn btn-primary btn-sm rounded-pill px-3">
+                              <i class="fas fa-play-circle me-1"></i> متابعة
+                            </a>
+                            <a href="{% url 'courseviewpage' enrollment.course.id %}" 
+                               class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                              <i class="fas fa-info-circle me-1"></i> التفاصيل
+                            </a>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             {% endfor %}
           {% else %}
             <div class="text-center py-5">
-              <i class="fas fa-book-open text-muted mb-3" style="font-size: 3rem;"></i>
-              <h5 class="text-muted">لم تشترك في أي دورات بعد</h5>
-              <a href="{% url 'allcourses' %}" class="btn btn-primary mt-3">تصفح الدورات</a>
+              <img src="https://cdn-icons-png.flaticon.com/512/4076/4076478.png" 
+                   alt="No courses" 
+                   class="img-fluid mb-4" 
+                   style="max-width: 200px; opacity: 0.5;">
+              <h5 class="fw-bold text-muted mb-3">لم تشترك في أي دورات بعد</h5>
+              <p class="text-muted mb-4">ابدأ رحلة التعلم الخاصة بك اليوم!</p>
+              <a href="{% url 'allcourses' %}" class="btn btn-primary rounded-pill px-4 py-2">
+                <i class="fas fa-compass me-2"></i> استكشف الدورات
+              </a>
             </div>
           {% endif %}
         </div>

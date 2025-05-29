@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.contrib import messages
+from .models import Course, Video, Module, Notes, Comment, Enrollment
+from django.contrib.auth.models import User
 from django.utils import timezone
 import json
 from django.views.decorators.csrf import csrf_exempt
@@ -18,6 +19,38 @@ from .utils import searchCourses
 from django.contrib.gis.geoip2 import GeoIP2
 from django_user_agents.utils import get_user_agent
 import requests
+
+@login_required
+def dashboard(request):
+    # Get the user's profile
+    profile = request.user.profile
+    
+    # Get all enrollments for the user
+    enrollments = Enrollment.objects.filter(student=request.user).select_related(
+        'course',
+        'course__teacher__profile'
+    ).prefetch_related(
+        'course__tags',
+        'course__courseprogress_set'
+    )
+    
+    # Calculate progress for each enrollment
+    for enrollment in enrollments:
+        # Get or create course progress
+        progress, created = enrollment.course.courseprogress_set.get_or_create(
+            student=request.user,
+            defaults={'total_progress_percent': 0}
+        )
+        
+        # Check if course is completed
+        enrollment.completed = progress.total_progress_percent == 100
+    
+    context = {
+        'profile': profile,
+        'enrollments': enrollments,
+    }
+    
+    return render(request, 'website/dashboard.html', context)
 import json
 
 def batch(iterable, n=1):

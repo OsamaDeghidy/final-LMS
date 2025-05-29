@@ -216,3 +216,81 @@
 h3 {
   font-weight: 600;
 }
+
+/* Dashboard Styles */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.course-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.min-height-200 {
+  min-height: 200px;
+}
+
+.course-image img {
+  transition: transform 0.3s ease;
+}
+
+.course-image:hover img {
+  transform: scale(1.05);
+}
+
+.object-fit-cover {
+  object-fit: cover;
+}
+
+.progress {
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.progress-thin {
+  height: 8px;
+}
+
+.progress-bar {
+  transition: width 0.6s ease;
+}
+
+/* Badge animations */
+.badge {
+  transition: all 0.3s ease;
+}
+
+.badge:hover {
+  transform: scale(1.1);
+}
+
+/* Button styles */
+.btn-sm {
+  padding: 0.4rem 1rem;
+  font-size: 0.875rem;
+}
+
+.btn {
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Empty state styles */
+.empty-state-image {
+  max-width: 200px;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.empty-state-image:hover {
+  opacity: 0.7;
+}
