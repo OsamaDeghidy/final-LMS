@@ -101,17 +101,29 @@ class Course(models.Model):
 
 
 class Enrollment(models.Model):
-    course = models.ForeignKey(Course, related_name="enrollments",on_delete=models.CASCADE)
+    STATUS_CHOICES = (
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    )
+    course = models.ForeignKey(Course, related_name="enrollments", on_delete=models.CASCADE)
     student = models.ForeignKey(User, related_name="user_courses", on_delete=models.CASCADE)
+    enrollment_date = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    progress = models.FloatField(default=0.0)
+    last_accessed = models.DateTimeField(null=True, blank=True)
+    
     class Meta:
         unique_together = ('course', 'student')
 
     def save(self, *args, **kwargs):
-        print(f"Saving Enrollment: course={self.course.name}, student={self.student.profile.name}")
+        # Update the course's enrolled users count
+        if not self.pk:  # If this is a new enrollment
+            self.course.enroller_user.add(self.student)
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.course.name + " - " + self.student.profile.name
+        return f"{self.course.name} - {self.student.username}"
 
 
 
@@ -190,18 +202,70 @@ class Video(models.Model):
     module = models.ForeignKey(Module, on_delete=models.CASCADE, blank=True, null=True)
     video = models.FileField(null=True, blank=True)
     duration = models.IntegerField(default=0)
-
+    
     def save(self, *args, **kwargs):
+        # First save the course if it's a new instance
+        is_new = not self.pk  # Check if this is a new course
         super().save(*args, **kwargs)
-        try:
-            cmd = ['ffprobe', '-i', self.video.path, '-show_entries', 'format=duration', '-v', 'quiet', '-of', 'csv=p=0']
-            output = subprocess.check_output(cmd)
-            self.duration = int(float(output))
-        except Exception as e:
-            print(f"Error getting video duration: {e}")
-            
+        if is_new:
+            # Update the course's video count
+            if self.course:
+                videos = Video.objects.filter(course=self.course).count()
+                self.course.total_video = videos
+                self.course.save()
+
     def __str__(self):
-                return self.name + " - " + self.module.name + " - " + self.course.name
+        return self.name + " - " + self.module.name + " - " + self.course.name
+
+
+
+class VideoProgress(models.Model):
+    """Tracks a student's progress through a video"""
+    student = models.ForeignKey(User, on_delete=models.CASCADE)
+    video = models.ForeignKey(Video, on_delete=models.CASCADE)
+    watched = models.BooleanField(default=False)  # Whether the video has been watched
+    watch_time = models.IntegerField(default=0)  # Seconds watched
+    last_position = models.IntegerField(default=0)  # Last position in the video in seconds
+    completed_at = models.DateTimeField(null=True, blank=True)  # When the video was completed
+    last_watched = models.DateTimeField(auto_now=True)  # When the video was last watched
+    
+    class Meta:
+        unique_together = ('student', 'video')
+        
+    def __str__(self):
+        return f"{self.student.username} - {self.video.name} - {'Completed' if self.watched else 'In Progress'}"
+        
+    def mark_as_watched(self):
+        """Mark the video as watched"""
+        if not self.watched:
+            self.watched = True
+            self.completed_at = timezone.now()
+            self.save(update_fields=['watched', 'completed_at'])
+            
+            # Update enrollment progress
+            enrollment = Enrollment.objects.filter(
+                student=self.student, 
+                course=self.video.course
+            ).first()
+            
+            if enrollment:
+                # Calculate progress
+                total_videos = Video.objects.filter(module__course=self.video.course).count()
+                completed_videos = VideoProgress.objects.filter(
+                    student=self.student,
+                    video__module__course=self.video.course,
+                    watched=True
+                ).count()
+                
+                if total_videos > 0:
+                    progress = (completed_videos / total_videos) * 100
+                    enrollment.progress = progress
+                    enrollment.save(update_fields=['progress'])
+                    
+                    # Check if course is completed
+                    if progress >= 100:
+                        enrollment.status = 'completed'
+                        enrollment.save(update_fields=['status'])
 
 
 

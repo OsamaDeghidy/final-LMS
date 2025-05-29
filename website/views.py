@@ -3,6 +3,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.utils import timezone
 import json
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
@@ -45,27 +46,61 @@ def contact(request):
 def courseviewpage(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     is_enrolled = False
+    enrollment = None
+    progress = 0
+    
     if request.user.is_authenticated:
         enrollment = Enrollment.objects.filter(course=course, student=request.user).first()
         if enrollment:
             is_enrolled = True
+            # Update last accessed time and get progress
+            from .utils import update_enrollment_progress
+            progress = update_enrollment_progress(enrollment)
+    
     if is_enrolled:
-        return render(request, 'website/courseviewpage.html', {'course': course})
+        context = {
+            'course': course,
+            'enrollment': enrollment,
+            'progress': progress
+        }
+        return render(request, 'website/courseviewpage.html', context)
     else:
-        return redirect('course_detail',course_id=course.id)
+        return redirect('course_detail', course_id=course.id)
 
 def courseviewpagevideo(request, course_id, video_id):
     course = get_object_or_404(Course, id=course_id)
     video = get_object_or_404(Video, id=video_id)
     is_enrolled = False
+    enrollment = None
+    video_progress = None
+    
     if request.user.is_authenticated:
         enrollment = Enrollment.objects.filter(course=course, student=request.user).first()
         if enrollment:
             is_enrolled = True
+            # Update last accessed time
+            enrollment.last_accessed = timezone.now()
+            enrollment.save(update_fields=['last_accessed'])
+            
+            # Get or create video progress
+            video_progress, created = VideoProgress.objects.get_or_create(
+                student=request.user,
+                video=video,
+                defaults={'watched': False}
+            )
+            
     if is_enrolled:
         quiz = Quiz.objects.filter(video=video).first()
         questions = quiz.question_set.all() if quiz else []
-        return render(request, 'website/courseviewvideo.html', {'course': course, 'video': video, 'questions': questions, 'quiz': quiz})
+        
+        context = {
+            'course': course, 
+            'video': video, 
+            'questions': questions, 
+            'quiz': quiz,
+            'video_progress': video_progress
+        }
+        return render(request, 'website/courseviewvideo.html', context)
     else:
         return redirect('course_detail', course_id=course.id)
 
@@ -336,6 +371,7 @@ def course_detail(request, course_id):
     monitor = None
     user_review = None
     is_enrolled = False
+    profile_context = {"status": "none"}  # Initialize profile_context with a default value
     
     if request.user.is_authenticated:
         # Check if user is enrolled in the course
@@ -346,6 +382,13 @@ def course_detail(request, course_id):
         # Get user's review if it exists
         user_review = Review.objects.filter(course=course, user=request.user).first()
         
+        # Get user profile information
+        try:
+            profile = Profile.objects.get(user=request.user)
+            profile_context = profile
+        except Profile.DoesNotExist:
+            pass
+            
         try:
             monitor = Monitor.objects.get(user=request.user, landing_page=request.META.get('HTTP_HOST') + request.META.get('PATH_INFO'), ip=request.META.get('REMOTE_ADDR'))
             monitor.frequency += 1
@@ -361,22 +404,8 @@ def course_detail(request, course_id):
         data = data.split("(")[1].strip(")")
         location = json.loads(data)
         monitor.country = location['country_name']
-        monitor.city = location['city']
-        monitor.region = location['region']
-        monitor.timeZone = location['time_zone']
-        user_agent = get_user_agent(request)
-        monitor.browser = user_agent.browser.family
-        monitor.browser_version = user_agent.browser.version_string
-        monitor.operating_system = user_agent.os.family
-        monitor.device = user_agent.device.family
-        monitor.language = request.headers.get('Accept-Language')
-        monitor.screen_resolution = request.headers.get('X-Original-Request-Screen-Resolution')
-        monitor.referrer = request.META.get('HTTP_REFERER')
-        monitor.landing_page = request.META.get('HTTP_HOST') + request.META.get('PATH_INFO')
-        monitor.frequency = 1
-        monitor.save()
     
-    # Handle review submission
+    # Process review submission
     if request.method == 'POST' and request.user.is_authenticated and 'review_rating' in request.POST:
         rating = int(request.POST.get('review_rating'))
         comment = request.POST.get('review_comment', '')
@@ -398,15 +427,6 @@ def course_detail(request, course_id):
         
         # Refresh user review after submission
         user_review = Review.objects.filter(course=course, user=request.user).first()
-        
-    if not request.user.is_authenticated:
-        profile_context = {"status": "none"}
-    else:
-        profile=Profile.objects.filter(user=request.user)
-       
-        if profile.exists():
-            profile=Profile.objects.get(user=request.user)
-            profile_context=profile
     
     # Get all modules for this course with their videos
     modules = Module.objects.filter(course=course).order_by('number').prefetch_related('video_set')
@@ -1360,13 +1380,89 @@ def teacher_list(request):
 def enroll_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     if not request.user.is_authenticated:
+        # Store the course ID in session to redirect back after login
+        request.session['enroll_after_login'] = course_id
         return redirect('login')
-    enrollment, created = Enrollment.objects.get_or_create(course=course, student=request.user)
-    if created:
-        messages.success(request, f"You have successfully enrolled in {course.name}.")
-    else:
-        messages.warning(request, f"You are already enrolled in {course.name}.")
-    return redirect(reverse('courseviewpage', args=[course_id]))
+    
+    # Check if user is already enrolled
+    existing_enrollment = Enrollment.objects.filter(course=course, student=request.user).first()
+    if existing_enrollment:
+        if existing_enrollment.status == 'cancelled':
+            # Reactivate cancelled enrollment
+            existing_enrollment.status = 'active'
+            existing_enrollment.enrollment_date = timezone.now()
+            existing_enrollment.save()
+            messages.success(request, f"تم إعادة تفعيل اشتراكك في الدورة: {course.name}")
+        else:
+            messages.warning(request, f"أنت مسجل بالفعل في الدورة: {course.name}")
+        return redirect(reverse('courseviewpage', args=[course_id]))
+    
+    # For free courses or if payment is handled elsewhere
+    if request.method == 'POST':
+        # Process enrollment
+        enrollment = Enrollment.objects.create(
+            course=course,
+            student=request.user,
+            status='active',
+            enrollment_date=timezone.now()
+        )
+        
+        # Send welcome email (optional)
+        # send_enrollment_email(request.user.email, course)
+        
+        messages.success(request, f"تم تسجيلك بنجاح في الدورة: {course.name}")
+        return redirect(reverse('courseviewpage', args=[course_id]))
+    
+    # Show enrollment confirmation page
+    context = {
+        'course': course,
+    }
+    return render(request, 'website/enrollment_confirmation.html', context)
+
+@csrf_exempt
+def mark_video_watched(request, video_id):
+    """API endpoint to mark a video as watched"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'User not authenticated'}, status=401)
+    
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Only POST method allowed'}, status=405)
+    
+    try:
+        video = Video.objects.get(id=video_id)
+        
+        # Get or create video progress
+        video_progress, created = VideoProgress.objects.get_or_create(
+            student=request.user,
+            video=video,
+            defaults={'watched': False}
+        )
+        
+        # Mark as watched
+        video_progress.mark_as_watched()
+        
+        # Update enrollment progress
+        enrollment = Enrollment.objects.filter(
+            student=request.user, 
+            course=video.course
+        ).first()
+        
+        if enrollment:
+            from .utils import update_enrollment_progress
+            progress = update_enrollment_progress(enrollment)
+            return JsonResponse({
+                'status': 'success', 
+                'message': 'Video marked as watched',
+                'progress': progress
+            })
+        else:
+            return JsonResponse({'status': 'error', 'message': 'User not enrolled in this course'}, status=400)
+            
+    except Video.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Video not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
 
 def analytics(request):
     return render(request, 'website/analytics.html')

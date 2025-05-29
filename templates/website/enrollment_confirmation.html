@@ -1,0 +1,205 @@
+{% extends 'main/base.html' %}
+{% load static %}
+{% load course_filters %}
+
+{% block title %}تأكيد التسجيل - {{ course.name }}{% endblock %}
+
+
+
+{% block content %}
+<div class="container" dir="rtl">
+    <div class="enrollment-confirmation">
+        <h1 class="text-center mb-4">تأكيد التسجيل في الدورة</h1>
+        
+        <div class="course-info">
+            {% if course.image_course %}
+                <img src="{{ course.image_course.url }}" alt="{{ course.name }}" class="course-image">
+            {% else %}
+                <div class="course-image-placeholder">
+                    <i class="fas fa-image fa-2x mb-2"></i>
+                    <span>لا توجد صورة</span>
+                </div>
+            {% endif %}
+            
+            <div class="course-details">
+                <h2>{{ course.name }}</h2>
+                <div class="instructor">
+                    {% if course.teacher.profile.image %}
+                        <img src="{{ course.teacher.profile.image.url }}" alt="{{ course.teacher.profile.name }}" class="instructor-avatar">
+                    {% else %}
+                        <div class="instructor-avatar">{{ course.teacher.profile.name|slice:':1'|upper }}</div>
+                    {% endif %}
+                    <span>{{ course.teacher.profile.name }}</span>
+                </div>
+                <div class="course-meta">
+                    <span><i class="fas fa-signal me-2"></i> {{ course.get_level_display }}</span>
+                    <span class="mx-3"><i class="fas fa-video me-2"></i> {{ course.videos }} محاضرة</span>
+                    <span><i class="fas fa-clock me-2"></i> {{ course.vidoes_time }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="price-info">
+            <h3 class="mb-3">تفاصيل الدفع</h3>
+            <div class="price-row">
+                <span>سعر الدورة</span>
+                <span>${{ course.price }}</span>
+            </div>
+            {% if course.discount_price %}
+                <div class="price-row">
+                    <span>خصم ({{ course.discount }}%)</span>
+                    <span>-${{ course.discount }}</span>
+                </div>
+            {% endif %}
+            <div class="price-total">
+                <span>الإجمالي</span>
+                <span>${{ course.discount_price|default:course.price }}</span>
+            </div>
+        </div>
+        
+        <form method="post" action="{% url 'enroll_course' course_id=course.id %}">
+            {% csrf_token %}
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">تأكيد التسجيل</button>
+                <a href="{% url 'course_detail' course_id=course.id %}" class="btn btn-outline text-center">العودة إلى صفحة الدورة</a>
+            </div>
+        </form>
+        
+        <div class="secure-payment mt-4">
+            <i class="fas fa-lock"></i> الدفع آمن ومشفر
+        </div>
+    </div>
+</div>
+
+
+
+
+<style>
+    .enrollment-confirmation {
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .course-info {
+        display: flex;
+        margin-bottom: 30px;
+        align-items: center;
+    }
+    
+    .course-image {
+        width: 180px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-left: 20px;
+    }
+    
+    .course-image-placeholder {
+        width: 180px;
+        height: 120px;
+        background-color: #f0f0f0;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #888;
+        margin-left: 20px;
+    }
+    
+    .course-details h2 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #333;
+    }
+    
+    .instructor {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+    
+    .instructor-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: #5624d0;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-left: 10px;
+    }
+    
+    .price-info {
+        background-color: #f7f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .price-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    
+    .price-total {
+        display: flex;
+        justify-content: space-between;
+        border-top: 1px solid #ddd;
+        padding-top: 10px;
+        margin-top: 10px;
+        font-weight: bold;
+    }
+    
+    .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .btn-primary {
+        background-color: #5624d0;
+        border-color: #5624d0;
+        padding: 12px;
+        font-size: 16px;
+    }
+    
+    .btn-outline {
+        border: 1px solid #5624d0;
+        color: #5624d0;
+        background-color: transparent;
+        padding: 12px;
+        font-size: 16px;
+    }
+    
+    .secure-payment {
+        text-align: center;
+        margin-top: 20px;
+        color: #666;
+    }
+    
+    .secure-payment i {
+        margin-right: 5px;
+        color: #5624d0;
+    }
+    
+    @media (max-width: 768px) {
+        .course-info {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .course-image, .course-image-placeholder {
+            margin-left: 0;
+            margin-bottom: 20px;
+        }
+    }
+</style>
+{% endblock %}

@@ -17,15 +17,23 @@ def coursebase(request):
 
 def loginUser(request):
     if request.user.is_authenticated:
+        # Check if there's a pending enrollment after login
+        if 'enroll_after_login' in request.session:
+            course_id = request.session['enroll_after_login']
+            del request.session['enroll_after_login']
+            return redirect('enroll_course', course_id=course_id)
         return redirect('index')
 
+    # Get the next URL from query parameters or use index as default
+    next_url = request.GET.get('next', 'index')
+    
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
         
         if not email or not password:
             messages.error(request, 'الرجاء إدخال البريد الإلكتروني وكلمة المرور')
-            return render(request, 'user/login.html')
+            return render(request, 'user/login.html', {'next': next_url})
         
         # First try to authenticate
         user = authenticate(request, username=email, password=password)
@@ -34,6 +42,16 @@ def loginUser(request):
             # Authentication successful
             login(request, user)
             messages.success(request, 'تم تسجيل الدخول بنجاح')
+            
+            # Check if there's a pending enrollment after login
+            if 'enroll_after_login' in request.session:
+                course_id = request.session['enroll_after_login']
+                del request.session['enroll_after_login']
+                return redirect('enroll_course', course_id=course_id)
+            
+            # If there's a next URL in the request, redirect to it
+            if next_url != 'index':
+                return redirect(next_url)
             return redirect('index')
         else:
             # Check if user exists but password is wrong
@@ -43,7 +61,7 @@ def loginUser(request):
             except User.DoesNotExist:
                 messages.error(request, 'لا يوجد حساب بهذا البريد الإلكتروني')
     
-    return render(request, 'user/login.html')
+    return render(request, 'user/login.html', {'next': next_url})
 
 def logoutUser(request):
     logout(request)
