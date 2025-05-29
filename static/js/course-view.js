@@ -343,3 +343,74 @@ function getCsrfToken() {
     }
     return cookieValue;
 }
+
+
+// Handle video progress tracking
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle video position saving
+    const videos = document.querySelectorAll('video');
+    videos.forEach(video => {
+      const videoId = video.closest('.content-section').id.replace('video-', '');
+      
+      // Load saved position if exists
+      if(video.dataset.lastPosition) {
+        video.currentTime = parseFloat(video.dataset.lastPosition);
+      }
+      
+      // Save position periodically
+      video.addEventListener('timeupdate', function() {
+        localStorage.setItem(`video_${videoId}_position`, video.currentTime);
+      });
+      
+      // Mark as completed when video ends
+      video.addEventListener('ended', function() {
+        // Here you would typically send an AJAX request to mark as completed
+        console.log(`Video ${videoId} completed`);
+        video.dataset.watched = "true";
+        
+        // Update UI
+        const badge = document.createElement('div');
+        badge.className = 'video-completed-badge position-absolute top-0 end-0 m-3';
+        badge.innerHTML = `<span class="badge bg-success rounded-pill px-3 py-2 shadow-sm">
+          <i class="fas fa-check-circle me-1"></i> تم المشاهدة
+        </span>`;
+        video.parentElement.appendChild(badge);
+      });
+    });
+    
+    // Handle content switching
+    const contentItems = document.querySelectorAll('.content-item');
+    contentItems.forEach(item => {
+      item.addEventListener('click', function(e) {
+        e.preventDefault();
+        const contentId = this.dataset.contentId;
+        
+        // Hide all content sections
+        document.querySelectorAll('.content-section').forEach(section => {
+          section.classList.add('d-none');
+        });
+        
+        // Show selected content
+        document.getElementById(contentId).classList.remove('d-none');
+        
+        // Update active state
+        contentItems.forEach(i => i.classList.remove('active', 'bg-light-primary'));
+        this.classList.add('active', 'bg-light-primary');
+      });
+    });
+    
+    // Handle quiz submission
+    const quizForm = document.getElementById('ques');
+    if(quizForm) {
+      quizForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        // Here you would typically send an AJAX request
+        console.log('Quiz submitted');
+        
+        // Show results
+        document.getElementById('results').classList.remove('d-none');
+        quizForm.classList.add('d-none');
+      });
+    }
+  });
+
