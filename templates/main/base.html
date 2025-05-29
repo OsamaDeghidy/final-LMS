@@ -1,4 +1,5 @@
 {% load static %}
+{% load website_extras %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -47,18 +48,14 @@
                            الكورسات
                         </a>
                     </li>
+                    {% for category in categories %}
                     <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
-                        <a class="nav-link px-3 py-2 fw-semibold" href="/course-category/e-learning"
+                        <a class="nav-link px-3 py-2 fw-semibold" href="{% url 'course_category' category.name %}"
                            style="color: #495057; border-radius: 8px;">
-                           التدريب الإلكتروني
+                           {{ category.name }}
                         </a>
                     </li>
-                    <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
-                        <a class="nav-link px-3 py-2 fw-semibold" href="/course-bundle"
-                           style="color: #495057; border-radius: 8px;">
-                           الدبلومات
-                        </a>
-                    </li>
+                    {% endfor %}
                     <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
                         <a class="nav-link px-3 py-2 fw-semibold" href="/contact"
                            style="color: #495057; border-radius: 8px;">

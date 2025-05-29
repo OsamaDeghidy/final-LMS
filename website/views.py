@@ -1378,29 +1378,44 @@ def delete_pdf(request, course_id, pdf_type):
     course = get_object_or_404(Course, id=course_id)
     
     # Check if user is authorized to modify this course
-    if request.user.profile != course.teacher.profile:
-        messages.error(request, 'غير مسموح لك بتعديل هذه الدورة')
-        return redirect('course_detail', course_id=course_id)
+    if not request.user.is_staff and (not hasattr(request.user, 'teacher') or request.user.teacher != course.teacher):
+        messages.error(request, 'ليس لديك صلاحية لحذف هذا الملف')
+        return redirect('update_course', course_id=course_id)
     
-    # Handle different PDF types
+    # Delete the appropriate file based on pdf_type
     if pdf_type == 'syllabus_pdf' and course.syllabus_pdf:
         # Delete the file
         course.syllabus_pdf.delete(save=False)
         course.syllabus_pdf = None
         course.save()
-        messages.success(request, 'تم حذف ملف منهج الدورة بنجاح')
-        
     elif pdf_type == 'materials_pdf' and course.materials_pdf:
         # Delete the file
         course.materials_pdf.delete(save=False)
         course.materials_pdf = None
         course.save()
-        messages.success(request, 'تم حذف ملف المواد الإضافية بنجاح')
     else:
         messages.error(request, 'لم يتم العثور على الملف المطلوب')
     
     # Redirect back to the update course page
     return redirect('update_course', course_id=course_id)
+
+
+def course_category(request, category_slug):
+    """
+    View to display all courses belonging to a specific category
+    """
+    # Get the category or return 404 if not found
+    category = get_object_or_404(Category, name=category_slug)
+    
+    # Get all courses in this category
+    courses = Course.objects.filter(category=category, status='published')
+    
+    context = {
+        'category': category,
+        'courses': courses,
+    }
+    
+    return render(request, 'website/category_courses.html', context)
 
 
 # def create_quiz(request, video_id):
