@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
@@ -9,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, Review
+from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress
 from user.models import Profile, Student, Organization, Teacher
 from .utils import searchCourses
 
@@ -1599,3 +1601,20 @@ def course_category(request, category_slug):
 #         return redirect('quiz_result', quiz_id=quiz_id, message=message)
 #     else:
 #         return redirect('home')
+
+@login_required
+@require_POST
+def add_comment(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    comment_text = request.POST.get('comment_text')
+    
+    if comment_text:
+        Comment.objects.create(
+            user=request.user,
+            course=course,
+            description=comment_text
+        )
+        return redirect('courseviewpage', course_id=course_id)
+    
+    messages.error(request, 'Comment text is required.')
+    return redirect('courseviewpage', course_id=course_id)

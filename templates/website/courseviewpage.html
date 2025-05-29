@@ -1,43 +1,160 @@
-{% extends 'main/base.html' %} 
+{% extends 'main/base.html' %}
 
 {% load static %}
 {% load course_filters %}
 
-{% block title %}{{ course.name }} - دورة تدريبية{% endblock %} 
+{% block title %}{{ course.name }} - دورة تدريبية{% endblock %}
+
+{% block head %}
+    {{ block.super }}
+<link rel="stylesheet" href="{% static 'css/course-view.css' %}">
+<script src="{% static 'js/course-view.js' %}"></script>
+{% endblock %}
 
 {% block content %}
 
-<div class="course-header bg-dark text-white py-5">
-  <div class="container">
+<!-- Course Header Section -->
+<div class="course-header text-white py-4 mb-0">
+  <div class="container-fluid">
     <div class="row align-items-center">
-      <div class="col-lg-8">
-        <h1 class="display-5 fw-bold mb-3">{{ course.name }}</h1>
-        <p class="lead mb-4">{{ course.small_description }}</p>
-        <div class="d-flex align-items-center mb-3">
-          <div class="me-4">
-            <span class="badge bg-primary rounded-pill px-3 py-2 d-inline-flex align-items-center">
-              <i class="fas fa-graduation-cap me-2"></i> {{ course.total_video }} دروس
-            </span>
+      <div class="col-12">
+        <h1 class="h3 fw-bold mb-2">{{ course.name }}</h1>
+        <div class="d-flex align-items-center flex-wrap gap-2">
+          <span class="badge bg-primary rounded-pill px-3 py-2 d-inline-flex align-items-center">
+            <i class="fas fa-graduation-cap me-2"></i> {{ course.total_video }} دروس
+          </span>
+          <span class="badge bg-success rounded-pill px-3 py-2 d-inline-flex align-items-center">
+            <i class="fas fa-clock me-2"></i> {{ course.vidoes_time }}
+          </span>
+          <span class="badge bg-info rounded-pill px-3 py-2 d-inline-flex align-items-center">
+            <i class="fas fa-signal me-2"></i> {{ course.get_level_display }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Course Content -->
+<div class="course-content">
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar Navigation -->
+      <div class="col-lg-3 course-sidebar p-0">
+        <div class="sidebar-content bg-light border-end h-100 overflow-auto">
+          <div class="p-3 border-bottom bg-white sticky-top">
+            <div class="progress mb-2" style="height: 8px;">
+              <div class="progress-bar bg-primary" role="progressbar" style="width: {{ progress }}%;" 
+                   aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center small">
+              <span class="text-muted">تقدمك في الدورة</span>
+              <span class="fw-bold">{{ progress }}%</span>
+            </div>
           </div>
-          <div class="me-4">
-            <span class="badge bg-success rounded-pill px-3 py-2 d-inline-flex align-items-center">
-              <i class="fas fa-clock me-2"></i> {{ course.vidoes_time }}
-            </span>
-          </div>
-          <div>
-            <span class="badge bg-info rounded-pill px-3 py-2 d-inline-flex align-items-center">
-              <i class="fas fa-signal me-2"></i> {{ course.get_level_display }}
-            </span>
+
+          <!-- Course Modules Navigation -->
+          <div class="modules-nav">
+            {% for module in course.module_set.all %}
+            <div class="module-section">
+              <div class="module-header p-3 border-bottom d-flex align-items-center" 
+                   data-bs-toggle="collapse" data-bs-target="#module{{ module.id }}" 
+                   role="button" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}">
+                <i class="fas fa-chevron-down me-2 text-primary"></i>
+                <div>
+                  <h6 class="mb-1 fw-bold">{{ module.name }}</h6>
+                  <small class="text-muted">{{ module.video_set.count }} فيديو • {{ module.notes_set.count }} ملاحظات</small>
+                </div>
+              </div>
+              
+              <div class="collapse {% if forloop.first %}show{% endif %}" id="module{{ module.id }}">
+                <div class="module-content">
+                  <!-- Videos -->
+                  {% for video in module.video_set.all %}
+                  <a href="#video-{{ video.id }}" class="content-item p-3 border-bottom d-flex align-items-center text-decoration-none text-dark {% if video.id == video_id %}active{% endif %}" data-content-id="video-{{ video.id }}">
+                    <div class="icon-wrapper {% if video.id in completed_videos %}bg-success{% else %}bg-primary{% endif %} rounded-circle me-3 p-2">
+                      <i class="fas {% if video.id in completed_videos %}fa-check{% else %}fa-play{% endif %} text-white"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1 small fw-bold">{{ video.name }}</h6>
+                      <small class="text-muted">{{ video.duration|default:"0:00" }}</small>
+                    </div>
+                  </a>
+                  {% endfor %}
+                  
+                  <!-- Notes -->
+                  {% for note in module.notes_set.all %}
+                  <a href="#note-{{ note.id }}" class="content-item p-3 border-bottom d-flex align-items-center text-decoration-none text-dark" data-content-id="note-{{ note.id }}">
+                    <div class="icon-wrapper bg-success rounded-circle me-3 p-2">
+                      <i class="fas fa-file-alt text-white"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1 small fw-bold">ملاحظات {{ forloop.counter }}</h6>
+                      <small class="text-muted">PDF</small>
+                    </div>
+                  </a>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
           </div>
         </div>
-        
-        <!-- Course Progress -->
-        <div class="course-progress mt-3">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="text-white mb-0">تقدمك في الدورة</h6>
-            <span class="text-white">{{ progress|floatformat:0 }}%</span>
-          </div>
-          <div class="progress" style="height: 10px;">
+      </div>
+      
+      <!-- Main Content Area -->
+      <div class="col-lg-9 main-content p-4">
+        <div class="content-container">
+          {% for module in course.module_set.all %}
+            {% for video in module.video_set.all %}
+            <div id="video-{{ video.id }}" class="content-section {% if not forloop.first or not forloop.parentloop.first %}d-none{% endif %}">
+              <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-bottom">
+                  <h4 class="mb-0">{{ video.name }}</h4>
+                </div>
+                <div class="card-body p-0">
+                  <div class="video-container position-relative">
+                    <video
+                      src="{{ video.video.url }}"
+                      type="{{ video.video.content_type }}"
+                      class="w-100"
+                      controls
+                      {% if video.id in video_progress %}data-last-position="{{ video_progress.last_position }}"{% endif %}
+                      {% if video.id in completed_videos %}data-watched="true"{% endif %}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                    
+                    {% if video.id in completed_videos %}
+                    <div class="video-completed-badge">
+                      <i class="fas fa-check-circle"></i> تم مشاهدة هذا الفيديو
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+            
+            {% for note in module.notes_set.all %}
+            <div id="note-{{ note.id }}" class="content-section d-none">
+              <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-bottom">
+                  <h4 class="mb-0">ملاحظات {{ forloop.counter }}</h4>
+                </div>
+                <div class="card-body">
+                  <embed src="{{ note.file.url }}" type="application/pdf" width="100%" height="600px">
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+          <div class="progress">
             {% with width_value=progress|stringformat:'f' %}
             <div class="progress-bar bg-warning" role="progressbar" 
                  style="width: {{ width_value|floatformat:0 }}%;"
@@ -61,23 +178,113 @@
       </div>
       <div class="col-lg-4 text-center text-lg-end mt-4 mt-lg-0">
         {% if course.image_course %}
-          <img src="{{ course.image_course.url }}" alt="{{ course.name }}" class="img-fluid rounded-3 shadow" style="max-height: 200px;">
+          <img src="{{ course.image_course.url }}" alt="{{ course.name }}" class="img-fluid rounded-3 shadow course-thumbnail">
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 
+<!-- Main Course Content -->
 <main class="container-fluid py-5">
   <div class="row">
     <!-- Main Content Column -->
     <div class="col-lg-8 pe-lg-5">
+      <!-- Video Player Section (if available) -->
+      {% if video %}
+      <section class="mb-5">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
+            <h3 class="mb-0 h5">{{ video.name }}</h3>
+            <span class="badge bg-primary">{{ video.duration|default:"0:00" }}</span>
+          </div>
+          <div class="card-body p-0">
+            <div class="video-player">
+              <div class="video-container position-relative">
+                <video
+                  src="{{ video.video.url }}"
+                  type="{{ video.video.content_type }}"
+                  id="vid"
+                  class="w-100 rounded-0"
+                  controls
+                  {% if video_progress.last_position %}
+                  data-last-position="{{ video_progress.last_position }}"
+                  {% endif %}
+                  {% if video_progress.watched %}
+                  data-watched="true"
+                  {% endif %}
+                >
+                  Your browser does not support the video tag.
+                </video>
+                
+                {% if video_progress.watched %}
+                <div class="video-completed-badge position-absolute top-0 end-0 m-3 bg-success text-white px-3 py-2 rounded-pill">
+                  <i class="fas fa-check-circle me-1"></i> تم مشاهدة هذا الفيديو
+                </div>
+                {% endif %}
+              </div>
+              
+              {% if questions %}
+              <div class="quiz-section mt-4 p-4">
+                <h4 class="mb-3"><i class="fas fa-question-circle text-primary me-2"></i>اختبار قصير</h4>
+                <form class="hide quesForm bg-light p-4 rounded-3 shadow-sm" id="ques">
+                  {% csrf_token %}
+                  {% for question in questions %}
+                  <div class="quesBox mb-4">
+                    <h5 class="fw-bold">سؤال {{ forloop.counter }}: {{ question.text }}</h5>
+                    <div class="answers-list mt-3">
+                      {% for answer in question.answer_set.all %}
+                      <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="{{ question.id }}[]" value="{{ answer.id }}" id="answer{{ answer.id }}">
+                        <label class="form-check-label" for="answer{{ answer.id }}">
+                          {{ answer.text }}
+                        </label>
+                      </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% endfor %}
+                  <button id="sub" type="submit" class="btn btn-primary rounded-pill px-4 py-2 mt-3">
+                    <i class="fas fa-paper-plane me-2"></i>إرسال الإجابات
+                  </button>
+                </form>
+              </div>
+              {% endif %}
+              
+              <div class="hide results bg-light p-4 rounded-3 shadow-sm mt-4" id="results">
+                <h4 class="mb-3 d-flex align-items-center">
+                  <i class="fas fa-chart-bar text-primary me-2"></i>نتائج الاختبار
+                </h4>
+                {% if quiz %}
+                <div class="d-flex justify-content-between mb-3">
+                  <p class="mb-0"><strong>درجة النجاح:</strong> {{ quiz.pass_mark }}%</p>
+                  <p class="mb-0"><strong>درجتك:</strong> <span class="fs-5 fw-bold {% if passed %}text-success{% else %}text-danger{% endif %}">{{ score }}%</span></p>
+                </div>
+                <div class="alert {% if passed %}alert-success{% else %}alert-danger{% endif %}">
+                  {% if passed %}
+                    <i class="fas fa-check-circle me-2"></i>تهانينا! لقد اجتزت الاختبار بنجاح.
+                  {% else %}
+                    <i class="fas fa-times-circle me-2"></i>لم تجتز الاختبار. يرجى المحاولة مرة أخرى.
+                  {% endif %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                  <i class="fas fa-info-circle me-2"></i>لا يوجد اختبار مرتبط بهذا الفيديو.
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
       {% for module in course.module_set.all %}
       <section class="mb-5">
         <div class="card border-0 shadow-sm module-card">
           <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
             <div class="d-flex align-items-center">
-              <div class="module-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+              <div class="module-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
                 <i class="fas fa-book"></i>
               </div>
               <h3 class="mb-0 h5">{{ module.name }}</h3>
@@ -98,8 +305,8 @@
                       {% for video in module.video_set.all %}
                       <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=video.id %}" class="list-group-item list-group-item-action d-flex align-items-center py-3 px-3 hover-bg">
                         <div class="flex-shrink-0 me-3">
-                          <div class="video-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                            <i class="fas fa-play"></i>
+                          <div class="video-icon {% if video.id == video_id %}bg-success{% else %}bg-primary{% endif %} text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                            <i class="fas {% if video.id == video_id %}fa-play-circle{% else %}fa-play{% endif %}"></i>
                           </div>
                         </div>
                         <div class="flex-grow-1">
@@ -107,7 +314,11 @@
                           <p class="text-muted mb-0 small">{{ video.duration|default:"0" }} دقيقة</p>
                         </div>
                         <div class="ms-auto">
+                          {% if video_progress and video.id in completed_videos %}
+                          <span class="badge bg-success rounded-pill"><i class="fas fa-check me-1"></i>تم</span>
+                          {% else %}
                           <i class="fas fa-chevron-right text-muted"></i>
+                          {% endif %}
                         </div>
                       </a>
                       {% endfor %}
@@ -167,13 +378,14 @@
           
           <div class="card-body">
             <!-- New Comment Form -->
-            <form class="mb-4">
+            <form method="post" action="{% url 'add_comment' course_id=course.id %}" class="mb-4 comment-form">
+              {% csrf_token %}
               <div class="form-floating mb-3">
-                <textarea class="form-control" placeholder="اكتب سؤالك أو تعليقك هنا" id="commentTextarea" style="height: 100px"></textarea>
+                <textarea class="form-control" placeholder="اكتب سؤالك أو تعليقك هنا" id="commentTextarea" name="comment_text" style="height: 100px" required></textarea>
                 <label for="commentTextarea">اكتب سؤالك أو تعليقك هنا</label>
               </div>
               <div class="text-end">
-                <button type="submit" class="btn btn-primary rounded-pill px-4">
+                <button type="submit" class="btn btn-primary rounded-pill px-4 py-2 shadow-sm">
                   <i class="fas fa-paper-plane me-2"></i>إرسال
                 </button>
               </div>
@@ -181,358 +393,38 @@
             
             <!-- Comments List -->
             <div class="comments-list">
-              {% for comment in course.comment_set.all %}
-              <div class="comment-item mb-4">
-                <div class="d-flex">
-                  <div class="flex-shrink-0">
-                    <div class="avatar bg-gradient-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                      <i class="fas fa-user"></i>
-                    </div>
-                  </div>
-                  <div class="flex-grow-1 ms-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                      <div>
-                        <h5 class="mb-0">{{ comment.user.profile.name }}</h5>
-                        <small class="text-muted">{{ comment.created_at|date:"d M Y" }}</small>
-                      </div>
-                      <div>
-                        <button class="btn btn-sm btn-outline-primary rounded-pill">
-                          <i class="fas fa-reply me-1"></i> رد
-                        </button>
-                      </div>
-                    </div>
-                    <div class="comment-content mb-3">
-                      {{ comment.description|safe }}
-                    </div>
-                    <div class="d-flex">
-                      <button class="btn btn-sm btn-link text-muted">
-                        <i class="far fa-thumbs-up me-1"></i> مفيد (24)
-                      </button>
-                    </div>
-                    
-                    <!-- Replies -->
-                    {% if comment.subcomment_set.all %}
-                    <div class="replies mt-3 ps-4 border-start border-2 border-primary">
-                      {% for subcomment in comment.subcomment_set.all %}
-                      <div class="d-flex mt-3">
-                        <div class="flex-shrink-0">
-                          <div class="avatar bg-gradient-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                            <i class="fas fa-user"></i>
-                          </div>
+              {% if course.comment_set.all %}
+                {% for comment in course.comment_set.all %}
+                <div class="comment-item mb-4 p-3 border-bottom">
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      {% if comment.user.profile.image %}
+                        <img src="{{ comment.user.profile.image.url }}" alt="{{ comment.user.profile.name }}" class="rounded-circle me-3" width="48" height="48">
+                      {% else %}
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                          {{ comment.user.profile.name|slice:':1'|upper }}
                         </div>
-                        <div class="flex-grow-1 ms-3">
-                          <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div>
-                              <h6 class="mb-0">{{ subcomment.user.profile.name }}</h6>
-                              <small class="text-muted">{{ subcomment.created_at|date:"d M Y" }}</small>
-                            </div>
-                          </div>
-                          <div class="comment-content mb-3">
-                            {{ subcomment.description|safe }}
-                          </div>
-                        </div>
-                      </div>
-                      {% endfor %}
+                      {% endif %}
                     </div>
-                    {% endif %}
+                    <div class="flex-grow-1">
+                      <h6 class="mb-0">{{ comment.user.profile.name }}</h6>
+                      <small class="text-muted">{{ comment.created_at|date:"d M Y" }}</small>
+                      <div class="comment-content mt-2">
+                        {{ comment.description|safe }}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              {% endfor %}
+                {% endfor %}
+              {% else %}
+                <p class="text-center">لا يوجد تعليقات بعد.</p>
+              {% endif %}
             </div>
-          </div>
-          
-          <div class="card-footer bg-white py-3">
-            <h5 class="mb-3">Add your comment</h5>
-            <form>
-              <div class="form-floating mb-3">
-                <textarea class="form-control" placeholder="Leave a comment here" id="commentTextarea" style="height: 100px"></textarea>
-                <label for="commentTextarea">Your comment...</label>
-              </div>
-              <div class="d-flex justify-content-end">
-                <button class="btn btn-primary rounded-pill px-4 py-2" type="submit">
-                  <i class="fas fa-paper-plane me-2"></i> Post Comment
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       </section>
     </div>
-
-    <!-- Sidebar Column -->
-    <div class="col-lg-4 bg-light p-lg-4 p-3">
-      <div class="sticky-sidebar">
-        <div class="card border-0 shadow-sm mb-4">
-          <div class="card-header bg-white py-3 border-bottom">
-            <h4 class="mb-0 d-flex align-items-center">
-              <i class="fas fa-list-ul text-primary me-2"></i> Course Content
-            </h4>
-          </div>
-          
-          <div class="card-body p-0">
-            <div class="accordion" id="courseAccordion">
-              {% for module in course.module_set.all %}
-              <div class="accordion-item border-0">
-                <h2 class="accordion-header">
-                  <button class="accordion-button collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#module{{ module.id }}">
-                    <div class="d-flex align-items-center">
-                      <i class="fas fa-layer-group text-primary me-3"></i>
-                      <div>
-                        <strong>{{ module.name }}</strong>
-                        <div class="text-muted small mt-1">
-                          {{ module.video_set.count }} videos • {{ module.notes_set.count }} notes
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                </h2>
-                <div id="module{{ module.id }}" class="accordion-collapse collapse" data-bs-parent="#courseAccordion">
-                  <div class="accordion-body p-0">
-                    <!-- Videos -->
-                    <div class="p-3 bg-white">
-                      <h6 class="text-uppercase text-muted small mb-3 d-flex align-items-center">
-                        <i class="fas fa-play-circle me-2"></i>Videos
-                      </h6>
-                      <ul class="list-unstyled">
-                        {% for video in module.video_set.all %}
-                        <li class="mb-2">
-                          <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=video.id %}" class="d-flex align-items-center text-decoration-none text-dark p-2 rounded-3 hover-bg">
-                            <div class="flex-shrink-0 bg-primary bg-opacity-10 p-2 rounded-circle me-3">
-                              <i class="fas fa-play text-primary"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                              <div>{{ video.name }}</div>
-                              <small class="text-muted">5 min</small>
-                            </div>
-                            <div class="flex-shrink-0">
-                              <i class="fas fa-lock text-muted"></i>
-                            </div>
-                          </a>
-                        </li>
-                        {% endfor %}
-                      </ul>
-                    </div>
-                    
-                    <!-- Notes -->
-                    <div class="p-3 border-top">
-                      <h6 class="text-uppercase text-muted small mb-3 d-flex align-items-center">
-                        <i class="fas fa-file-alt me-2"></i>Notes
-                      </h6>
-                      <ul class="list-unstyled">
-                        {% for note in module.notes_set.all %}
-                        <li class="mb-2">
-                          <a href="{% url 'courseviewpagenote' course_id=course.id note_id=note.id %}" class="d-flex align-items-center text-decoration-none text-dark p-2 rounded-3 hover-bg">
-                            <div class="flex-shrink-0 bg-success bg-opacity-10 p-2 rounded-circle me-3">
-                              <i class="fas fa-file-alt text-success"></i>
-                            </div>
-                            <div class="flex-grow-1">
-                              <div>Note {{ forloop.counter }}</div>
-                              <small class="text-muted">PDF • 2 MB</small>
-                            </div>
-                          </a>
-                        </li>
-                        {% endfor %}
-        <div class="card border-0 shadow-sm mb-4">
-          <div class="card-body">
-            <h5 class="mb-3 d-flex align-items-center">
-              <i class="fas fa-chart-line text-primary me-2"></i>
-              تقدمك في الدورة
-            </h5>
-            <div class="progress mb-3" style="height: 8px;">
-              <div class="progress-bar bg-primary" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-            <div class="d-flex justify-content-between small text-muted mb-3">
-              <span>25% مكتمل</span>
-              <span>3/{{ course.total_video }} درس</span>
-            </div>
-            <button class="btn btn-outline-primary w-100 rounded-pill">
-              <i class="fas fa-certificate me-2"></i>الحصول على الشهادة
-            </button>
-          </div>
-        </div>
-
-        <!-- Course Content Navigation -->
-        <div class="card border-0 shadow-sm mb-4">
-          <div class="card-header bg-white py-3">
-            <h5 class="mb-0 d-flex align-items-center">
-              <i class="fas fa-list-ul text-primary me-2"></i>
-              محتوى الدورة
-            </h5>
-          </div>
-          <div class="card-body p-0">
-            <div class="list-group list-group-flush">
-              {% for module in course.module_set.all %}
-              <div class="list-group-item border-0 px-3 py-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <h6 class="mb-0 fw-bold">{{ module.name }}</h6>
-                  <span class="badge bg-light text-dark">{{ module.video_set.count }} فيديو</span>
-                </div>
-                <div class="small">
-                  {% for video in module.video_set.all %}
-                  <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=video.id %}" class="d-block py-2 text-decoration-none text-muted hover-bg rounded px-2">
-                    <i class="fas fa-play-circle me-2 text-primary"></i>{{ video.name }}
-                  </a>
-                  {% endfor %}
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
-      {% endfor %}
-
-        <!-- Instructor Widget -->
-        <div class="card border-0 shadow-sm">
-          <div class="card-body">
-            <h5 class="mb-3 d-flex align-items-center">
-              <i class="fas fa-user-tie text-primary me-2"></i>
-              المدرب
-            </h5>
-            <div class="d-flex align-items-center mb-3">
-              <div class="flex-shrink-0 me-3">
-                {% if course.teacher.profile.image %}
-                <img src="{{ course.teacher.profile.image.url }}" class="rounded-circle" width="60" height="60" alt="{{ course.teacher.profile.name }}">
-                {% else %}
-                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                  {{ course.teacher.profile.name|slice:':1'|upper }}
-                </div>
-                {% endif %}
-              </div>
-              <div class="flex-grow-1">
-                <h6 class="mb-0">{{ course.teacher.profile.name }}</h6>
-                <small class="text-muted">{{ course.teacher.profile.title|default:'مدرب محترف' }}</small>
-              </div>
-            </div>
-            <p class="small text-muted">{{ course.teacher.profile.bio|default:'مدرب متخصص مع خبرة واسعة في مجال التدريس والتطوير.' }}</p>
-            <button class="btn btn-outline-secondary w-100 rounded-pill">
-              <i class="fas fa-envelope me-2"></i>مراسلة المدرب
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </main>
-
-<style>
-  /* Custom styles for course view */
-  :root {
-    --primary-color: #5624d0;
-    --secondary-color: #f7f9fa;
-    --text-color: #333;
-    --light-text: #6c757d;
-    --border-color: #ddd;
-  }
-
-  body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f7f9fa;
-  }
-
-  .module-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .module-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
-  }
-
-  .avatar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    background: linear-gradient(135deg, var(--primary-color), #9575cd);
-  }
-
-  .comment-text {
-    line-height: 1.6;
-  }
-
-  .view-replies {
-    transition: all 0.2s;
-  }
-
-  .view-replies:hover {
-    background-color: rgba(86, 36, 208, 0.1) !important;
-  }
-
-  .accordion-button {
-    transition: all 0.2s;
-  }
-
-  .accordion-button:not(.collapsed) {
-    background-color: rgba(86, 36, 208, 0.05);
-    color: var(--primary-color);
-  }
-
-  .accordion-button:focus {
-    box-shadow: none;
-    border-color: rgba(0,0,0,.125);
-  }
-
-  .sticky-sidebar {
-    position: sticky;
-    top: 20px;
-  }
-
-  .hover-bg {
-    transition: all 0.2s;
-  }
-
-  .hover-bg:hover {
-    background-color: rgba(86, 36, 208, 0.05) !important;
-  }
-
-  .progress {
-    border-radius: 100px;
-    background-color: #e0e0e0;
-  }
-
-  .progress-bar {
-    border-radius: 100px;
-    background: linear-gradient(90deg, var(--primary-color), #9575cd);
-  }
-
-  @media (max-width: 992px) {
-    .sticky-sidebar {
-      position: static;
-    }
-  }
-
-  /* Modern form inputs */
-  .form-control, .form-floating>.form-control {
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    transition: all 0.2s;
-  }
-
-  .form-control:focus, .form-floating>.form-control:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(86, 36, 208, 0.1);
-  }
-
-  /* Button styles */
-  .btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-  }
-
-  .btn-primary:hover {
-    background-color: #4a1fc0;
-    border-color: #4a1fc0;
-  }
-
-  .btn-outline-primary {
-    color: var(--primary-color);
-    border-color: var(--primary-color);
-  }
-
-  .btn-outline-primary:hover {
-    background-color: rgba(86, 36, 208, 0.1);
-  }
-</style>
 
 {% endblock content %}

@@ -36,6 +36,7 @@ urlpatterns = [
     path('submit_quiz/', views.submit_quiz, name='submit_quiz'),
     path('delete-pdf/<int:course_id>/<str:pdf_type>/', views.delete_pdf, name='delete_pdf'),
     path('course-category/<str:category_slug>/', views.course_category, name='course_category'),
+    path('course/<int:course_id>/add-comment/', views.add_comment, name='add_comment'),
      #path('create_course', views.create_course, name='create_course'),  # Add this line
 ]
 
