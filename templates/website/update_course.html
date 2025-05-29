@@ -314,7 +314,7 @@
                           {% endwith %}
                         </div>
                       </div>
-                      <div class="quiz-section card-body" id="quiz_section_existing_{{ module.id }}" style="display: {% if module.module_quizzes.first %}block{% else %}none{% endif %};">
+                      <div class="quiz-section card-body {% if not module.module_quizzes.first %}d-none{% endif %}" id="quiz_section_existing_{{ module.id }}">
                         {% with module_quiz=module.module_quizzes.first %}
                         {% if module_quiz %}
                         <input type="hidden" name="quiz_id_existing_{{ module.id }}" value="{{ module_quiz.id }}">
