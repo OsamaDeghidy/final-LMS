@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitCourse();
         });
     }
+});
     
     // Function to initialize PDF delete buttons
     function initializePdfDeleteButtons() {
@@ -27,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!pdfType) return;
 
                 // Get the course ID from the URL path (e.g., /123/update/)
-                const match = window.location.pathname.match(/\/([\d]+)\/update\/$/);
+                const match = window.location.pathname.match(/\/(\d+)\/update\//);
                 if (!match) {
                     console.error('Could not extract course ID from URL');
                     return;
@@ -35,16 +36,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 const courseId = match[1];
                 const pdfContainer = this.closest('.d-flex');
                 const cardBody = pdfContainer.closest('.card-body');
-                const deleteInput = cardBody.querySelector(`input[name="delete_${pdfType}"]`);
+                
+                // Create hidden input for delete flag if it doesn't exist
+                let deleteInput = document.getElementById(`delete_${pdfType}`);
+                if (!deleteInput) {
+                    deleteInput = document.createElement('input');
+                    deleteInput.type = 'hidden';
+                    deleteInput.name = `delete_${pdfType}`;
+                    deleteInput.id = `delete_${pdfType}`;
+                    deleteInput.value = '0';
+                    cardBody.appendChild(deleteInput);
+                }
 
                 if (!confirm('هل أنت متأكد من حذف هذا الملف؟')) {
                     return;
                 }
 
                 // Set the delete flag to 1
-                if (deleteInput) {
-                    deleteInput.value = '1';
-                }
+                deleteInput.value = '1';
 
                 // Show loading state
                 const originalContent = pdfContainer.innerHTML;
@@ -81,22 +90,46 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
 
                     if (data.success) {
-                        // File deleted successfully
-                        const fileInput = cardBody.querySelector(`input[name="${pdfType}"]`);
-                        if (fileInput) {
-                            fileInput.value = ''; // Clear the file input
+                        // Get the parent column div that contains the label and file input
+                        const parentColumn = pdfContainer.closest('.col-md-6.mb-3');
+                        if (!parentColumn) {
+                            throw new Error('Could not find parent column');
                         }
                         
-                        // Show success message and remove the container after a delay
-                        pdfContainer.innerHTML = `
-                            <div class="alert alert-success mb-0 py-2">
-                                <i class="fas fa-check-circle me-2"></i>تم حذف الملف بنجاح
-                            </div>`;
+                        // Keep the label
+                        const label = parentColumn.querySelector('.form-label');
+                        const labelHtml = label ? label.outerHTML : '';
                         
-                        // Remove the container after 2 seconds
-                        setTimeout(() => {
-                            pdfContainer.remove();
-                        }, 2000);
+                        // Create new content with file input and success message
+                        parentColumn.innerHTML = `
+                            ${labelHtml}
+                            <div class="alert alert-success mb-2">
+                                <i class="fas fa-check-circle me-2"></i>تم حذف الملف بنجاح
+                            </div>
+                            <input type="file" class="form-control" name="${pdfType}" accept="application/pdf">
+                            <small class="text-muted">اختياري. حجم الملف الأقصى: 10 ميجابايت</small>
+                            <input type="hidden" name="delete_${pdfType}" id="delete_${pdfType}" value="1">
+                        `;
+                        
+                        // Add change event listener to the new file input
+                        const newFileInput = parentColumn.querySelector(`input[name="${pdfType}"]`);
+                        if (newFileInput) {
+                            newFileInput.addEventListener('change', function() {
+                                if (this.files.length > 0) {
+                                    // If a new file is selected, reset the delete flag
+                                    const deleteInput = document.getElementById(`delete_${pdfType}`);
+                                    if (deleteInput) {
+                                        deleteInput.value = '0';
+                                    }
+                                    
+                                    // Remove success message if it exists
+                                    const successMsg = parentColumn.querySelector('.alert-success');
+                                    if (successMsg) {
+                                        successMsg.remove();
+                                    }
+                                }
+                            });
+                        }
                     } else {
                         throw new Error(data.error || 'فشل حذف الملف');
                     }
@@ -134,6 +167,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     const warningMsg = this.parentNode.querySelector('.alert-warning');
                     if (warningMsg) {
                         warningMsg.remove();
+                    }
+                    
+                    // If there was a success message, remove it
+                    const successMsg = this.parentNode.querySelector('.alert-success');
+                    if (successMsg) {
+                        successMsg.remove();
+                    }
+                    
+                    // Validate file size
+                    const maxSize = 10 * 1024 * 1024; // 10MB
+                    if (this.files[0].size > maxSize) {
+                        // Show error message
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'alert alert-danger mt-2';
+                        errorDiv.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>حجم الملف كبير جدًا. الحد الأقصى هو 10 ميجابايت.';
+                        this.parentNode.insertBefore(errorDiv, this.nextSibling);
+                        
+                        // Clear the file input
+                        this.value = '';
+                    } else {
+                        // Show file selected message
+                        const fileInfoDiv = document.createElement('div');
+                        fileInfoDiv.className = 'alert alert-info mt-2';
+                        fileInfoDiv.innerHTML = `<i class="fas fa-file-pdf me-2"></i>تم اختيار: ${this.files[0].name}`;
+                        this.parentNode.insertBefore(fileInfoDiv, this.nextSibling);
                     }
                 }
             });
@@ -311,15 +369,51 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to initialize quiz toggles
     function initializeQuizToggles() {
+        // Use event delegation for quiz toggles to handle both existing and dynamically added ones
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('quiz-toggle')) {
+                const toggle = e.target;
+                const toggleId = toggle.id;
+                let quizSectionId;
+                
+                // Handle both existing and new modules
+                if (toggleId.includes('has_quiz_existing_')) {
+                    const moduleId = toggleId.replace('has_quiz_existing_', '');
+                    quizSectionId = 'quiz_section_existing_' + moduleId;
+                } else if (toggleId.includes('has_quiz_new_')) {
+                    const moduleId = toggleId.replace('has_quiz_new_', '');
+                    quizSectionId = 'quiz_section_new_' + moduleId;
+                }
+                
+                const quizSection = document.getElementById(quizSectionId);
+                if (quizSection) {
+                    quizSection.style.display = toggle.checked ? 'block' : 'none';
+                    console.log(`Quiz section ${quizSectionId} display set to ${toggle.checked ? 'block' : 'none'}`);
+                }
+            }
+        });
+        
+        // Set initial state for all quiz toggles on page load
         const quizToggles = document.querySelectorAll('.quiz-toggle');
         quizToggles.forEach(toggle => {
-            toggle.addEventListener('change', function() {
-                const moduleId = this.id.replace('has_quiz_existing_', '');
-                const quizSection = document.getElementById('quiz_section_existing_' + moduleId);
-                if (quizSection) {
-                    quizSection.style.display = this.checked ? 'block' : 'none';
-                }
-            });
+            const toggleId = toggle.id;
+            let quizSectionId;
+            
+            // Handle both existing and new modules
+            if (toggleId.includes('has_quiz_existing_')) {
+                const moduleId = toggleId.replace('has_quiz_existing_', '');
+                quizSectionId = 'quiz_section_existing_' + moduleId;
+            } else if (toggleId.includes('has_quiz_new_')) {
+                const moduleId = toggleId.replace('has_quiz_new_', '');
+                quizSectionId = 'quiz_section_new_' + moduleId;
+            }
+            
+            const quizSection = document.getElementById(quizSectionId);
+            if (quizSection) {
+                // Set initial state
+                quizSection.style.display = toggle.checked ? 'block' : 'none';
+                console.log(`Initial quiz section ${quizSectionId} display set to ${toggle.checked ? 'block' : 'none'}`);
+            }
         });
     }
 
@@ -328,21 +422,31 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add module button
         const addModuleBtn = document.getElementById('add-module-btn');
         if (addModuleBtn) {
+            // Remove any existing event listeners to prevent duplicates
+            addModuleBtn.removeEventListener('click', addNewModule);
             addModuleBtn.addEventListener('click', addNewModule);
         }
 
-        // Add question buttons
-        document.querySelectorAll('.add-question-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const moduleId = this.getAttribute('data-module-id');
-                addNewQuestion(moduleId);
-            });
+        // Use event delegation for dynamically added elements
+        // This attaches event listeners to the document and checks if the clicked element matches our selector
+        
+        // For add question buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.add-question-btn')) {
+                const btn = e.target.closest('.add-question-btn');
+                const moduleId = btn.getAttribute('data-module-id');
+                if (moduleId) {
+                    console.log(`Adding new question to module ${moduleId}`);
+                    addNewQuestion(moduleId);
+                }
+            }
         });
 
-        // Add answer buttons
-        document.querySelectorAll('.add-answer-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const questionCard = this.closest('.question-card');
+        // For add answer buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.add-answer-btn')) {
+                const btn = e.target.closest('.add-answer-btn');
+                const questionCard = btn.closest('.question-card');
                 if (questionCard) {
                     const answersContainer = questionCard.querySelector('.answers-container');
                     if (answersContainer) {
@@ -353,31 +457,39 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (match) {
                             moduleId = match[1];
                             questionId = match[2] || '';
+                            console.log(`Adding new answer to question ${questionId} in module ${moduleId}`);
+                            addNewAnswer(answersContainer, moduleId, questionId);
                         }
-                        addNewAnswer(answersContainer, moduleId, questionId);
                     }
                 }
-            });
+            }
         });
 
-        // Add note buttons
-        document.querySelectorAll('.add-note-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const moduleId = this.getAttribute('data-module-id');
-                addNewNote(moduleId);
-            });
+        // For add note buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.add-note-btn')) {
+                const btn = e.target.closest('.add-note-btn');
+                const moduleId = btn.getAttribute('data-module-id');
+                if (moduleId) {
+                    console.log(`Adding new note to module ${moduleId}`);
+                    addNewNote(moduleId);
+                }
+            }
         });
-
-        // Add video name buttons
-        document.querySelectorAll('.add-video-name-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const moduleId = this.getAttribute('data-module-id');
-                addNewVideoName(moduleId);
-            });
+        
+        // For add video name buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.add-video-name-btn')) {
+                const btn = e.target.closest('.add-video-name-btn');
+                const moduleId = btn.getAttribute('data-module-id');
+                if (moduleId) {
+                    console.log(`Adding new video name to module ${moduleId}`);
+                    addNewVideoName(moduleId);
+                }
+            }
         });
     }
-});
-
+    
 // Function to add a new module
 function addNewModule() {
     const modulesContainer = document.getElementById('modules-container');
@@ -862,14 +974,104 @@ function submitCourse() {
             // If marked for deletion and no new file is selected, ensure we keep the delete flag
             if (deleteInput && deleteInput.value === '1' && fileInput && fileInput.files.length === 0) {
                 // The delete flag is already set, no need to do anything
+                console.log(`${pdfType} marked for deletion`);
             } 
             // If a new file is selected, make sure the delete flag is reset
             else if (fileInput && fileInput.files.length > 0 && deleteInput) {
                 deleteInput.value = '0';
+                console.log(`New ${pdfType} selected, resetting delete flag`);
             }
         });
         
-        document.getElementById('course-form').submit();
+        // Process module data before submission
+        const moduleCards = document.querySelectorAll('.module-card');
+        moduleCards.forEach(moduleCard => {
+            // Handle module deletion flags
+            const moduleId = moduleCard.id.replace('module_', '');
+            const deleteModuleInput = document.getElementById(`delete_module_${moduleId}`);
+            
+            if (deleteModuleInput && deleteModuleInput.value === '1') {
+                console.log(`Module ${moduleId} marked for deletion`);
+            }
+            
+            // Handle quiz sections
+            const quizToggle = moduleCard.querySelector('.quiz-toggle');
+            const quizSection = moduleCard.querySelector('.quiz-section');
+            
+            if (quizToggle && quizSection) {
+                // If quiz toggle is checked, make sure quiz section is visible for form submission
+                if (quizToggle.checked && quizSection.style.display === 'none') {
+                    quizSection.style.display = 'block';
+                    console.log(`Showing quiz section for module ${moduleId} for form submission`);
+                }
+                
+                // If quiz toggle is not checked, hide the quiz section
+                // If quiz section is displayed but toggle is not checked, hide it
+                if (!quizToggle.checked && quizSection.style.display !== 'none') {
+                    quizSection.style.display = 'none';
+                    console.log(`Hiding quiz section for module ${moduleId} for form submission`);
+                }
+            }
+        });
+        
+        // Ensure all form data is included by checking required fields
+        const form = document.getElementById('course-form');
+        const requiredFields = form.querySelectorAll('[required]');
+        let missingFields = false;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                console.error(`Required field missing: ${field.name}`);
+                field.classList.add('is-invalid');
+                missingFields = true;
+            }
+        });
+        
+        if (missingFields) {
+            alert('يرجى ملء جميع الحقول المطلوبة');
+            return false;
+        }
+        
+        // Use FormData to ensure proper file upload
+        const formData = new FormData(form);
+        
+        // Show loading indicator
+        const submitBtn = document.getElementById('submit-course-btn');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> جاري الحفظ...`;
+        
+        // Submit the form using fetch API to handle file uploads properly
+        fetch(form.action || window.location.href, {
+            method: 'POST',
+            body: formData,
+            // Don't set Content-Type header - browser will set it with boundary for multipart/form-data
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Check if response contains success message
+            if (html.includes('success') || html.includes('تم تحديث')) {
+                // Redirect to course list or show success message
+                window.location.href = '/dashboard/courses/';
+            } else {
+                // If it's a form with errors, replace the page content
+                document.open();
+                document.write(html);
+                document.close();
+            }
+        })
+        .catch(error => {
+            console.error('Error submitting form:', error);
+            alert('حدث خطأ أثناء حفظ الدورة. يرجى المحاولة مرة أخرى.');
+            // Restore button state
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+        });
     }
 }
 

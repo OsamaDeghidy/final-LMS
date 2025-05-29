@@ -24,7 +24,7 @@
           </h2>
         </div>
         <div class="card-body p-4">
-          <form id="course-form" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+          <form id="course-form" method="post" enctype="multipart/form-data" class="needs-validation" action="" novalidate>
             {% csrf_token %}
             
             <!-- Step Progress Bar -->
@@ -165,7 +165,7 @@
                     {% endfor %}
                   </select>
                 </div>
-                <div class="col-md-6">
+                <!-- <div class="col-md-6">
                   <label class="form-label fw-bold">المؤسسة</label>
                   <select class="form-select" name="organization">
                     <option value="">-- اختر المؤسسة --</option>
@@ -173,7 +173,7 @@
                       <option value="{{ org.id }}" {% if course.organization.id == org.id %}selected{% endif %}>{{ org.name }}</option>
                     {% endfor %}
                   </select>
-                </div>
+                </div> -->
               </div>
               
               <div class="mb-3">

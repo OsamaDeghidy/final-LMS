@@ -439,6 +439,9 @@ def update_course(request, course_id):
     import json
     from django.http import JsonResponse
     from django.urls import reverse
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     course = get_object_or_404(Course, pk=course_id)
     if(course.teacher.profile == request.user.profile):
@@ -453,6 +456,10 @@ def update_course(request, course_id):
         # Get all modules associated with this course
         modules = Module.objects.filter(course=course).order_by('number')
         
+        # Get categories and organizations for the form
+        categories = Category.objects.all()
+        organizations = Organization.objects.all()
+        
         # Create JSON data for modules
         modules_json = {}
         for module in modules:
@@ -466,6 +473,9 @@ def update_course(request, course_id):
                 'duration': module.duration or ''
             }
         
+        # Prepare tags string for the form
+        tags_string = ", ".join([tag.name for tag in course.tags.all()])
+        
         if request.method == 'POST':
             # Update course data
             course.name = request.POST.get('name')
@@ -473,12 +483,62 @@ def update_course(request, course_id):
             course.price = request.POST.get('price')
             course.small_description = request.POST.get('small_description')
             course.learned = request.POST.get('learned')
+            course.level = request.POST.get('level')
             tags = request.POST.get('tags', '').split(',')
             course.update_at = datetime.today()
+            
+            # Update category if provided
+            category_id = request.POST.get('category')
+            if category_id:
+                try:
+                    category = Category.objects.get(pk=category_id)
+                    course.category = category
+                    logger.info(f"Updated category for course {course_id} to {category.name}")
+                except Category.DoesNotExist:
+                    logger.warning(f"Category with ID {category_id} not found")
+            
+            # Update organization if provided
+            organization_id = request.POST.get('organization')
+            if organization_id:
+                try:
+                    organization = Organization.objects.get(pk=organization_id)
+                    course.organization = organization
+                    logger.info(f"Updated organization for course {course_id} to {organization.name}")
+                except Organization.DoesNotExist:
+                    logger.warning(f"Organization with ID {organization_id} not found")
             
             # Handle image upload
             if 'image_course' in request.FILES:
                 course.image_course = request.FILES['image_course']
+                
+            # Handle PDF uploads
+            # Handle syllabus PDF
+            if 'syllabus_pdf' in request.FILES:
+                # If there's a new file, replace the old one
+                if course.syllabus_pdf:
+                    course.syllabus_pdf.delete(save=False)
+                course.syllabus_pdf = request.FILES['syllabus_pdf']
+                logger.info(f"Uploaded new syllabus PDF for course {course_id}: {request.FILES['syllabus_pdf'].name}")
+            elif request.POST.get('delete_syllabus_pdf') == '1':
+                # If delete flag is set and no new file is uploaded, delete the existing file
+                if course.syllabus_pdf:
+                    course.syllabus_pdf.delete(save=False)
+                    course.syllabus_pdf = None
+                    logger.info(f"Deleted syllabus PDF for course {course_id}")
+                    
+            # Handle materials PDF
+            if 'materials_pdf' in request.FILES:
+                # If there's a new file, replace the old one
+                if course.materials_pdf:
+                    course.materials_pdf.delete(save=False)
+                course.materials_pdf = request.FILES['materials_pdf']
+                logger.info(f"Uploaded new materials PDF for course {course_id}: {request.FILES['materials_pdf'].name}")
+            elif request.POST.get('delete_materials_pdf') == '1':
+                # If delete flag is set and no new file is uploaded, delete the existing file
+                if course.materials_pdf:
+                    course.materials_pdf.delete(save=False)
+                    course.materials_pdf = None
+                    logger.info(f"Deleted materials PDF for course {course_id}")
 
             # Clear existing tags and add new ones
             course.tags.clear()
@@ -487,33 +547,164 @@ def update_course(request, course_id):
                 if tag:
                     obj, created = Tags.objects.get_or_create(name=tag)
                     course.tags.add(obj)
+                    
+            # Save course with all updates
             course.save()
+            logger.info(f"Course {course_id} updated successfully with basic changes")
             
-            # Check if module data is also submitted
-            if 'module_id' in request.POST and request.POST.get('module_id'):
-                module_id = request.POST.get('module_id')
-                try:
-                    module = Module.objects.get(id=module_id, course=course)
-                    module_name = request.POST.get('module_name', '')
-                    if module_name:
-                        module.name = module_name
-                        module.save()
-                    
-                    # Handle video uploads
-                    video_files = request.FILES.getlist('video')
-                    video_names = request.POST.getlist('video_names[]', [])
-                    
-                    for i, video in enumerate(video_files):
-                        video_name = video_names[i] if i < len(video_names) else video.name.split('.')[0]
-                        Video.objects.create(module=module, video=video, name=video_name, course=course)
-                except Module.DoesNotExist:
-                    pass  # Module not found, just continue
+            # Process existing modules
+            for key, value in request.POST.items():
+                # Handle existing module updates
+                if key.startswith('module_name_existing_'):
+                    parts = key.split('_')
+                    if len(parts) >= 3:
+                        module_id = parts[-1]  # Get the module ID from the end of the key
+                        try:
+                            # Ensure module_id is a valid integer
+                            module_id = int(module_id)
+                            module = Module.objects.get(id=module_id, course=course)
+                            module.name = value
+                            module.description = request.POST.get(f'module_description_existing_{module_id}', '')
+                            module.save()
+                            logger.info(f"Updated module {module_id} for course {course_id}")
+                        except (ValueError, Module.DoesNotExist):
+                            logger.warning(f"Could not update module with ID {module_id} for course {course_id}")
+                            continue
+                        
+                # Handle module deletion
+                elif key.startswith('delete_module_') and value == '1':
+                    module_id = key.replace('delete_module_', '')
+                    try:
+                        # Ensure module_id is a valid integer
+                        module_id = int(module_id)
+                        module = Module.objects.get(id=module_id, course=course)
+                        module.delete()
+                        logger.info(f"Deleted module {module_id} from course {course_id}")
+                    except (ValueError, Module.DoesNotExist):
+                        logger.warning(f"Could not delete module with ID {module_id} for course {course_id}")
+                        continue
+            
+            # Process new modules
+            new_module_names = request.POST.getlist('new_module_name', [])
+            new_module_descriptions = request.POST.getlist('new_module_description', [])
+            
+            for i, name in enumerate(new_module_names):
+                if name.strip():
+                    description = new_module_descriptions[i] if i < len(new_module_descriptions) else ''
+                    new_module = Module.objects.create(
+                        course=course,
+                        name=name,
+                        description=description,
+                        number=i+1+len(modules)  # Set number to be after existing modules
+                    )
+                    logger.info(f"Created new module {new_module.id} for course {course_id}")
+            
+            # Process quizzes
+            for key, value in request.POST.items():
+                # Handle quiz questions
+                if key.startswith('question_text_'):
+                    parts = key.split('_')
+                    if len(parts) >= 3:
+                        module_id = parts[2]
+                        question_index = parts[3] if len(parts) > 3 else '0'
+                        
+                        try:
+                            # Ensure module_id is a valid integer
+                            if not module_id.isdigit():
+                                continue
+                            module_id = int(module_id)
+                            module = Module.objects.get(id=module_id, course=course)
+                            
+                            # Get or create quiz for this module
+                            quiz, created = Quiz.objects.get_or_create(
+                                module=module,
+                                defaults={'name': f"Quiz for {module.name}"}
+                            )
+                            
+                            # Create or update question
+                            question_type = request.POST.get(f'question_type_{module_id}_{question_index}', 'multiple_choice')
+                            question_text = value
+                            
+                            # Check if this is an existing question or a new one
+                            question_id = request.POST.get(f'question_id_{module_id}_{question_index}', '')
+                            
+                            if question_id:
+                                # Update existing question
+                                try:
+                                    question = Question.objects.get(id=question_id, quiz=quiz)
+                                    question.text = question_text
+                                    question.question_type = question_type
+                                    question.save()
+                                    logger.info(f"Updated question {question_id} for module {module_id}")
+                                except Question.DoesNotExist:
+                                    continue
+                            else:
+                                # Create new question
+                                question = Question.objects.create(
+                                    quiz=quiz,
+                                    text=question_text,
+                                    question_type=question_type
+                                )
+                                logger.info(f"Created new question {question.id} for module {module_id}")
+                            
+                            # Process answers for this question
+                            if question_type == 'multiple_choice':
+                                # Get all answer texts and correct flags for this question
+                                answer_keys = [k for k in request.POST.keys() if k.startswith(f'answer_text_{module_id}_{question_index}_')]
+                                
+                                # Delete existing answers for this question
+                                Answer.objects.filter(question=question).delete()
+                                
+                                # Create new answers
+                                for answer_key in answer_keys:
+                                    answer_index = answer_key.split('_')[-1]
+                                    answer_text = request.POST.get(answer_key)
+                                    is_correct = request.POST.get(f'answer_correct_{module_id}_{question_index}_{answer_index}') == 'on'
+                                    
+                                    Answer.objects.create(
+                                        question=question,
+                                        text=answer_text,
+                                        is_correct=is_correct
+                                    )
+                            elif question_type == 'true_false':
+                                # Delete existing answers
+                                Answer.objects.filter(question=question).delete()
+                                
+                                # Create True answer
+                                Answer.objects.create(
+                                    question=question,
+                                    text="صح",
+                                    is_correct=request.POST.get(f'correct_answer_{module_id}_{question_index}') == '0'
+                                )
+                                
+                                # Create False answer
+                                Answer.objects.create(
+                                    question=question,
+                                    text="خطأ",
+                                    is_correct=request.POST.get(f'correct_answer_{module_id}_{question_index}') == '1'
+                                )
+                            elif question_type == 'short_answer':
+                                # Delete existing answers
+                                Answer.objects.filter(question=question).delete()
+                                
+                                # Create the correct answer
+                                correct_answer = request.POST.get(f'answer_short_{module_id}_{question_index}', '')
+                                Answer.objects.create(
+                                    question=question,
+                                    text=correct_answer,
+                                    is_correct=True
+                                )
+                        except Module.DoesNotExist:
+                            continue
+            
+            # Add success message
+            messages.success(request, 'تم تحديث الدورة بنجاح')
             
             # Check if this is an AJAX request
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.POST.get('is_ajax') == 'true':
                 return JsonResponse({
                     'success': True, 
-                    'message': 'Course and module updated successfully',
+                    'message': 'تم تحديث الدورة بنجاح',
                     'redirect_url': reverse('course_detail', args=[course_id])
                 })
             else:
@@ -525,7 +716,10 @@ def update_course(request, course_id):
             'modules': modules,
             'modules_json': json.dumps(modules_json),
             'profile': profile,
-            'student': student
+            'student': student,
+            'categories': categories,
+            'organizations': organizations,
+            'tags_string': tags_string
         })
     else:
         return redirect('course_detail', course_id=course.id)
