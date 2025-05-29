@@ -1,0 +1,116 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}إضافة واجب جديد{% endblock %}
+
+{% block dashboard_content %}
+
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">إضافة واجب جديد - {{ course.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" action="{% url 'create_assignment' course.id %}">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">عنوان الواجب *</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="module" class="form-label">الوحدة (اختياري)</label>
+                            <select class="form-select" id="module" name="module">
+                                <option value="">اختر الوحدة</option>
+                                {% for module in modules %}
+                                <option value="{{ module.id }}">{{ module.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">وصف الواجب *</label>
+                            <textarea class="form-control" id="description" name="description" rows="5"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="due_date" class="form-label">تاريخ الاستحقاق (اختياري)</label>
+                            <input type="datetime-local" class="form-control" id="due_date" name="due_date">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="points" class="form-label">الدرجة الكلية</label>
+                            <input type="number" class="form-control" id="points" name="points" value="100" min="0">
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="allow_late_submissions" name="allow_late_submissions">
+                            <label class="form-check-label" for="allow_late_submissions">السماح بالتسليم المتأخر</label>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="late_submission_penalty" class="form-label">نسبة الخصم للتسليم المتأخر (%)</label>
+                            <input type="number" class="form-control" id="late_submission_penalty" name="late_submission_penalty" value="0" min="0" max="100">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="attachments" class="form-label">مرفقات (اختياري)</label>
+                            <input type="file" class="form-control" id="attachments" name="attachments" multiple>
+                            <small class="text-muted">يمكنك تحميل ملفات متعددة</small>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'assignment_list' course.id %}" class="btn btn-secondary">إلغاء</a>
+                            <button type="submit" class="btn btn-primary">إضافة الواجب</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+
+<script src="https://cdn.ckeditor.com/ckeditor5/35.0.1/classic/ckeditor.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // استخدام CKEditor 5
+        ClassicEditor
+            .create(document.querySelector('#description'), {
+                toolbar: ['heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote'],
+                language: 'ar'
+            })
+            .then(editor => {
+                // إضافة مستمع للنموذج عند الإرسال
+                var form = document.querySelector('form');
+                form.addEventListener('submit', function(e) {
+                    // منع السلوك الافتراضي للنموذج
+                    e.preventDefault();
+                    
+                    // التحقق من أن النموذج يحتوي على البيانات المطلوبة
+                    var title = document.getElementById('title').value;
+                    if (!title) {
+                        alert('يرجى إدخال عنوان الواجب');
+                        return false;
+                    }
+                    
+                    // الحصول على محتوى المحرر
+                    var editorData = editor.getData();
+                    if (!editorData) {
+                        alert('يرجى إدخال وصف الواجب');
+                        return false;
+                    }
+                    
+                    // إضافة المحتوى إلى النموذج
+                    document.getElementById('description').value = editorData;
+                    
+                    // إرسال النموذج
+                    form.submit();
+                });
+            })
+            .catch(error => {
+                console.error(error);
+            });
+    });
+</script>
+
+{% endblock dashboard_content %}

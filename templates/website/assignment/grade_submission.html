@@ -1,0 +1,95 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}تقييم الواجب{% endblock %}
+
+{% block dashboard_content %}
+
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تقييم تسليم الطالب - {{ submission.user.username }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 class="fw-bold">تفاصيل الواجب:</h6>
+                        <p><strong>عنوان الواجب:</strong> {{ assignment.title }}</p>
+                        <p><strong>الدورة:</strong> {{ assignment.course.name }}</p>
+                        {% if assignment.module %}
+                        <p><strong>الوحدة:</strong> {{ assignment.module.name }}</p>
+                        {% endif %}
+                        <p><strong>الدرجة الكلية:</strong> {{ assignment.points }}</p>
+                        <p><strong>تاريخ التسليم:</strong> {{ submission.submitted_at|date:"Y-m-d H:i" }}</p>
+                        {% if submission.is_late %}
+                        <p class="text-danger"><strong>تسليم متأخر</strong></p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="fw-bold">تسليم الطالب:</h6>
+                        <div class="p-3 border rounded">
+                            {{ submission.submission_text|safe }}
+                        </div>
+                    </div>
+                    
+                    {% if attachments %}
+                    <div class="mb-4">
+                        <h6 class="fw-bold">مرفقات الطالب:</h6>
+                        <ul class="list-group">
+                            {% for attachment in attachments %}
+                            <li class="list-group-item">
+                                <a href="{{ attachment.file.url }}" target="_blank" class="d-flex align-items-center">
+                                    <i class="fas fa-file me-2"></i>
+                                    {{ attachment.file.name|slice:"12:" }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="grade" class="form-label">الدرجة (من {{ assignment.points }})*</label>
+                            <input type="number" class="form-control" id="grade" name="grade" 
+                                   min="0" max="{{ assignment.points }}" step="0.1" 
+                                   value="{% if submission.grade is not None %}{{ submission.grade }}{% endif %}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="status" class="form-label">الحالة</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="graded" {% if submission.status == 'graded' %}selected{% endif %}>تم التقييم</option>
+                                <option value="returned" {% if submission.status == 'returned' %}selected{% endif %}>إعادة للتعديل</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="feedback" class="form-label">تعليق للطالب</label>
+                            <textarea class="form-control" id="feedback" name="feedback" rows="5">{% if submission.feedback %}{{ submission.feedback|safe }}{% endif %}</textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'assignment_detail' assignment.id %}" class="btn btn-secondary">إلغاء</a>
+                            <button type="submit" class="btn btn-primary">حفظ التقييم</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.ckeditor.com/ckeditor5/35.0.1/classic/ckeditor.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        ClassicEditor
+            .create(document.querySelector('#feedback'))
+            .catch(error => {
+                console.error(error);
+            });
+    });
+</script>
+{% endblock dashboard_content %}

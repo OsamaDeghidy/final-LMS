@@ -1,0 +1,33 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}حذف الواجب{% endblock %}
+
+{% block dashboard_content %}
+<div class="container-fluid p-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">حذف الواجب</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <i class="fas fa-exclamation-triangle text-danger fa-4x"></i>
+                    </div>
+                    <h5 class="mb-3">هل أنت متأكد من حذف الواجب "{{ assignment.title }}"؟</h5>
+                    <p class="text-muted">هذا الإجراء لا يمكن التراجع عنه وسيؤدي إلى حذف جميع التسليمات المرتبطة بهذا الواجب.</p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-center mt-4">
+                            <a href="{% url 'assignment_detail' assignment.id %}" class="btn btn-secondary me-2">إلغاء</a>
+                            <button type="submit" class="btn btn-danger">تأكيد الحذف</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock dashboard_content %}

@@ -1,0 +1,143 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}تسليم الواجب{% endblock %}
+
+{% block dashboard_content %}
+
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">تسليم الواجب - {{ assignment.title }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 class="fw-bold">تفاصيل الواجب:</h6>
+                        <p><strong>الدورة:</strong> {{ assignment.course.name }}</p>
+                        {% if assignment.module %}
+                        <p><strong>الوحدة:</strong> {{ assignment.module.name }}</p>
+                        {% endif %}
+                        {% if assignment.due_date %}
+                        <p><strong>تاريخ الاستحقاق:</strong> {{ assignment.due_date|date:"Y-m-d H:i" }}</p>
+                        {% endif %}
+                        <p><strong>الدرجة الكلية:</strong> {{ assignment.points }}</p>
+                        
+                        {% if assignment.due_date and now > assignment.due_date %}
+                            {% if assignment.allow_late_submissions %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                تنبيه: أنت تقوم بالتسليم بعد الموعد المحدد. سيتم تطبيق خصم بنسبة {{ assignment.late_submission_penalty }}%.
+                            </div>
+                            {% else %}
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-circle"></i>
+                                تحذير: انتهى موعد تسليم هذا الواجب. لن يتم قبول التسليمات المتأخرة.
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="fw-bold">وصف الواجب:</h6>
+                        <div class="p-3 border rounded">
+                            {{ assignment.description|safe }}
+                        </div>
+                    </div>
+                    
+                    {% if assignment.attachments.all %}
+                    <div class="mb-4">
+                        <h6 class="fw-bold">مرفقات الواجب:</h6>
+                        <ul class="list-group">
+                            {% for attachment in assignment.attachments.all %}
+                            <li class="list-group-item">
+                                <a href="{{ attachment.file.url }}" target="_blank" class="d-flex align-items-center">
+                                    <i class="fas fa-file me-2"></i>
+                                    {{ attachment.file.name|slice:"12:" }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="submission_text" class="form-label">إجابتك *</label>
+                            <textarea class="form-control" id="submission_text" name="submission_text" rows="5" required>{% if existing_submission %}{{ existing_submission.submission_text|safe }}{% endif %}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="attachments" class="form-label">مرفقات (اختياري)</label>
+                            <input type="file" class="form-control" id="attachments" name="attachments" multiple>
+                            <small class="text-muted">يمكنك تحميل ملفات متعددة</small>
+                        </div>
+                        
+                        {% if existing_submission and existing_submission.attachments.all %}
+                        <div class="mb-3">
+                            <label class="form-label">المرفقات الحالية</label>
+                            <ul class="list-group">
+                                {% for attachment in existing_submission.attachments.all %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <a href="{{ attachment.file.url }}" target="_blank">{{ attachment.file.name|slice:"12:" }}</a>
+                                    <a href="#" class="text-danger delete-attachment" data-id="{{ attachment.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'assignment_detail' assignment.id %}" class="btn btn-secondary">إلغاء</a>
+                            <button type="submit" class="btn btn-primary">
+                                {% if existing_submission %}
+                                تحديث التسليم
+                                {% else %}
+                                تسليم الواجب
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+<script src="https://cdn.ckeditor.com/ckeditor5/35.0.1/classic/ckeditor.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        ClassicEditor
+            .create(document.querySelector('#submission_text'))
+            .catch(error => {
+                console.error(error);
+            });
+            
+        // Handle attachment deletion
+        document.querySelectorAll('.delete-attachment').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (confirm('هل أنت متأكد من حذف هذا المرفق؟')) {
+                    const attachmentId = this.dataset.id;
+                    // Send AJAX request to delete attachment
+                    fetch(`/delete-attachment/${attachmentId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.closest('li').remove();
+                        } else {
+                            alert('حدث خطأ أثناء حذف المرفق');
+                        }
+                    });
+                }
+            });
+        });
+    });
+</script>
+{% endblock dashboard_content %}
