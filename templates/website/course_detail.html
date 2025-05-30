@@ -162,7 +162,7 @@
                                                         {% if item.video %}
                                                             <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=item.video.id %}" class="content-link">
                                                         {% else %}
-                                                            <a href="#" class="content-link" onclick="alert('هذا اختبار خاص بالوحدة')">
+                                                            <a href="#" class="content-link">
                                                         {% endif %}
                                                                 <div class="content-header">
                                                                     <i class="fas fa-question-circle"></i>
@@ -444,7 +444,7 @@
                         {% else %}
                             <form method="post" action="{% url 'add_to_cart' course_id=course.id %}" class="mb-2">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-primary sidebar-btn">إضافة إلى السلة</button>
+                                <button type="submit" class="btn btn-primary sidebar-btn add-to-cart-btn">إضافة إلى السلة</button>
                             </form>
                             <a href="{% url 'enroll_course' course_id=course.id %}" class="btn btn-outline-primary sidebar-btn">اشترك الآن</a>
                             <div class="mt-2 text-center">

@@ -14,18 +14,6 @@
         });
     });
 
-    // Enroll buttons
-    document.querySelectorAll('.sidebar-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            alert('تمت إضافة الدورة إلى سلة التسوق الخاصة بك!');
-        });
-    });
-
-    // Write review button
-    document.querySelector('.write-review').addEventListener('click', () => {
-        alert('سيتم توجيهك إلى صفحة إضافة التقييم بعد تسجيل الدخول.');
-    });
-
     // Course card hover effect
     document.querySelectorAll('.course-card').forEach(card => {
         card.addEventListener('mouseenter', () => {
