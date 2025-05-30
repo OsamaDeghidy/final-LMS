@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress
+from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress, Cart, CartItem
 from user.models import Profile, Student, Organization, Teacher
 from .utils import searchCourses
 
@@ -31,19 +31,34 @@ def dashboard(request):
         'course__teacher__profile'
     ).prefetch_related(
         'course__tags',
-        'course__courseprogress_set'
+        'course__module_set',
+        'course__module_set__video_set'
     )
     
     # Calculate progress for each enrollment
     for enrollment in enrollments:
-        # Get or create course progress
-        progress, created = enrollment.course.courseprogress_set.get_or_create(
-            student=request.user,
-            defaults={'total_progress_percent': 0}
-        )
+        # Calculate total videos in course
+        total_videos = sum(module.video_set.count() for module in enrollment.course.module_set.all())
         
-        # Check if course is completed
-        enrollment.completed = progress.total_progress_percent == 100
+        if total_videos > 0:
+            # Get watched videos for this course
+            watched_videos = VideoProgress.objects.filter(
+                student=request.user,
+                video__module__course=enrollment.course,
+                watched=True
+            ).count()
+            
+            # Calculate progress percentage
+            progress = (watched_videos / total_videos) * 100
+        else:
+            progress = 0
+            
+        # Update enrollment progress
+        enrollment.progress = progress
+        enrollment.save(update_fields=['progress'])
+        
+        # Set completed flag
+        enrollment.completed = progress == 100
     
     context = {
         'profile': profile,
@@ -77,6 +92,117 @@ def allcourses(request):
 
 def contact(request):   
     return render(request, 'website/contact.html')
+
+def course_detail(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    is_enrolled = False
+    in_cart = False
+    enrollment = None
+    progress = 0
+    
+    if request.user.is_authenticated:
+        enrollment = Enrollment.objects.filter(course=course, student=request.user).first()
+        if enrollment:
+            is_enrolled = True
+            # Update last accessed time and get progress
+            from .utils import update_enrollment_progress
+            progress = update_enrollment_progress(enrollment)
+        
+        # Check if course is in cart
+        cart = Cart.objects.filter(user=request.user).first()
+        if cart:
+            in_cart = CartItem.objects.filter(cart=cart, course=course).exists()
+    
+    context = {
+        'course': course,
+        'is_enrolled': is_enrolled,
+        'enrollment': enrollment,
+        'progress': progress,
+        'in_cart': in_cart
+    }
+    
+    if is_enrolled:
+        return render(request, 'website/courseviewpage.html', context)
+    else:
+        return render(request, 'website/course_detail.html', context)
+
+@login_required
+def add_to_cart(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Check if user is already enrolled in the course
+    if Enrollment.objects.filter(user=request.user, course=course).exists():
+        messages.warning(request, 'أنت مسجل بالفعل في هذه الدورة')
+        return redirect('course_detail', course_id=course_id)
+    
+    # Get or create user's cart
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    
+    # Check if course is already in cart
+    if CartItem.objects.filter(cart=cart, course=course).exists():
+        messages.info(request, 'هذه الدورة موجودة بالفعل في سلة التسوق')
+    else:
+        # Add course to cart
+        CartItem.objects.create(cart=cart, course=course)
+        messages.success(request, 'تمت إضافة الدورة إلى سلة التسوق')
+    
+    return redirect('view_cart')
+
+@login_required
+def view_cart(request):
+    # Get or create cart for the user
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    cart_items = cart.items.select_related('course', 'course__teacher__profile').all()
+    total_price = cart.total_price
+    
+    context = {
+        'cart': cart,
+        'cart_items': cart_items,
+        'total_price': total_price
+    }
+    
+    return render(request, 'website/cart.html', context)
+
+@login_required
+def remove_from_cart(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    cart = Cart.objects.filter(user=request.user).first()
+    
+    if cart:
+        CartItem.objects.filter(cart=cart, course=course).delete()
+        messages.success(request, 'تمت إزالة الدورة من السلة')
+    
+    return redirect('view_cart')
+
+@login_required
+def checkout(request):
+    cart = Cart.objects.filter(user=request.user).first()
+    
+    if not cart or cart.items.count() == 0:
+        messages.warning(request, 'السلة فارغة')
+        return redirect('view_cart')
+    
+    if request.method == 'POST':
+        # Process enrollment for all courses in cart
+        for cart_item in cart.items.all():
+            Enrollment.objects.create(
+                course=cart_item.course,
+                student=request.user,
+                status='active',
+                enrollment_date=timezone.now()
+            )
+        
+        # Clear the cart
+        cart.items.all().delete()
+        messages.success(request, 'تم التسجيل في جميع الدورات بنجاح')
+        return redirect('dashboard')
+    
+    context = {
+        'cart_items': cart.items.all(),
+        'total_price': cart.total_price
+    }
+    
+    return render(request, 'website/checkout.html', context)
 
 def courseviewpage(request, course_id):
     course = get_object_or_404(Course, id=course_id)

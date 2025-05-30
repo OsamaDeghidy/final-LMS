@@ -16,6 +16,41 @@
     <!-- CKEditor -->
     <script src="{% static 'ckeditor/ckeditor.js' %}"></script>
     
+    <!-- Cart Dropdown Styles -->
+    <style>
+        .cart-item-image {
+            width: 50px;
+            height: 35px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .cart-item-image-placeholder {
+            width: 50px;
+            height: 35px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+        }
+        
+        .dropdown-menu {
+            margin-top: 10px;
+            border: none;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+        
+        .cart-item {
+            transition: background-color 0.2s;
+        }
+        
+        .cart-item:hover {
+            background-color: #f8f9fa;
+        }
+    </style>
+    
     <!-- Page-specific head content -->
     {% block head %}{% endblock %}
   </head>
@@ -68,15 +103,58 @@
                 <div class="d-flex align-items-center">
                     <!-- Cart Icon with Dropdown -->
                     <div class="dropdown me-3">
-                        <a href="#" class="position-relative" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a href="{% url 'view_cart' %}" class="position-relative" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-shopping-cart fa-lg" style="color: #495057;"></i>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                0
-                            </span>
+                            {% if user.is_authenticated and user.cart.total_items > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ user.cart.total_items }}
+                                </span>
+                            {% endif %}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end p-3" style="width: 300px;">
-                            <li class="text-center py-2">
-                                <p class="mb-0">سلة التسوق فارغة</p>
+                            {% if user.is_authenticated %}
+                                {% if user.cart.items.all %}
+                                    {% for item in user.cart.items.all|slice:":3" %}
+                                        <li class="cart-item mb-2">
+                                            <div class="d-flex align-items-center">
+                                                {% if item.course.image_course %}
+                                                    <img src="{{ item.course.image_course.url }}" alt="{{ item.course.name }}" class="cart-item-image">
+                                                {% else %}
+                                                    <div class="cart-item-image-placeholder">
+                                                        <i class="fas fa-image"></i>
+                                                    </div>
+                                                {% endif %}
+                                                <div class="ms-2">
+                                                    <h6 class="mb-0">{{ item.course.name }}</h6>
+                                                    <p class="mb-0 text-muted">${{ item.course.price }}</p>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    {% endfor %}
+                                    {% if user.cart.items.count > 3 %}
+                                        <li class="text-center">
+                                            <small class="text-muted">+{{ user.cart.items.count|add:"-3" }} دورات أخرى</small>
+                                        </li>
+                                    {% endif %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li class="d-flex justify-content-between align-items-center mb-2">
+                                        <span>المجموع:</span>
+                                        <span class="fw-bold">${{ user.cart.total_price }}</span>
+                                    </li>
+                                    <li>
+                                        <a href="{% url 'view_cart' %}" class="btn btn-primary w-100">عرض السلة</a>
+                                    </li>
+                                {% else %}
+                                    <li class="text-center py-2">
+                                        <p class="mb-0">سلة التسوق فارغة</p>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="text-center py-2">
+                                    <p class="mb-0">سجل الدخول لعرض سلة التسوق</p>
+                                    <a href="{% url 'login' %}" class="btn btn-primary mt-2">تسجيل الدخول</a>
+                                </li>
+                            {% endif %}
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>

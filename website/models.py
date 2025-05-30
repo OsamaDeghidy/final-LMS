@@ -864,3 +864,31 @@ class Article(models.Model):
         return self.title
 
 
+class Cart(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Cart for {self.user.username}"
+
+    @property
+    def total_price(self):
+        return sum(item.course.price for item in self.items.all())
+
+    @property
+    def total_items(self):
+        return self.items.count()
+
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, related_name='items', on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('cart', 'course')
+
+    def __str__(self):
+        return f"{self.course.name} in {self.cart}"
+

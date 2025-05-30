@@ -37,7 +37,13 @@ urlpatterns = [
     path('delete-pdf/<int:course_id>/<str:pdf_type>/', views.delete_pdf, name='delete_pdf'),
     path('course-category/<str:category_slug>/', views.course_category, name='course_category'),
     path('course/<int:course_id>/add-comment/', views.add_comment, name='add_comment'),
-     #path('create_course', views.create_course, name='create_course'),  # Add this line
+    #path('create_course', views.create_course, name='create_course'),  # Add this line
+    
+    # Cart URLs
+    path('cart/add/<int:course_id>/', views.add_to_cart, name='add_to_cart'),
+    path('cart/', views.view_cart, name='view_cart'),
+    path('cart/remove/<int:course_id>/', views.remove_from_cart, name='remove_from_cart'),
+    path('checkout/', views.checkout, name='checkout'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
