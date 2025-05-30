@@ -4,6 +4,8 @@
 {% block title %}إنشاء دورة جديدة{% endblock %}
 
 {% block head %}
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <link rel="stylesheet" href="{% static 'css/course-creation.css' %}">
 <script src="{% static 'js/course-image-upload.js' %}"></script>
 <script src="{% static 'js/course-creation.js' %}"></script>
@@ -19,7 +21,7 @@
           </h2>
         </div>
         <div class="card-body p-4">
-          <form id="course-form" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+          <form id="course-form" method="post" enctype="multipart/form-data" class="needs-validation" accept-charset="utf-8" novalidate>
             {% csrf_token %}
             <input type="hidden" name="teacher_id" value="{{ request.user.teacher.id }}">
             
@@ -130,7 +132,7 @@
                     {% endfor %}
                   </select>
                 </div>
-                <div class="col-md-6">
+               <!--  <div class="col-md-6">
                   <label class="form-label fw-bold">المؤسسة</label>
                   <select class="form-select" name="organization">
                     <option value="">-- اختر المؤسسة --</option>
@@ -138,7 +140,7 @@
                       <option value="{{ org.id }}">{{ org.name }}</option>
                     {% endfor %}
                   </select>
-                </div>
+                </div> -->
               </div>
               
               <div class="mb-3">

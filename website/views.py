@@ -911,9 +911,13 @@ def create_course(request):
                 )
                 course.save()
                 
-                # Print debug info
-                print(f"Created course: {course.name} with teacher: {teacher}")
-                print(f"Teacher ID: {teacher.id}, Course ID: {course.id}")
+                # Print debug info - use encoding to avoid character issues
+                try:
+                    print(f"Created course with ID: {course.id}")
+                    print(f"Teacher ID: {teacher.id}")
+                except UnicodeEncodeError:
+                    print(f"Created course with ID: {course.id} (name contains non-ASCII characters)")
+                    print(f"Teacher ID: {teacher.id}")
                 course.tags.set(tags)
                 
                 # Process modules and quizzes
