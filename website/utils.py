@@ -1,6 +1,6 @@
 from django.db.models import Q, Count, Sum, F, ExpressionWrapper, FloatField
 from django.utils import timezone
-from .models import Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, VideoProgress
+from .models import Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, VideoProgress, Assignment, AssignmentSubmission, UserExamAttempt
 from user.models import Profile, Student, Organization, Teacher
 
 
@@ -73,9 +73,13 @@ def update_enrollment_progress(enrollment):
         completed_quizzes = 0
     
     # Count accessed PDFs (Notes)
-    # This is a placeholder - you'll need to implement PDF tracking
-    # For now, we'll assume no PDFs are completed
-    completed_pdfs = 0
+    try:
+        # For now, assume no PDFs are completed since we don't have the PDFAccess table yet
+        # In a real implementation, you would track PDF views
+        completed_pdfs = 0
+    except Exception as e:
+        print(f"Error counting PDFs: {e}")
+        completed_pdfs = 0
     
     # Count completed assignments
     try:

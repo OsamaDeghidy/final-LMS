@@ -93,6 +93,109 @@ def allcourses(request):
 def contact(request):   
     return render(request, 'website/contact.html')
 
+def courseviewpagenote(request, course_id, note_id):
+    course = get_object_or_404(Course, id=course_id)
+    note = get_object_or_404(Notes, id=note_id)
+    
+    # Check if user is enrolled or has course in cart
+    is_enrolled = False
+    in_cart = False
+    
+    if request.user.is_authenticated:
+        # Check if user is enrolled
+        is_enrolled = Enrollment.objects.filter(course=course, student=request.user).exists()
+        
+        if not is_enrolled:
+            # Check if course is in user's cart
+            try:
+                cart = Cart.objects.get(user=request.user)
+                in_cart = CartItem.objects.filter(cart=cart, course=course).exists()
+            except Cart.DoesNotExist:
+                pass
+                
+        # Track PDF access for progress calculation
+        if is_enrolled or in_cart:
+            try:
+                from .models import PDFAccess
+                # Record that the user has accessed this PDF
+                PDFAccess.objects.get_or_create(
+                    user=request.user,
+                    pdf_id=note.id,
+                    defaults={'read': True}
+                )
+                
+                # If user is enrolled, update progress
+                if is_enrolled:
+                    enrollment = Enrollment.objects.get(course=course, student=request.user)
+                    from .utils import update_enrollment_progress
+                    progress = update_enrollment_progress(enrollment)
+            except Exception as e:
+                print(f"Error tracking PDF access: {e}")
+    
+    if not (is_enrolled or in_cart):
+        messages.warning(request, 'يجب أن تكون مسجلاً في الدورة لعرض هذا المحتوى')
+        return redirect('course_detail', course_id=course_id)
+    
+    # Get all modules for this course
+    modules = course.module_set.all()
+    
+    # Get all videos for this course
+    videos = Video.objects.filter(module__course=course)
+    
+    # Get all notes for this course
+    notes = Notes.objects.filter(module__course=course)
+    
+    # Get completed items for progress tracking
+    completed_videos = []
+    completed_pdfs = []
+    completed_quizzes = []
+    completed_assignments = []
+    progress = 0
+    
+    if request.user.is_authenticated and is_enrolled:
+        # Get completed videos
+        completed_videos = VideoProgress.objects.filter(
+            student=request.user,
+            video__module__course=course,
+            watched=True
+        ).values_list('video_id', flat=True)
+        
+        # Get completed PDFs
+        try:
+            from .models import PDFAccess
+            completed_pdfs = PDFAccess.objects.filter(
+                user=request.user,
+                pdf_id__in=notes.values_list('id', flat=True),
+                read=True
+            ).values_list('pdf_id', flat=True)
+        except Exception as e:
+            print(f"Error getting completed PDFs: {e}")
+            completed_pdfs = []
+        
+        # Get enrollment progress
+        try:
+            enrollment = Enrollment.objects.get(course=course, student=request.user)
+            progress = enrollment.progress
+        except:
+            progress = 0
+    
+    context = {
+        'course': course,
+        'modules': modules,
+        'videos': videos,
+        'notes': notes,
+        'current_note': note,
+        'is_enrolled': is_enrolled,
+        'in_cart': in_cart,
+        'completed_videos': completed_videos,
+        'completed_pdfs': completed_pdfs,
+        'completed_quizzes': completed_quizzes,
+        'completed_assignments': completed_assignments,
+        'progress': progress
+    }
+    
+    return render(request, 'website/courseviewpagenote.html', context)
+
 def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     is_enrolled = False
@@ -278,11 +381,14 @@ def courseviewpage(request, course_id):
                 completed_quizzes = []
             
             # Get accessed PDFs (Notes)
+            # Since we don't have the PDFAccess table yet, we'll use a temporary solution
+            # that assumes no PDFs are completed
             try:
-                # This is a placeholder - you'll need to implement PDF tracking
                 # For now, we'll assume no PDFs are completed
+                # In a real implementation, you would track PDF views
                 completed_pdfs = []
-            except:
+            except Exception as e:
+                print(f"Error getting completed PDFs: {e}")
                 completed_pdfs = []
             
             # Get completed assignments
@@ -317,7 +423,7 @@ def courseviewpage(request, course_id):
     
     # Count quizzes, PDFs, and assignments
     quizzes_count = Quiz.objects.filter(course=course).count()
-    pdfs_count = Notes.objects.filter(course=course).count()
+    pdfs_count = Notes.objects.filter(module__course=course).count()
     assignments_count = Assignment.objects.filter(course=course).count()
     
     # Get the first video from the first module as the default content
@@ -1935,92 +2041,6 @@ def course_category(request, category_slug):
     
     return render(request, 'website/category_courses.html', context)
 
-
-# def create_quiz(request, video_id):
-#     video = Video.objects.get(id=video_id)
-#     if request.user.profile != video.module.course.teacher.profile:
-#         return HttpResponse('You do not have permission to access this page')
-#     if request.method == 'POST':
-#         pass_mark = request.POST.get('pass_mark')
-#         start_time_str = request.POST.get('timestamp')
-#         if start_time_str:
-#             start_time = timedelta(seconds=float(start_time_str))
-#         else:
-#             start_time = timedelta(seconds=0)
-
-#         quiz = Quiz.objects.create(
-#             video=video,
-#             start_time=start_time,
-#             pass_mark=pass_mark,
-#         )
-
-#         question_text = request.POST.get('question_text')
-#         question = Question.objects.create(
-#             quiz=quiz,
-#             text=question_text,
-#         )
-
-#         answer1_text = request.POST.get('answer1_text')
-#         answer1_is_correct = request.POST.get('answer1_is_correct') == 'on'
-#         answer1 = Answer.objects.create(
-#             question=question,
-#             text=answer1_text,
-#             is_correct=answer1_is_correct,
-#         )
-
-#         answer2_text = request.POST.get('answer2_text')
-#         answer2_is_correct = request.POST.get('answer2_is_correct') == 'on'
-#         answer2 = Answer.objects.create(
-#             question=question,
-#             text=answer2_text,
-#             is_correct=answer2_is_correct,
-#         )
-
-#         answer3_text = request.POST.get('answer3_text')
-#         answer3_is_correct = request.POST.get('answer3_is_correct') == 'on'
-#         answer3 = Answer.objects.create(
-#             question=question,
-#             text=answer3_text,
-#             is_correct=answer3_is_correct,
-#         )
-
-#         answer4_text = request.POST.get('answer4_text')
-#         answer4_is_correct = request.POST.get('answer4_is_correct') == 'on'
-#         answer4 = Answer.objects.create(
-#             question=question,
-#             text=answer4_text,
-#             is_correct=answer4_is_correct,
-#         )
-#         return redirect('quiz_detail', quiz_id=quiz.id)
-
-#     return render(request, 'website/create_quiz.html', {'video': video})
-
-
-
-# def submit_quiz(request):
-#     if request.method == 'POST':
-#         quiz_id = request.POST.get('quiz_id')
-#         question_ids = request.POST.getlist('question_ids[]')
-#         answer_ids = request.POST.getlist('answer_ids[]')
-
-#         # Do something with the form data, for example:
-#         quiz = Quiz.objects.get(id=quiz_id)
-#         total_marks = 0
-#         obtained_marks = 0
-#         for question_id, answer_id in zip(question_ids, answer_ids):
-#             question = Question.objects.get(id=question_id)
-#             answer = Answer.objects.get(id=answer_id)
-#             if answer.is_correct:
-#                 obtained_marks += question.marks
-#             total_marks += question.marks
-#         percentage = obtained_marks / total_marks * 100
-#         if percentage >= quiz.pass_percentage:
-#             message = 'Congratulations! You passed the quiz with a score of {}%.'.format(round(percentage))
-#         else:
-#             message = 'Sorry, you failed the quiz with a score of {}%.'.format(round(percentage))
-#         return redirect('quiz_result', quiz_id=quiz_id, message=message)
-#     else:
-#         return redirect('home')
 
 @login_required
 @require_POST

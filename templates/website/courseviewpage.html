@@ -9,13 +9,233 @@
     {{ block.super }}
 <link rel="stylesheet" href="{% static 'css/course-view.css' %}">
 <script src="{% static 'js/course-view.js' %}"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 {% endblock %}
 
 {% block content %}
 
 <div class="container py-4" dir="rtl">
   <div class="row">
-    <!-- Course Image and Basic Info -->
+    <!-- Course Content - Main content area -->
+    <div class="col-md-8">
+      <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
+        <!-- Current Video/Content -->
+        <div class="video-container bg-dark position-relative">
+          {% if current_content.type == 'video' %}
+            <video src="{{ current_content.content.video.url }}" 
+                   class="w-100" controls id="course-video" data-video-id="{{ current_content.content.id }}"
+                   poster="{% if course.image_course %}{{ course.image_course.url }}{% endif %}" 
+                   style="max-height: 450px;">
+              Your browser does not support the video tag.
+            </video>
+            <div class="video-controls-overlay">
+              <div class="video-progress">
+                <div class="video-progress-bar" style="width: 0%"></div>
+              </div>
+            </div>
+          {% else %}
+            <div class="pdf-viewer-container" style="height: 450px;">
+              <embed src="{{ current_content.content.file.url }}" 
+                     type="application/pdf" width="100%" height="100%">
+            </div>
+          {% endif %}
+        </div>
+        
+        <!-- Content Title and Description -->
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title fw-bold mb-0">
+              {% if current_content.type == 'video' %}
+                <i class="fas fa-play-circle text-primary me-2"></i>{{ current_content.content.title }}
+              {% elif current_content.type == 'pdf' %}
+                <i class="fas fa-file-pdf text-danger me-2"></i>{{ current_content.content.title }}
+              {% endif %}
+            </h5>
+            <div class="content-meta">
+              {% if current_content.type == 'video' %}
+                <span class="badge bg-light text-dark">
+                  <i class="far fa-clock me-1"></i> {{ current_content.content.duration|default:'10:00' }}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <p class="text-muted">
+            {% if current_content.type == 'video' %}
+              {{ current_content.content.description|default:"لا يوجد وصف متاح لهذا الفيديو." }}
+            {% else %}
+              ملاحظات مرفقة لمساعدتك في فهم المحتوى بشكل أفضل.
+            {% endif %}
+          </p>
+          
+          {% if current_content.type == 'video' and current_content.content.resources %}
+            <div class="resources-section mt-4">
+              <h6 class="fw-bold mb-3"><i class="fas fa-paperclip me-2"></i>الملفات المرفقة</h6>
+              <div class="d-flex flex-wrap gap-2">
+                {% for resource in current_content.content.resources.all %}
+                  <a href="{{ resource.file.url }}" class="btn btn-sm btn-outline-primary rounded-pill">
+                    <i class="fas fa-download me-1"></i> {{ resource.name }}
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Course Modules - Coursera Style -->  
+      <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-body p-0">
+          <div class="p-4 border-bottom">
+            <h5 class="fw-bold mb-0">محتوى الدورة</h5>
+          </div>
+          
+          <div class="module-list">
+            {% for module in course.module_set.all %}
+            <div class="module-container mb-1">
+              <div class="module-header p-3 d-flex justify-content-between align-items-center" 
+                   data-bs-toggle="collapse" data-bs-target="#module-content-{{ module.id }}" 
+                   aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="module-content-{{ module.id }}">
+                <div class="d-flex align-items-center">
+                  <div class="module-number me-3 bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                       style="width: 28px; height: 28px; font-size: 14px;">
+                    {{ forloop.counter }}
+                  </div>
+                  <h6 class="mb-0 fw-bold" style="padding-right: 10px;">{{ module.name }}</h6>
+                </div>
+                <div class="d-flex align-items-center">
+                  <span class="module-progress me-3 small">
+                    <!-- Module content count -->
+                    {{ forloop.counter }} من {{ modules|length }}
+                  </span>
+                  <i class="fas {% if forloop.first %}fa-chevron-up{% else %}fa-chevron-down{% endif %}"></i>
+                </div>
+              </div>
+              
+              <div id="module-content-{{ module.id }}" class="collapse {% if forloop.first %}show{% endif %}">
+                <div class="list-group list-group-flush">
+                  
+                  <!-- Videos -->  
+                  {% for video in course.video_set.all %}
+                    {% if video.module.id == module.id %}
+                    <a href="{% url 'courseviewpagevideo' course.id video.id %}" 
+                       class="content-item list-group-item list-group-item-action border-0 py-3 d-flex align-items-center {% if current_content.type == 'video' and current_content.content.id == video.id %}active{% endif %} {% if video.id in completed_videos %}completed{% endif %}" 
+                       data-video-id="{{ video.id }}">
+                      <div class="content-icon me-3 {% if video.id in completed_videos %}bg-success-soft{% endif %}">
+                        <i class="fas {% if video.id in completed_videos %}fa-check text-success{% else %}fa-play-circle text-primary{% endif %}"></i>
+                      </div>
+                      <div class="content-info flex-grow-1">
+                        <h6 class="mb-0 fw-semibold" style="padding-right: 10px;">{{ video.name }}</h6>
+                        <div class="d-flex align-items-center">
+                          <small class="text-muted me-2">
+                            <i class="far fa-clock me-1"></i>{{ video.duration|default:'10:00' }}
+                          </small>
+                          <small class="text-muted">
+                            <i class="fas fa-video me-1"></i>فيديو
+                          </small>
+                        </div>
+                      </div>
+                      {% if video.id in completed_videos %}
+                        <span class="ms-2 text-success">
+                          <i class="fas fa-check-circle"></i>
+                        </span>
+                      {% endif %}
+                    </a>
+                    {% endif %}
+                  {% endfor %}
+                  
+                  <!-- PDFs -->
+                  {% for pdf in course.pdf_set.all %}
+                    {% if pdf.module.id == module.id %}
+                    <a href="{% url 'courseviewpagenote' course.id pdf.id %}" 
+                       class="content-item list-group-item list-group-item-action border-0 py-3 d-flex align-items-center {% if current_content.type == 'note' and current_content.content.id == pdf.id %}active{% endif %} {% if pdf.id in completed_pdfs %}completed{% endif %}" 
+                       data-pdf-id="{{ pdf.id }}">
+                      <div class="content-icon me-3 {% if pdf.id in completed_pdfs %}bg-success-soft{% endif %}">
+                        <i class="fas {% if pdf.id in completed_pdfs %}fa-check text-success{% else %}fa-file-pdf text-danger{% endif %}"></i>
+                      </div>
+                      <div class="content-info flex-grow-1">
+                        <h6 class="mb-0 fw-semibold" style="padding-right: 10px;">{{ pdf.title }}</h6>
+                        <small class="text-muted">
+                          <i class="fas fa-file-pdf me-1"></i>ملف PDF
+                        </small>
+                      </div>
+                      {% if pdf.id in completed_pdfs %}
+                        <span class="ms-2 text-success">
+                          <i class="fas fa-check-circle"></i>
+                        </span>
+                      {% endif %}
+                    </a>
+                    {% endif %}
+                  {% endfor %}
+                  
+                  <!-- Quizzes -->
+                  {% for quiz in quizzes %}
+                    {% if quiz.module.id == module.id %}
+                    <a href="{% url 'quiz_detail' quiz.id %}" 
+                       class="content-item list-group-item list-group-item-action border-0 py-3 d-flex align-items-center {% if quiz.id in completed_quizzes %}completed{% endif %}" 
+                       data-quiz-id="{{ quiz.id }}">
+                      <div class="content-icon me-3 {% if quiz.id in completed_quizzes %}bg-success-soft{% endif %}">
+                        <i class="fas {% if quiz.id in completed_quizzes %}fa-check text-success{% else %}fa-question-circle text-warning{% endif %}"></i>
+                      </div>
+                      <div class="content-info flex-grow-1">
+                        <h6 class="mb-0 fw-semibold" style="padding-right: 10px;">{{ quiz.title }}</h6>
+                        <div class="d-flex align-items-center">
+                          <small class="text-muted me-2">
+                            <i class="far fa-clock me-1" ></i>{{ quiz.time_limit|default:'15' }} دقيقة
+                          </small>
+                          <small class="text-muted">
+                            <i class="fas fa-question-circle me-1"></i>اختبار
+                          </small>
+                        </div>
+                      </div>
+                      {% if quiz.id in completed_quizzes %}
+                        <span class="ms-2 text-success">
+                          <i class="fas fa-check-circle"></i>
+                        </span>
+                      {% endif %}
+                    </a>
+                    {% endif %}
+                  {% endfor %}
+                  
+                  <!-- Assignments -->
+                  {% for assignment in assignments %}
+                    {% if assignment.module.id == module.id %}
+                    <a href="{% url 'assignment_detail' assignment.id %}" 
+                       class="content-item list-group-item list-group-item-action border-0 py-3 d-flex align-items-center {% if assignment.id in completed_assignments %}completed{% endif %}" 
+                       data-assignment-id="{{ assignment.id }}">
+                      <div class="content-icon me-3 {% if assignment.id in completed_assignments %}bg-success-soft{% endif %}">
+                        <i class="fas {% if assignment.id in completed_assignments %}fa-check text-success{% else %}fa-tasks text-success{% endif %}"></i>
+                      </div>
+                      <div class="content-info flex-grow-1">
+                        <h6 class="mb-0 fw-semibold" style="padding-right: 10px;">{{ assignment.title }}</h6>
+                        <div class="d-flex align-items-center">
+                          <small class="text-muted me-2">
+                            <i class="far fa-calendar-alt me-1"></i>{{ assignment.due_date|date:"d/m/Y"|default:'لا يوجد موعد تسليم' }}
+                          </small>
+                          <small class="text-muted">
+                            <i class="fas fa-tasks me-1"></i>واجب
+                          </small>
+                        </div>
+                      </div>
+                      {% if assignment.id in completed_assignments %}
+                        <span class="ms-2 text-success">
+                          <i class="fas fa-check-circle"></i>
+                        </span>
+                      {% endif %}
+                    </a>
+                    {% endif %}
+                  {% endfor %}
+                  
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Course Image and Basic Info - Moved to the left side (col-md-4) -->
     <div class="col-md-4 mb-4">
       <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
         {% if course.image_course %}
@@ -81,211 +301,13 @@
               </div>
             {% endif %}
             <div>
-              <h6 class="mb-0 fw-bold">{{ course.teacher.profile.name }}</h6>
-              <small class="text-muted">مدرب معتمد</small>
+              <h6 class="mb-0 fw-bold" style="padding-right: 10px;">{{ course.teacher.profile.name }}</h6>
+              <small class="text-muted" style="padding-right: 10px;">مدرب معتمد</small>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Course Content -->
-    <div class="col-md-8">
-      <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
-        <!-- Current Video/Content -->
-        <div class="video-container bg-dark">
-          {% if current_content.type == 'video' %}
-            <video src="{{ current_content.content.video.url }}" 
-                   class="w-100" controls style="max-height: 450px;">
-              Your browser does not support the video tag.
-            </video>
-          {% else %}
-            <div class="pdf-viewer-container" style="height: 450px;">
-              <embed src="{{ current_content.content.file.url }}" 
-                     type="application/pdf" width="100%" height="100%">
-            </div>
-          {% endif %}
-        </div>
-        
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="mb-0 fw-bold">
-              {% if current_content.type == 'video' %}
-                {{ current_content.content.name }}
-              {% else %}
-                ملاحظات {{ current_content.module.name }}
-              {% endif %}
-            </h4>
-            <div>
-              {% if prev_content %}
-                {% if prev_content.type == 'video' %}
-                  <a href="{% url 'courseviewpagevideo' course.id prev_content.content.id %}" 
-                     class="btn btn-sm btn-outline-primary rounded-pill me-2">
-                    <i class="fas fa-arrow-right"></i> السابق
-                  </a>
-                {% elif prev_content.type == 'note' %}
-                  <a href="{% url 'courseviewpagenote' course.id prev_content.content.id %}" 
-                     class="btn btn-sm btn-outline-primary rounded-pill me-2">
-                    <i class="fas fa-arrow-right"></i> السابق
-                  </a>
-                {% endif %}
-              {% endif %}
-              {% if next_content %}
-                {% if next_content.type == 'video' %}
-                  <a href="{% url 'courseviewpagevideo' course.id next_content.content.id %}" 
-                     class="btn btn-sm btn-primary rounded-pill">
-                    التالي <i class="fas fa-arrow-left"></i>
-                  </a>
-                {% elif next_content.type == 'note' %}
-                  <a href="{% url 'courseviewpagenote' course.id next_content.content.id %}" 
-                     class="btn btn-sm btn-primary rounded-pill">
-                    التالي <i class="fas fa-arrow-left"></i>
-                  </a>
-                {% endif %}
-              {% else %}
-                <button class="btn btn-sm btn-success rounded-pill">
-                  إكمال الدورة <i class="fas fa-check"></i>
-                </button>
-              {% endif %}
-            </div>
-          </div>
-          
-          <p class="text-muted">
-            {% if current_content.type == 'video' %}
-              {{ current_content.content.description|default:"لا يوجد وصف متاح لهذا الفيديو." }}
-            {% else %}
-              ملاحظات مرفقة لمساعدتك في فهم المحتوى بشكل أفضل.
-            {% endif %}
-          </p>
-          
-          {% if current_content.type == 'video' and current_content.content.resources %}
-            <div class="resources-section mt-4">
-              <h6 class="fw-bold mb-3"><i class="fas fa-paperclip me-2"></i>الملفات المرفقة</h6>
-              <div class="d-flex flex-wrap gap-2">
-                {% for resource in current_content.content.resources.all %}
-                  <a href="{{ resource.file.url }}" class="btn btn-sm btn-outline-primary rounded-pill">
-                    <i class="fas fa-download me-1"></i> {{ resource.name }}
-                  </a>
-                {% endfor %}
-              </div>
-            </div>
-          {% endif %}
-        </div>
-      </div>
-      
-      <!-- Course Modules Accordion -->
-      <div class="card shadow-sm border-0 rounded-4 mt-4">
-        <div class="card-body">
-          <h5 class="fw-bold mb-4">محتوى الدورة</h5>
-          
-          <div class="accordion" id="courseModules">
-            {% for module in course.module_set.all %}
-            <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-              <h6 class="accordion-header" id="moduleHeading{{ module.id }}">
-                <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} bg-light" 
-                        type="button" data-bs-toggle="collapse" 
-                        data-bs-target="#moduleCollapse{{ module.id }}" 
-                        aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" 
-                        aria-controls="moduleCollapse{{ module.id }}">
-                  <div class="d-flex align-items-center">
-                    <span class="badge bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" 
-                          style="width: 30px; height: 30px;">{{ forloop.counter }}</span>
-                    <span class="fw-bold">{{ module.name }}</span>
-                  </div>
-                </button>
-              </h6>
-              
-              <div id="moduleCollapse{{ module.id }}" 
-                   class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" 
-                   aria-labelledby="moduleHeading{{ module.id }}" 
-                   data-bs-parent="#courseModules">
-                <div class="accordion-body pt-0">
-                  <div class="list-group list-group-flush">
-                    {% for video in module.video_set.all %}
-                      <a href="{% url 'courseviewpagevideo' course.id video.id %}" 
-                         class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center {% if current_content.type == 'video' and current_content.content.id == video.id %}active{% endif %}">
-                        <div class="content-icon me-3">
-                          <i class="fas fa-play-circle {% if current_content.type == 'video' and current_content.content.id == video.id %}text-white{% else %}text-primary{% endif %}"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                          <div class="d-flex justify-content-between">
-                            <span class="content-title">{{ video.name }}</span>
-                            <small class="text-muted">{{ video.duration|default:"0:00" }}</small>
-                          </div>
-                          {% if video.id in completed_videos %}
-                            <small class="text-success"><i class="fas fa-check-circle"></i> مكتمل</small>
-                          {% endif %}
-                        </div>
-                      </a>
-                    {% endfor %}
-                    
-                    {% for note in module.notes_set.all %}
-                      <a href="{% url 'courseviewpagenote' course.id note.id %}" 
-                         class="list-group-item list-group-item-action pdf-item border-0 py-3 d-flex align-items-center {% if current_content.type == 'note' and current_content.content.id == note.id %}active{% endif %}" data-pdf-id="{{ note.id }}">
-                        <div class="content-icon me-3">
-                          <i class="fas fa-file-pdf {% if current_content.type == 'note' and current_content.content.id == note.id %}text-white{% else %}text-info{% endif %}"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                          <div class="d-flex justify-content-between">
-                            <span class="content-title">ملاحظات {{ forloop.counter }}</span>
-                            <small class="text-muted">PDF</small>
-                          </div>
-                          {% if note.id in completed_pdfs %}
-                            <small class="text-success"><i class="fas fa-check-circle"></i> تمت القراءة</small>
-                          {% endif %}
-                        </div>
-                      </a>
-                    {% endfor %}
-                    
-                    {% for quiz in quizzes %}
-                      {% if quiz.module.id == module.id %}
-                      <a href="{% url 'quiz_detail' quiz.id %}" 
-                         class="list-group-item list-group-item-action quiz-item border-0 py-3 d-flex align-items-center" data-quiz-id="{{ quiz.id }}">
-                        <div class="content-icon me-3">
-                          <i class="fas fa-question-circle text-warning"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                          <div class="d-flex justify-content-between">
-                            <span class="content-title">{{ quiz.title }}</span>
-                            <small class="text-muted">{{ quiz.questions.count }} سؤال</small>
-                          </div>
-                          {% if quiz.id in completed_quizzes %}
-                            <small class="text-success"><i class="fas fa-check-circle"></i> تم الإكمال</small>
-                          {% endif %}
-                        </div>
-                      </a>
-                      {% endif %}
-                    {% endfor %}
-                    
-                    {% for assignment in assignments %}
-                      {% if assignment.module.id == module.id %}
-                      <a href="{% url 'assignment_detail' assignment.id %}" 
-                         class="list-group-item list-group-item-action assignment-item border-0 py-3 d-flex align-items-center" data-assignment-id="{{ assignment.id }}">
-                        <div class="content-icon me-3">
-                          <i class="fas fa-tasks text-success"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                          <div class="d-flex justify-content-between">
-                            <span class="content-title">{{ assignment.title }}</span>
-                            <small class="text-muted">تسليم: {{ assignment.due_date|date:"d/m/Y" }}</small>
-                          </div>
-                          {% if assignment.id in completed_assignments %}
-                            <small class="text-success"><i class="fas fa-check-circle"></i> تم التسليم</small>
-                          {% endif %}
-                        </div>
-                      </a>
-                      {% endif %}
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-            </div>
-            {% endfor %}
           </div>
         </div>
       </div>
     </div>
   </div>
 </div>
-
 {% endblock content %}

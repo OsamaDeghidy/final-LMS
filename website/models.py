@@ -23,6 +23,21 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
+class PDFAccess(models.Model):
+    """Tracks when a user accesses a PDF"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    pdf_id = models.IntegerField()  # Store the ID of the PDF/Notes
+    accessed_at = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=True)
+    
+    class Meta:
+        unique_together = ('user', 'pdf_id')
+        verbose_name_plural = 'PDF Accesses'
+    
+    def __str__(self):
+        return f"{self.user.username} - PDF {self.pdf_id}"
+
+
 class Category(models.Model):
     name = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
