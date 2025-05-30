@@ -327,61 +327,6 @@
                     </section>
                 </div>
 
-                <!-- Course Content -->
-                <!-- <section class="content-accordion">
-                    <h2 class="section-title">محتوى الدورة</h2>
-                    <p>{{ course.modules }} وحدة • {{ course.videos }} محاضرة • إجمالي المدة {{ course.vidoes_time }}</p>
-                    
-                    {% for module in course.module_set.all %}
-                    <div class="accordion-item {% if forloop.first %}active{% endif %}">
-                        <div class="accordion-header">
-                            <div class="accordion-title">
-                                <i class="fas fa-chevron-left accordion-icon"></i>
-                                <span>الوحدة {{ forloop.counter }}: {{ module.name }}</span>
-                            </div>
-                            <div class="lecture-count">{{ module.video_set.count }} محاضرة • {{ module.duration|default:"0" }} ساعة</div>
-                        </div>
-                        <div class="accordion-content">
-                            {% for video in module.video_set.all %}
-                            <div class="lecture">
-                                <div class="lecture-title">
-                                    <div class="lecture-status {% if video.is_completed %}completed{% elif video.is_preview %}preview{% else %}locked{% endif %}">
-                                        <i class="fas {% if video.is_completed %}fa-check{% elif video.is_preview %}fa-play{% else %}fa-lock{% endif %}"></i>
-                                    </div>
-                                    <span>{{ forloop.counter }}. {{ video.name }}</span>
-                                </div>
-                                <div class="lecture-duration">{{ video.duration|default:"0" }} دقيقة</div>
-                            </div>
-                            {% endfor %}
-                            
-                            {% for quiz in module.quiz_set.all %}
-                            <div class="lecture">
-                                <div class="lecture-title">
-                                    <div class="lecture-status locked">
-                                        <i class="fas fa-question-circle"></i>
-                                    </div>
-                                    <span>اختبار: {{ quiz.name }}</span>
-                                </div>
-                                <div class="lecture-duration">{{ quiz.questions.count }} أسئلة</div>
-                            </div>
-                            {% endfor %}
-                            
-                            {% for assignment in module.assignment_set.all %}
-                            <div class="lecture">
-                                <div class="lecture-title">
-                                    <div class="lecture-status locked">
-                                        <i class="fas fa-file-alt"></i>
-                                    </div>
-                                    <span>مهمة: {{ assignment.name }}</span>
-                                </div>
-                                <div class="lecture-duration">{{ assignment.points }} نقطة</div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </section> -->
-
                 <!-- Requirements -->
                 <section>
                     <h2 class="section-title">المتطلبات</h2>
@@ -515,10 +460,21 @@
                     {% if user.is_authenticated and is_enrolled %}
                         <a href="{% url 'courseviewpage' course_id=course.id %}" class="btn btn-success sidebar-btn">عرض الدورة</a>
                     {% elif user.is_authenticated %}
-                        <a href="{% url 'enroll_course' course_id=course.id %}" class="btn btn-primary sidebar-btn">اشترك الآن</a>
-                        <div class="mt-2 text-center">
-                            <small class="text-muted">انقر للتسجيل في هذه الدورة</small>
-                        </div>
+                        {% if in_cart %}
+                            <a href="{% url 'view_cart' %}" class="btn btn-info sidebar-btn">عرض السلة</a>
+                            <div class="mt-2 text-center">
+                                <small class="text-muted">الدورة موجودة في سلة التسوق</small>
+                            </div>
+                        {% else %}
+                            <form method="post" action="{% url 'add_to_cart' course_id=course.id %}" class="mb-2">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary sidebar-btn">إضافة إلى السلة</button>
+                            </form>
+                            <a href="{% url 'enroll_course' course_id=course.id %}" class="btn btn-outline-primary sidebar-btn">اشترك الآن</a>
+                            <div class="mt-2 text-center">
+                                <small class="text-muted">يمكنك الاشتراك مباشرة أو إضافة الدورة للسلة</small>
+                            </div>
+                        {% endif %}
                     {% else %}
                         <a href="{% url 'login' %}?next={% url 'course_detail' course_id=course.id %}" class="btn btn-primary sidebar-btn">تسجيل الدخول للاشتراك</a>
                         <div class="mt-2 text-center">

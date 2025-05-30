@@ -97,41 +97,49 @@ def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     is_enrolled = False
     in_cart = False
-    enrollment = None
-    progress = 0
     
     if request.user.is_authenticated:
-        enrollment = Enrollment.objects.filter(course=course, student=request.user).first()
-        if enrollment:
-            is_enrolled = True
-            # Update last accessed time and get progress
-            from .utils import update_enrollment_progress
-            progress = update_enrollment_progress(enrollment)
+        # Check if user is enrolled in the course
+        is_enrolled = Enrollment.objects.filter(course=course, student=request.user).exists()
         
-        # Check if course is in cart
+        # Check if course is in user's cart
         cart = Cart.objects.filter(user=request.user).first()
         if cart:
             in_cart = CartItem.objects.filter(cart=cart, course=course).exists()
     
+    # Get course reviews
+    reviews = Review.objects.filter(course=course)
+    
+    # Calculate average rating
+    avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+    
+    # Round to nearest half
+    avg_rating = round(avg_rating * 2) / 2
+    
+    # Generate full and half stars
+    full_stars = int(avg_rating)
+    half_star = avg_rating - full_stars > 0
+    empty_stars = 5 - full_stars - (1 if half_star else 0)
+    
     context = {
         'course': course,
         'is_enrolled': is_enrolled,
-        'enrollment': enrollment,
-        'progress': progress,
-        'in_cart': in_cart
+        'in_cart': in_cart,
+        'reviews': reviews,
+        'avg_rating': avg_rating,
+        'full_stars': range(full_stars),
+        'half_star': half_star,
+        'empty_stars': range(empty_stars),
     }
     
-    if is_enrolled:
-        return render(request, 'website/courseviewpage.html', context)
-    else:
-        return render(request, 'website/course_detail.html', context)
+    return render(request, 'website/course_detail.html', context)
 
 @login_required
 def add_to_cart(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
     # Check if user is already enrolled in the course
-    if Enrollment.objects.filter(user=request.user, course=course).exists():
+    if Enrollment.objects.filter(student=request.user, course=course).exists():
         messages.warning(request, 'أنت مسجل بالفعل في هذه الدورة')
         return redirect('course_detail', course_id=course_id)
     
@@ -166,40 +174,57 @@ def view_cart(request):
 @login_required
 def remove_from_cart(request, course_id):
     course = get_object_or_404(Course, id=course_id)
-    cart = Cart.objects.filter(user=request.user).first()
+    cart, created = Cart.objects.get_or_create(user=request.user)
     
-    if cart:
-        CartItem.objects.filter(cart=cart, course=course).delete()
-        messages.success(request, 'تمت إزالة الدورة من السلة')
+    # Try to find and delete the cart item
+    deleted, _ = CartItem.objects.filter(cart=cart, course=course).delete()
+    
+    if deleted:
+        messages.success(request, 'تمت إزالة الدورة من سلة التسوق')
+    else:
+        messages.warning(request, 'هذه الدورة غير موجودة في سلة التسوق')
     
     return redirect('view_cart')
 
 @login_required
 def checkout(request):
-    cart = Cart.objects.filter(user=request.user).first()
+    # Get user's cart
+    cart, created = Cart.objects.get_or_create(user=request.user)
     
-    if not cart or cart.items.count() == 0:
-        messages.warning(request, 'السلة فارغة')
+    if not cart.items.exists():
+        messages.warning(request, 'سلة التسوق الخاصة بك فارغة')
         return redirect('view_cart')
     
     if request.method == 'POST':
-        # Process enrollment for all courses in cart
-        for cart_item in cart.items.all():
-            Enrollment.objects.create(
-                course=cart_item.course,
-                student=request.user,
-                status='active',
-                enrollment_date=timezone.now()
-            )
+        # Process payment (placeholder for now)
+        # In a real application, you would integrate with a payment gateway here
         
-        # Clear the cart
+        # Enroll user in all courses in the cart
+        enrolled_courses = []
+        for cart_item in cart.items.all():
+            # Check if already enrolled
+            if not Enrollment.objects.filter(course=cart_item.course, student=request.user).exists():
+                enrollment = Enrollment.objects.create(
+                    course=cart_item.course,
+                    student=request.user,
+                    status='active'
+                )
+                enrolled_courses.append(cart_item.course.name)
+        
+        # Clear the cart after successful enrollment
         cart.items.all().delete()
-        messages.success(request, 'تم التسجيل في جميع الدورات بنجاح')
+        
+        if enrolled_courses:
+            messages.success(request, f'تم الاشتراك في {len(enrolled_courses)} دورة بنجاح!')
+        else:
+            messages.info(request, 'لم يتم الاشتراك في أي دورات جديدة.')
+            
         return redirect('dashboard')
     
     context = {
-        'cart_items': cart.items.all(),
-        'total_price': cart.total_price
+        'cart_items': cart.items.select_related('course', 'course__teacher__profile').all(),
+        'total_price': cart.total_price,
+        'cart': cart
     }
     
     return render(request, 'website/checkout.html', context)
