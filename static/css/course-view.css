@@ -1,169 +1,372 @@
-/* Course View Page Styling */
-
-/* General Styles */
-body {
-    font-family: 'Tajawal', sans-serif;
-}
-
-/* Card Styling */
-.card {
-    transition: all 0.3s ease;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
-}
-
-.card:hover {
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Progress Bar */
-.progress {
-    height: 8px;
-    border-radius: 4px;
-    background-color: #e9ecef;
+  /* أنماط مخصصة */
+  .media-card {
+    border: none;
     overflow: hidden;
-}
-
-.progress-bar {
-    background-color: #0d6efd;
-    transition: width 0.6s ease;
-}
-
-/* Video Container */
-.video-container {
+  }
+  
+  .video-wrapper {
     position: relative;
-    overflow: hidden;
-    border-top-left-radius: 0.5rem;
-    border-top-right-radius: 0.5rem;
-}
-
-video {
-    width: 100%;
-    background-color: #000;
+    background: #000;
+  }
+  
+  .video-wrapper video {
     max-height: 450px;
-}
-
-/* PDF Viewer */
-.pdf-viewer-container {
-    border-radius: 8px 8px 0 0;
-    overflow: hidden;
-    background-color: #f1f1f1;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
-}
-
-/* Module List Styles */
-.module-list {
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.module-header {
-    background-color: #f8f9fa;
-    border-left: 4px solid #e9ecef;
-    transition: all 0.3s ease;
+    display: block;
+  }
+  
+  .video-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px;
+    background: rgba(0,0,0,0.5);
+  }
+  
+  .progress-container {
+    height: 5px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
     cursor: pointer;
-}
-
-.module-header:hover {
-    background-color: #e9ecef;
-}
-
-.module-header.active {
-    background-color: #e9ecef;
-    border-left-color: #0056b3;
-}
-
-.content-icon {
-    width: 32px;
-    height: 32px;
+  }
+  
+  .progress-bar {
+    height: 100%;
+    background: #4e54c8;
+    border-radius: 3px;
+    transition: width 0.1s;
+  }
+  
+  .pdf-viewer {
+    height: 450px;
+    background: #f5f7fa;
+  }
+  
+  .content-info {
+    padding: 1.5rem;
+  }
+  
+  .content-title {
+    font-size: 1.5rem;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+  }
+  
+  .duration-badge {
+    background: #edf2f7;
+    color: #4a5568;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.85rem;
+  }
+  
+  .content-description {
+    color: #718096;
+    line-height: 1.6;
+  }
+  
+  .attachments {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+  }
+  
+  .attachments-title {
+    font-size: 1.1rem;
+    color: #2d3748;
+    margin-bottom: 0.75rem;
+  }
+  
+  .download-btn {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #4a5568;
+    padding: 0.35rem 1rem;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  
+  .download-btn:hover {
+    background: #edf2f7;
+    color: #2d3748;
+  }
+  
+  .curriculum-card {
+    border: none;
+  }
+  
+  .card-header {
+    padding: 1.25rem 1.5rem;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .card-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0;
+  }
+  
+  .module-item {
+    border: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .module-header {
+    padding: 1rem 1.5rem;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .module-header:hover {
+    background: #edf2f7;
+  }
+  
+  .module-header.collapsed .toggle-icon {
+    transform: rotate(0deg);
+  }
+  
+  .module-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #4e54c8;
+    color: white;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    margin-left: 0.75rem;
+  }
+  
+  .module-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0;
+  }
+  
+  .module-stats {
+    font-size: 0.85rem;
+    color: #718096;
+  }
+  
+  .toggle-icon {
+    margin-right: 0.5rem;
+    transition: transform 0.2s;
+    transform: rotate(180deg);
+  }
+  
+  .content-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    text-decoration: none;
+    color: #4a5568;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+  }
+  
+  .content-item:hover, .content-item.active {
+    background: #f8fafc;
+    border-left-color: #4e54c8;
+  }
+  
+  .content-item.completed {
+    background: #f0fdf4;
+  }
+  
+  .content-icon {
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: #edf2f7;
     border-radius: 50%;
-    background-color: rgba(0, 123, 255, 0.1);
-    transition: all 0.3s ease;
-}
-
-.content-item {
-    transition: all 0.2s ease;
-    border-left: 4px solid transparent;
-}
-
-.content-item:hover {
-    background-color: #f8f9fa;
-}
-
-.content-item.active {
-    background-color: #e9ecef;
-    border-left: 4px solid #0056b3;
-}
-
-.content-item.completed .content-icon {
-    background-color: rgba(40, 167, 69, 0.2);
-}
-
-.content-item.completed .content-icon i {
-    color: #28a745;
-}
-
-.bg-success-soft {
-    background-color: rgba(40, 167, 69, 0.2);
-}
-
-/* Progress Styles */
-.progress {
-    height: 8px;
-    border-radius: 4px;
-    background-color: #e9ecef;
-    overflow: hidden;
-}
-
-.progress-bar {
-    background-color: #0056b3;
-    border-radius: 4px;
-    transition: width 1s ease;
-}
-
-.progress-text {
-    color: #0056b3;
-}
-
-/* Video Completed Badge */
-.video-completed-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background-color: rgba(40, 167, 69, 0.8);
-    color: white;
-    padding: 5px 10px;
-    border-radius: 4px;
+    margin-left: 1rem;
+  }
+  
+  .content-item.completed .content-icon {
+    background: #dcfce7;
+  }
+  
+  .content-icon i {
+    font-size: 0.9rem;
+  }
+  
+  .content-details {
+    flex: 1;
+  }
+  
+  .content-details h5 {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #2d3748;
+    margin: 0 0 0.25rem 0;
+  }
+  
+  .content-meta {
+    display: flex;
+    gap: 1rem;
     font-size: 0.8rem;
+    color: #718096;
+  }
+  
+  .content-meta span {
     display: flex;
     align-items: center;
-    gap: 5px;
-}
-
-/* Resources Section */
-.resources-section {
-    background-color: #f8f9fa;
+  }
+  
+  .content-meta i {
+    margin-left: 0.25rem;
+    font-size: 0.7rem;
+  }
+  
+  .completed-badge {
+    color: #10b981;
+    font-size: 0.9rem;
+  }
+  
+  .course-card {
+    border: none;
+  }
+  
+  .course-thumbnail {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+  }
+  
+  .course-title {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 1rem 0 0.5rem 0;
+  }
+  
+  .course-description {
+    color: #718096;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+  }
+  
+  .course-badges {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .course-badges .badge {
+    padding: 0.35rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  
+  .lessons-badge {
+    background: #e0e7ff;
+    color: #4e54c8;
+  }
+  
+  .level-badge {
+    background: #ecfdf5;
+    color: #10b981;
+  }
+  
+  .progress-section {
+    margin-top: 1.5rem;
+  }
+  
+  .progress-wrapper {
+    margin-bottom: 1rem;
+  }
+  
+  .progress {
+    background: #e2e8f0;
+    border-radius: 50px;
+  }
+  
+  .progress-bar {
+    background: linear-gradient(to right, #4e54c8, #8f94fb);
+    border-radius: 50px;
+  }
+  
+  .progress-text {
+    display: block;
+    font-size: 0.85rem;
+    color: #4a5568;
+    text-align: center;
+    margin-top: 0.5rem;
+  }
+  
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .stat-item {
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    padding: 0.5rem 0.75rem;
     border-radius: 8px;
-    padding: 15px;
-}
-
-/* Content Navigation */
-.content-navigation {
-    border-top: 1px solid #e9ecef;
-    padding-top: 20px;
-    margin-top: 20px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .course-header {
-        position: relative;
-    }
-    
-    .video-container, .pdf-viewer-container {
-        max-height: 300px;
-    }
-}
+    font-size: 0.85rem;
+    color: #4a5568;
+  }
+  
+  .stat-item i {
+    margin-left: 0.5rem;
+    color: #4e54c8;
+  }
+  
+  .instructor-card {
+    border: none;
+  }
+  
+  .instructor-profile {
+    display: flex;
+    align-items: center;
+    margin-top: 1rem;
+  }
+  
+  .instructor-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e2e8f0;
+    margin-left: 1rem;
+  }
+  
+  .avatar-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #4e54c8;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-left: 1rem;
+  }
+  
+  .instructor-info h5 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0 0 0.25rem 0;
+  }
+  
+  .instructor-info p {
+    font-size: 0.85rem;
+    color: #718096;
+    margin: 0;
+  }

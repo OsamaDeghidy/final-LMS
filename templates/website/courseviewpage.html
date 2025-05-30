@@ -14,12 +14,12 @@
 
 {% block content %}
 
-<div class="container py-4" dir="rtl">
+<!-- <div class="container py-4" dir="rtl">
   <div class="row">
-    <!-- Course Content - Main content area -->
+    
     <div class="col-md-8">
       <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
-        <!-- Current Video/Content -->
+     
         <div class="video-container bg-dark position-relative">
           {% if current_content.type == 'video' %}
             <video src="{{ current_content.content.video.url }}" 
@@ -41,7 +41,7 @@
           {% endif %}
         </div>
         
-        <!-- Content Title and Description -->
+      
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="card-title fw-bold mb-0">
@@ -83,7 +83,7 @@
         </div>
       </div>
       
-      <!-- Course Modules - Coursera Style -->  
+  
       <div class="card shadow-sm border-0 rounded-4 mt-4">
         <div class="card-body p-0">
           <div class="p-4 border-bottom">
@@ -105,7 +105,7 @@
                 </div>
                 <div class="d-flex align-items-center">
                   <span class="module-progress me-3 small">
-                    <!-- Module content count -->
+             
                     {{ forloop.counter }} من {{ modules|length }}
                   </span>
                   <i class="fas {% if forloop.first %}fa-chevron-up{% else %}fa-chevron-down{% endif %}"></i>
@@ -115,7 +115,7 @@
               <div id="module-content-{{ module.id }}" class="collapse {% if forloop.first %}show{% endif %}">
                 <div class="list-group list-group-flush">
                   
-                  <!-- Videos -->  
+             
                   {% for video in course.video_set.all %}
                     {% if video.module.id == module.id %}
                     <a href="{% url 'courseviewpagevideo' course.id video.id %}" 
@@ -144,7 +144,7 @@
                     {% endif %}
                   {% endfor %}
                   
-                  <!-- PDFs -->
+           
                   {% for pdf in course.pdf_set.all %}
                     {% if pdf.module.id == module.id %}
                     <a href="{% url 'courseviewpagenote' course.id pdf.id %}" 
@@ -168,7 +168,7 @@
                     {% endif %}
                   {% endfor %}
                   
-                  <!-- Quizzes -->
+            
                   {% for quiz in quizzes %}
                     {% if quiz.module.id == module.id %}
                     <a href="{% url 'quiz_detail' quiz.id %}" 
@@ -197,7 +197,7 @@
                     {% endif %}
                   {% endfor %}
                   
-                  <!-- Assignments -->
+                  
                   {% for assignment in assignments %}
                     {% if assignment.module.id == module.id %}
                     <a href="{% url 'assignment_detail' assignment.id %}" 
@@ -235,7 +235,7 @@
       </div>
     </div>
     
-    <!-- Course Image and Basic Info - Moved to the left side (col-md-4) -->
+   
     <div class="col-md-4 mb-4">
       <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
         {% if course.image_course %}
@@ -287,7 +287,7 @@
         </div>
       </div>
       
-      <!-- Instructor Card -->
+   
       <div class="card shadow-sm border-0 rounded-4 mt-3">
         <div class="card-body">
           <h6 class="fw-bold mb-3">مقدم الدورة</h6>
@@ -311,5 +311,327 @@
       </div>
     </div>
   </div>
+</div> -->
+
+
+<div class="container py-4" dir="rtl">
+  <div class="row g-4">
+    <!-- المحتوى الرئيسي -->
+    <div class="col-lg-8">
+      <!-- مشغل الوسائط -->
+      <div class="card media-card shadow-lg border-0 rounded-4 overflow-hidden mb-4">
+        {% if current_content.type == 'video' %}
+        <!-- فيديو -->
+        <div class="video-wrapper">
+          <video id="course-video" class="w-100" controls
+                 poster="{% if course.image_course %}{{ course.image_course.url }}{% endif %}"
+                 data-video-id="{{ current_content.content.id }}">
+            <source src="{{ current_content.content.video.url }}" type="video/mp4">
+            متصفحك لا يدعم تشغيل الفيديو
+          </video>
+          <div class="video-controls">
+            <div class="progress-container">
+              <div class="progress-bar" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <!-- ملف PDF -->
+        <div class="pdf-viewer">
+          <embed src="{{ current_content.content.file.url }}" 
+                 type="application/pdf" class="w-100 h-100">
+        </div>
+        {% endif %}
+        
+        <!-- معلومات المحتوى -->
+        <div class="card-body content-info">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h2 class="content-title">
+                {% if current_content.type == 'video' %}
+                <i class="fas fa-play-circle text-primary me-2"></i>
+                {% else %}
+                <i class="fas fa-file-pdf text-danger me-2"></i>
+                {% endif %}
+                {{ current_content.content.title }}
+              </h2>
+              {% if current_content.type == 'video' %}
+              <span class="badge duration-badge">
+                <i class="far fa-clock me-1"></i> 
+                {{ current_content.content.duration|default:'10:00' }}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <p class="content-description">
+            {% if current_content.type == 'video' %}
+              {{ current_content.content.description|default:"لا يوجد وصف متاح لهذا الفيديو." }}
+            {% else %}
+              ملاحظات مرفقة لمساعدتك في فهم المحتوى بشكل أفضل.
+            {% endif %}
+          </p>
+          
+          {% if current_content.type == 'video' and current_content.content.resources %}
+          <div class="attachments mt-4">
+            <h5 class="attachments-title">
+              <i class="fas fa-paperclip me-2"></i>الملفات المرفقة
+            </h5>
+            <div class="d-flex flex-wrap gap-2">
+              {% for resource in current_content.content.resources.all %}
+              <a href="{{ resource.file.url }}" class="btn download-btn">
+                <i class="fas fa-download me-1"></i> 
+                {{ resource.name }}
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- محتوى الدورة -->
+      <div class="card curriculum-card shadow-lg border-0 rounded-4">
+        <div class="card-header">
+          <h3 class="mb-0">محتوى الدورة</h3>
+        </div>
+        
+        <div class="accordion curriculum-accordion">
+          {% for module in course.module_set.all %}
+          <div class="accordion-item module-item">
+            <div class="accordion-header module-header" 
+                 data-bs-toggle="collapse" 
+                 data-bs-target="#module-{{ module.id }}">
+              <div class="d-flex w-100 align-items-center">
+                <span class="module-number">{{ forloop.counter }}</span>
+                <h4 class="module-title">{{ module.name }}</h4>
+                <span class="module-stats ms-auto">
+                  {{ forloop.counter }} من {{ modules|length }}
+                </span>
+                <i class="fas fa-chevron-down toggle-icon"></i>
+              </div>
+            </div>
+            
+            <div id="module-{{ module.id }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}">
+              <div class="accordion-body p-0">
+                <!-- فيديوهات -->
+                {% for video in course.video_set.all %}
+                  {% if video.module.id == module.id %}
+                  <a href="{% url 'courseviewpagevideo' course.id video.id %}" 
+                     class="content-item {% if current_content.type == 'video' and current_content.content.id == video.id %}active{% endif %} {% if video.id in completed_videos %}completed{% endif %}">
+                    <div class="content-icon">
+                      <i class="fas {% if video.id in completed_videos %}fa-check-circle{% else %}fa-play{% endif %}"></i>
+                    </div>
+                    <div class="content-details">
+                      <h5>{{ video.name }}</h5>
+                      <div class="content-meta">
+                        <span><i class="far fa-clock"></i> {{ video.duration|default:'10:00' }}</span>
+                        <span><i class="fas fa-video"></i> فيديو</span>
+                      </div>
+                    </div>
+                    {% if video.id in completed_videos %}
+                    <div class="completed-badge">
+                      <i class="fas fa-check"></i>
+                    </div>
+                    {% endif %}
+                  </a>
+                  {% endif %}
+                {% endfor %}
+                
+                <!-- ملفات PDF -->
+                {% for pdf in course.pdf_set.all %}
+                  {% if pdf.module.id == module.id %}
+                  <a href="{% url 'courseviewpagenote' course.id pdf.id %}" 
+                     class="content-item {% if current_content.type == 'note' and current_content.content.id == pdf.id %}active{% endif %} {% if pdf.id in completed_pdfs %}completed{% endif %}">
+                    <div class="content-icon">
+                      <i class="fas {% if pdf.id in completed_pdfs %}fa-check-circle{% else %}fa-file-pdf{% endif %}"></i>
+                    </div>
+                    <div class="content-details">
+                      <h5>{{ pdf.title }}</h5>
+                      <div class="content-meta">
+                        <span><i class="fas fa-file-pdf"></i> ملف PDF</span>
+                      </div>
+                    </div>
+                    {% if pdf.id in completed_pdfs %}
+                    <div class="completed-badge">
+                      <i class="fas fa-check"></i>
+                    </div>
+                    {% endif %}
+                  </a>
+                  {% endif %}
+                {% endfor %}
+                
+                <!-- اختبارات -->
+                {% for quiz in quizzes %}
+                  {% if quiz.module.id == module.id %}
+                  <a href="{% url 'quiz_detail' quiz.id %}" 
+                     class="content-item {% if quiz.id in completed_quizzes %}completed{% endif %}">
+                    <div class="content-icon">
+                      <i class="fas {% if quiz.id in completed_quizzes %}fa-check-circle{% else %}fa-question-circle{% endif %}"></i>
+                    </div>
+                    <div class="content-details">
+                      <h5>{{ quiz.title }}</h5>
+                      <div class="content-meta">
+                        <span><i class="far fa-clock"></i> {{ quiz.time_limit|default:'15' }} دقيقة</span>
+                        <span><i class="fas fa-question-circle"></i> اختبار</span>
+                      </div>
+                    </div>
+                    {% if quiz.id in completed_quizzes %}
+                    <div class="completed-badge">
+                      <i class="fas fa-check"></i>
+                    </div>
+                    {% endif %}
+                  </a>
+                  {% endif %}
+                {% endfor %}
+                
+                <!-- واجبات -->
+                {% for assignment in assignments %}
+                  {% if assignment.module.id == module.id %}
+                  <a href="{% url 'assignment_detail' assignment.id %}" 
+                     class="content-item {% if assignment.id in completed_assignments %}completed{% endif %}">
+                    <div class="content-icon">
+                      <i class="fas {% if assignment.id in completed_assignments %}fa-check-circle{% else %}fa-tasks{% endif %}"></i>
+                    </div>
+                    <div class="content-details">
+                      <h5>{{ assignment.title }}</h5>
+                      <div class="content-meta">
+                        <span><i class="far fa-calendar-alt"></i> {{ assignment.due_date|date:"d/m/Y"|default:'لا يوجد موعد' }}</span>
+                        <span><i class="fas fa-tasks"></i> واجب</span>
+                      </div>
+                    </div>
+                    {% if assignment.id in completed_assignments %}
+                    <div class="completed-badge">
+                      <i class="fas fa-check"></i>
+                    </div>
+                    {% endif %}
+                  </a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- الجانب الأيمن -->
+    <div class="col-lg-4">
+      <!-- بطاقة الدورة -->
+      <div class="card course-card shadow-lg border-0 rounded-4 overflow-hidden">
+        {% if course.image_course %}
+        <img src="{{ course.image_course.url }}" class="course-thumbnail" alt="{{ course.name }}">
+        {% endif %}
+        <div class="card-body">
+          <h3 class="course-title">{{ course.name }}</h3>
+          <p class="course-description">{{ course.description|truncatewords:15 }}</p>
+          
+          <div class="course-badges">
+            <span class="badge lessons-badge">
+              <i class="fas fa-graduation-cap"></i> 
+              {{ course.total_video }} دروس
+            </span>
+            <span class="badge level-badge">
+              <i class="fas fa-signal"></i> 
+              {{ course.get_level_display }}
+            </span>
+          </div>
+          
+          <div class="progress-section">
+            <div class="progress-wrapper">
+              <div class="progress" style="height: 10px;">
+                <div class="progress-bar" role="progressbar" 
+                     style="width: {{ progress }}%" 
+                     aria-valuenow="{{ progress }}" 
+                     aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+              <span class="progress-text">إكمال الدورة: {{ progress }}%</span>
+            </div>
+            
+            <div class="stats-grid">
+              <div class="stat-item">
+                <i class="fas fa-play-circle"></i>
+                <span>{{ completed_videos|length }}/{{ course.total_video|default:0 }}</span>
+              </div>
+              {% if quizzes_count %}
+              <div class="stat-item">
+                <i class="fas fa-question-circle"></i>
+                <span>{{ completed_quizzes|length }}/{{ quizzes_count }}</span>
+              </div>
+              {% endif %}
+              {% if assignments_count %}
+              <div class="stat-item">
+                <i class="fas fa-tasks"></i>
+                <span>{{ completed_assignments|length }}/{{ assignments_count }}</span>
+              </div>
+              {% endif %}
+              {% if pdfs_count %}
+              <div class="stat-item">
+                <i class="fas fa-file-pdf"></i>
+                <span>{{ completed_pdfs|length }}/{{ pdfs_count }}</span>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- بطاقة المدرب -->
+      <div class="card instructor-card shadow-lg border-0 rounded-4 mt-4">
+        <div class="card-body">
+          <h4 class="card-title">مقدم الدورة</h4>
+          <div class="instructor-profile">
+            {% if course.teacher.profile.image %}
+            <img src="{{ course.teacher.profile.image.url }}" 
+                 class="instructor-avatar" 
+                 alt="{{ course.teacher.profile.name }}">
+            {% else %}
+            <div class="avatar-placeholder">
+              {{ course.teacher.profile.name|slice:':1'|upper }}
+            </div>
+            {% endif %}
+            <div class="instructor-info">
+              <h5>{{ course.teacher.profile.name }}</h5>
+              <p>مدرب معتمد</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  // تفاعلات جافاسكريبت
+  document.addEventListener('DOMContentLoaded', function() {
+    // تحكم في الفيديو
+    const video = document.getElementById('course-video');
+    if (video) {
+      const progressBar = document.querySelector('.progress-bar');
+      
+      video.addEventListener('timeupdate', function() {
+        const percent = (video.currentTime / video.duration) * 100;
+        progressBar.style.width = percent + '%';
+      });
+      
+      document.querySelector('.progress-container').addEventListener('click', function(e) {
+        const percent = e.offsetX / this.offsetWidth;
+        video.currentTime = percent * video.duration;
+      });
+    }
+    
+    // تفعيل أكورديون الوحدات
+    const moduleHeaders = document.querySelectorAll('.module-header');
+    moduleHeaders.forEach(header => {
+      header.addEventListener('click', function() {
+        const icon = this.querySelector('.toggle-icon');
+        icon.classList.toggle('fa-chevron-up');
+        icon.classList.toggle('fa-chevron-down');
+      });
+    });
+  });
+</script>
+
+
 {% endblock content %}
