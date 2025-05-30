@@ -228,14 +228,21 @@
     
     <!-- Recent Activity Section -->
     <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white border-0 py-4">
+      <div class="card-header bg-white border-0 py-4 d-flex justify-content-between align-items-center">
+        {% if profile.status == 'Teacher' %}
+        <h4 class="mb-0 fw-bold"><i class="fas fa-chalkboard-teacher me-2 text-primary"></i> دوراتي كمدرب</h4>
+        <a href="{% url 'create_course' %}" class="btn btn-primary rounded-pill">
+          <i class="fas fa-plus me-2"></i> إنشاء دورة جديدة
+        </a>
+        {% else %}
         <h4 class="mb-0 fw-bold"><i class="fas fa-history me-2 text-primary"></i> الدورات الجارية</h4>
+        {% endif %}
       </div>
       <div class="card-body p-0">
-        {% if courses %}
+        {% if profile.status == 'Teacher' %}
         <div class="container-fluid px-0">
           <div class="row g-4">
-            {% for course in courses %}
+            {% for course in teacher_courses %}
             <div class="col-12">
               <div id="course-{{ course.id }}" class="card mb-4 shadow-sm border-0" style="border-radius: 12px;">
                 <div class="row g-0 align-items-stretch">

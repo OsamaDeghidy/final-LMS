@@ -13,7 +13,11 @@ def my_courses(request):
     Display all courses the student is enrolled in
     """
     # Get user profile data for dashboard template
-    profile = Profile.objects.get(user=request.user)
+    try:
+        profile = Profile.objects.get(user=request.user)
+    except Profile.DoesNotExist:
+        messages.error(request, 'لم يتم العثور على ملف تعريف المستخدم. يرجى التواصل مع مسؤول النظام.')
+        return redirect('home')
     
     # Get student or teacher data if available
     student = None
@@ -78,15 +82,24 @@ def teacher_courses(request):
     Display all courses created by the teacher
     """
     # Get user profile data for dashboard template
-    profile = Profile.objects.get(user=request.user)
+    try:
+        profile = Profile.objects.get(user=request.user)
+    except Profile.DoesNotExist:
+        messages.error(request, 'لم يتم العثور على ملف تعريف المستخدم. يرجى التواصل مع مسؤول النظام.')
+        return redirect('home')
     
     # Check if user is a teacher
+    if profile.status != 'Teacher':
+        # User is not a teacher, redirect to dashboard
+        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
+        return redirect('dashboard')
+        
+    # Get teacher record
     try:
         teacher = Teacher.objects.get(profile__user=request.user)
     except Teacher.DoesNotExist:
-        # User is not a teacher, redirect to student courses
-        messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
-        return redirect('my_courses')
+        # Create teacher record if it doesn't exist but user has Teacher status
+        teacher = Teacher.objects.create(profile=profile)
     
     # Get student data if available (for the template)
     student = None

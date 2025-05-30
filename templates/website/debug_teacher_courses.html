@@ -1,0 +1,75 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Debug Teacher Courses{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0">Debug Teacher Courses</h3>
+        </div>
+        <div class="card-body">
+            <div class="mb-4">
+                <h4>Teacher Information</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th>Username</th>
+                                <td>{{ teacher_info.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>Profile Status</th>
+                                <td>{{ teacher_info.profile_status }}</td>
+                            </tr>
+                            <tr>
+                                <th>Teacher Exists</th>
+                                <td>{{ teacher_info.teacher_exists }}</td>
+                            </tr>
+                            {% if teacher_info.teacher_exists %}
+                            <tr>
+                                <th>Teacher ID</th>
+                                <td>{{ teacher_info.teacher_id }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div>
+                <h4>Course Information ({{ course_count }} courses)</h4>
+                {% if course_info %}
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for course in course_info %}
+                            <tr>
+                                <td>{{ course.id }}</td>
+                                <td>{{ course.name }}</td>
+                                <td>{{ course.status }}</td>
+                                <td>{{ course.price }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    No courses found for this teacher.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

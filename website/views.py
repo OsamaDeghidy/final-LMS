@@ -23,7 +23,11 @@ import requests
 @login_required
 def dashboard(request):
     # Get the user's profile
-    profile = request.user.profile
+    try:
+        profile = request.user.profile
+    except Profile.DoesNotExist:
+        messages.error(request, 'لم يتم العثور على ملف تعريف المستخدم. يرجى التواصل مع مسؤول النظام.')
+        return redirect('home')
     
     # Get all enrollments for the user
     enrollments = Enrollment.objects.filter(student=request.user).select_related(
@@ -60,9 +64,89 @@ def dashboard(request):
         # Set completed flag
         enrollment.completed = progress == 100
     
+    # Calculate statistics for student dashboard
+    completed_courses = sum(1 for e in enrollments if e.completed)
+    active_courses = sum(1 for e in enrollments if not e.completed and e.progress > 0)
+    courses_registered = len(enrollments)
+    
+    # Initialize teacher statistics
+    total_students = 0
+    total_courses = 0
+    total_earnings = 0
+    
+    # If user is a teacher, get teacher-specific stats
+    teacher = None
+    teacher_courses = []
+    
+    if profile.status == 'Teacher':
+        try:
+            teacher = Teacher.objects.get(profile__user=request.user)
+            
+            # Get all courses created by this teacher with related data
+            teacher_courses = Course.objects.all()  # Get ALL courses for testing
+            print(f"All courses: {teacher_courses.count()}")
+            
+            # Now filter by teacher
+            teacher_courses = Course.objects.filter(teacher=teacher).prefetch_related(
+                'tags',
+                'module_set',
+                'enrollments'
+            )
+            
+            # Calculate additional data for each course
+            for course in teacher_courses:
+                # Count total modules
+                course.total_module = course.module_set.count()
+                
+                # Count total videos
+                course.total_videos = sum(module.video_set.count() for module in course.module_set.all())
+                
+                # Count enrolled students
+                course.enrolled_students = course.enrollments.count()
+                
+                # Calculate rating (example calculation)
+                course.rating = 4.5  # Default rating, replace with actual calculation if available
+                
+                # Set videos time (example)
+                course.videos_time = "5h 30m"  # Replace with actual calculation if available
+            
+            total_courses = teacher_courses.count()
+            
+            # Count total students enrolled in teacher's courses
+            total_students = Enrollment.objects.filter(course__teacher=teacher).count()
+            
+            # Calculate total earnings (assuming price field represents earnings)
+            total_earnings = sum(course.price for course in teacher_courses)
+            
+            # Print debug info
+            print(f"Teacher: {teacher}, Courses: {teacher_courses.count()}")
+            print(f"Teacher ID: {teacher.id}")
+            print(f"Courses with this teacher: {Course.objects.filter(teacher=teacher).count()}")
+            
+        except Teacher.DoesNotExist:
+            # Create teacher if profile is marked as Teacher but no Teacher record exists
+            teacher = Teacher.objects.create(profile=profile)
+            print(f"Created new teacher: {teacher}")
+            
+            # Now get courses for the newly created teacher
+            teacher_courses = Course.objects.filter(teacher=teacher).prefetch_related(
+                'tags',
+                'module_set',
+                'enrollments'
+            )
+    
     context = {
         'profile': profile,
         'enrollments': enrollments,
+        'completed_courses': completed_courses,
+        'active_courses': active_courses,
+        'courses_registered': courses_registered,
+        'total_students': total_students,
+        'total_courses': total_courses,
+        'total_earnings': f'${total_earnings:.2f}',
+        'teacher': teacher,
+        'courses': teacher_courses if profile.status == 'Teacher' else [],
+        'teacher_courses': teacher_courses,  # Add this explicitly
     }
     
     return render(request, 'website/dashboard.html', context)
