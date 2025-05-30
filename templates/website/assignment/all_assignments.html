@@ -6,7 +6,7 @@
 
 {% block dashboard_content %}
 
-        <div class="col-lg-8">
+        <!-- <div class="col-lg-8">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">جميع الواجبات</h5>
@@ -175,5 +175,277 @@
     window.djangoTemplateFilters.get_attr = function(obj, attr) {
         return obj[attr];
     };
+</script> -->
+
+<div class="col-lg-8">
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <!-- Card Header -->
+        <div class="card-header bg-gradient-primary text-white py-3 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-tasks me-2 fs-5 text-primary" style="padding-left: 10px;"></i>
+                <h5 class="card-title mb-0 text-primary fw-bold">جميع الواجبات</h5>
+            </div>
+            {% if is_teacher %}
+            <div class="dropdown">
+                <button class="btn btn-light btn-sm rounded-pill dropdown-toggle d-flex align-items-center" 
+                        type="button" id="addAssignmentDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-plus-circle me-1" style="padding-left: 5px;"></i> إضافة واجب
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded-3" aria-labelledby="addAssignmentDropdown">
+                    {% for course in teacher_courses %}
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center py-2" href="{% url 'create_assignment' course.id %}">
+                            <i class="fas fa-book me-2 text-primary"></i>
+                            <span>{{ course.name }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Card Body -->
+        <div class="card-body p-4">
+            {% if is_teacher and teaching_assignments %}
+            <div class="mb-5">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="fas fa-chalkboard-teacher me-2 text-primary" style="padding-left: 5px;"></i>الواجبات التي قمت بإنشائها
+                    </h6>
+                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">
+                        {{ teaching_assignments.count }} واجب
+                    </span>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" style="width: 50px;">#</th>
+                                <th scope="col">الواجب</th>
+                                <th scope="col" class="text-center">الدورة</th>
+                                <th scope="col" class="text-center">تاريخ الاستحقاق</th>
+                                <th scope="col" class="text-center">التسليمات</th>
+                                <th scope="col" style="width: 150px;" class="text-end">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in teaching_assignments %}
+                            <tr class="border-top">
+                                <td class="fw-bold text-muted">{{ forloop.counter }}</td>
+                                <td>
+                                    <a href="{% url 'assignment_detail' assignment.id %}" class="text-decoration-none fw-bold text-dark">
+                                        {{ assignment.title|truncatechars:30 }}
+                                    </a>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">
+                                        {{ assignment.course.name }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    {% if assignment.due_date %}
+                                        <span class="text-dark">{{ assignment.due_date|date:"Y-m-d" }}</span>
+                                        <div class="small text-muted">{{ assignment.due_date|date:"H:i" }}</div>
+                                    {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3 py-1">
+                                        {{ assignment.submissions.count }} تسليم
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex justify-content-end">
+                                        <a href="{% url 'assignment_detail' assignment.id %}" 
+                                           class="btn btn-sm btn-icon btn-outline-primary rounded-circle me-2"
+                                           data-bs-toggle="tooltip" title="عرض التفاصيل">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'update_assignment' assignment.id %}" 
+                                           class="btn btn-sm btn-icon btn-outline-secondary rounded-circle"
+                                           data-bs-toggle="tooltip" title="تعديل الواجب">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if is_teacher %}
+                {% if enrolled_assignments %}
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-info-circle me-2"></i>
+                    لديك واجبات مسجلة كطالب في بعض الدورات
+                </div>
+                {% endif %}
+            {% elif enrolled_assignments %}
+            <div>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="fas fa-user-graduate me-2 text-success"></i>الواجبات المطلوبة منك
+                    </h6>
+                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">
+                        {{ enrolled_assignments.count }} واجب
+                    </span>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" style="width: 50px;">#</th>
+                                <th scope="col">الواجب</th>
+                                <th scope="col" class="text-center">الدورة</th>
+                                <th scope="col" class="text-center">تاريخ الاستحقاق</th>
+                                <th scope="col" class="text-center">الحالة</th>
+                                <th scope="col" class="text-center">الدرجة</th>
+                                <th scope="col" style="width: 180px;" class="text-end">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in enrolled_assignments %}
+                            <tr class="border-top">
+                                <td class="fw-bold text-muted">{{ forloop.counter }}</td>
+                                <td>
+                                    <a href="{% url 'assignment_detail' assignment.id %}" class="text-decoration-none fw-bold text-dark">
+                                        {{ assignment.title|truncatechars:25 }}
+                                    </a>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">
+                                        {{ assignment.course.name }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    {% if assignment.due_date %}
+                                        <div class="d-flex flex-column align-items-center">
+                                            <span class="text-dark">{{ assignment.due_date|date:"Y-m-d" }}</span>
+                                            <span class="small text-muted">{{ assignment.due_date|date:"H:i" }}</span>
+                                            {% if assignment.due_date < now and not assignment.allow_late_submissions %}
+                                            <span class="badge bg-danger bg-opacity-10 text-danger small mt-1">انتهى الموعد</span>
+                                            {% elif assignment.due_date < now %}
+                                            <span class="badge bg-warning bg-opacity-10 text-warning small mt-1">متأخر</span>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">غير محدد</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if assignment.id in submissions_by_assignment %}
+                                        {% with submission=submissions_by_assignment|get_item:assignment.id %}
+                                            {% if submission.status == 'submitted' %}
+                                            <span class="badge bg-info bg-opacity-15 text-info rounded-pill px-3 py-1">
+                                                <i class="fas fa-paper-plane me-1"></i>تم التسليم
+                                            </span>
+                                            {% elif submission.status == 'graded' %}
+                                            <span class="badge bg-success bg-opacity-15 text-success rounded-pill px-3 py-1">
+                                                <i class="fas fa-check-circle me-1"></i>تم التقييم
+                                            </span>
+                                            {% elif submission.status == 'returned' %}
+                                            <span class="badge bg-warning bg-opacity-15 text-warning rounded-pill px-3 py-1">
+                                                <i class="fas fa-redo me-1"></i>مطلوب تعديل
+                                            </span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% else %}
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3 py-1">
+                                            <i class="fas fa-clock me-1"></i>لم يتم التسليم
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center fw-bold">
+                                    {% if assignment.id in submissions_by_assignment %}
+                                        {% with submission=submissions_by_assignment|get_item:assignment.id %}
+                                            {% if submission.grade is not None %}
+                                            <span class="text-success">{{ submission.grade }}</span>
+                                            <span class="text-muted small">/ {{ assignment.points }}</span>
+                                            {% else %}
+                                            <span class="text-muted">-</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex justify-content-end">
+                                        <a href="{% url 'assignment_detail' assignment.id %}" 
+                                           class="btn btn-sm btn-icon btn-outline-primary rounded-circle me-2"
+                                           data-bs-toggle="tooltip" title="عرض التفاصيل">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        
+                                        {% if assignment.id not in submissions_by_assignment %}
+                                            {% if not assignment.due_date or assignment.due_date > now or assignment.allow_late_submissions %}
+                                            <a href="{% url 'submit_assignment' assignment.id %}" 
+                                               class="btn btn-sm btn-icon btn-success rounded-circle me-2"
+                                               data-bs-toggle="tooltip" title="تسليم الواجب">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </a>
+                                            {% endif %}
+                                        {% elif submissions_by_assignment|get_item:assignment.id|get_attr:"status" != 'graded' %}
+                                            <a href="{% url 'submit_assignment' assignment.id %}" 
+                                               class="btn btn-sm btn-icon btn-warning rounded-circle"
+                                               data-bs-toggle="tooltip" title="تعديل التسليم">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <img src="https://cdn-icons-png.flaticon.com/512/4076/4076478.png" 
+                         alt="لا توجد واجبات" style="width: 120px; opacity: 0.7;">
+                </div>
+                <h4 class="text-muted mb-3">لا توجد واجبات حالياً</h4>
+                <p class="text-muted mb-4">سيظهر هنا أي واجبات مطلوبة منك أو قمت بإنشائها</p>
+                {% if is_teacher %}
+                <a href="#" class="btn btn-primary rounded-pill px-4" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-plus-circle me-2"></i>إنشاء واجب جديد
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Tooltip Initialization Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Add custom template filter for dictionary access
+    if (!window.djangoTemplateFilters) {
+        window.djangoTemplateFilters = {};
+    }
+    
+    window.djangoTemplateFilters.get_item = function(dictionary, key) {
+        return dictionary[key];
+    };
+    
+    window.djangoTemplateFilters.get_attr = function(obj, attr) {
+        return obj[attr];
+    };
+});
 </script>
 {% endblock dashboard_content %}
