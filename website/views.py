@@ -79,61 +79,91 @@ def dashboard(request):
     teacher_courses = []
     
     if profile.status == 'Teacher':
+        # Force database refresh to get the latest courses
+        from django.db import connection
+        connection.close()
+        
+        # Try to get the teacher
         try:
             teacher = Teacher.objects.get(profile__user=request.user)
-            
-            # Get all courses created by this teacher with related data
-            teacher_courses = Course.objects.all()  # Get ALL courses for testing
-            print(f"All courses: {teacher_courses.count()}")
-            
-            # Now filter by teacher
-            teacher_courses = Course.objects.filter(teacher=teacher).prefetch_related(
-                'tags',
-                'module_set',
-                'enrollments'
-            )
-            
-            # Calculate additional data for each course
-            for course in teacher_courses:
-                # Count total modules
-                course.total_module = course.module_set.count()
-                
-                # Count total videos
-                course.total_videos = sum(module.video_set.count() for module in course.module_set.all())
-                
-                # Count enrolled students
-                course.enrolled_students = course.enrollments.count()
-                
-                # Calculate rating (example calculation)
-                course.rating = 4.5  # Default rating, replace with actual calculation if available
-                
-                # Set videos time (example)
-                course.videos_time = "5h 30m"  # Replace with actual calculation if available
-            
-            total_courses = teacher_courses.count()
-            
-            # Count total students enrolled in teacher's courses
-            total_students = Enrollment.objects.filter(course__teacher=teacher).count()
-            
-            # Calculate total earnings (assuming price field represents earnings)
-            total_earnings = sum(course.price for course in teacher_courses)
-            
-            # Print debug info
-            print(f"Teacher: {teacher}, Courses: {teacher_courses.count()}")
-            print(f"Teacher ID: {teacher.id}")
-            print(f"Courses with this teacher: {Course.objects.filter(teacher=teacher).count()}")
-            
         except Teacher.DoesNotExist:
-            # Create teacher if profile is marked as Teacher but no Teacher record exists
+            # Create teacher if it doesn't exist
             teacher = Teacher.objects.create(profile=profile)
             print(f"Created new teacher: {teacher}")
+        
+        # Get ALL courses (for debugging and to ensure we get all courses)
+        all_courses = Course.objects.all()
+        print(f"Total courses in database: {all_courses.count()}")
+        
+        # IMPORTANT: Force a direct query to get all courses for this teacher
+        # This is a more direct approach that should work regardless of any caching issues
+        teacher_courses = []
+        
+        # Loop through all courses and check if they belong to this teacher
+        for course in all_courses:
+            if course.teacher and course.teacher.id == teacher.id:
+                # Add this course to our list
+                teacher_courses.append(course)
+                print(f"Found teacher course: {course.name}, ID: {course.id}")
+        
+        print(f"Teacher: {teacher}, ID: {teacher.id}")
+        print(f"Found {len(teacher_courses)} courses for this teacher")
+        
+        # If we still don't have any courses, try creating a test course
+        if len(teacher_courses) == 0 and all_courses.count() > 0:
+            print("No courses found for this teacher, but there are courses in the database.")
+            print("This suggests there might be an issue with the teacher-course relationship.")
             
-            # Now get courses for the newly created teacher
-            teacher_courses = Course.objects.filter(teacher=teacher).prefetch_related(
-                'tags',
-                'module_set',
-                'enrollments'
-            )
+            # For debugging, let's check all courses and their teachers
+            for course in all_courses:
+                print(f"Course: {course.name}, Teacher ID: {course.teacher_id if course.teacher else 'None'}")
+                
+            # If there are no courses at all, let's create a test course for this teacher
+            if all_courses.count() == 0:
+                try:
+                    # Create a test course for this teacher
+                    test_course = Course.objects.create(
+                        name="Test Course",
+                        small_description="This is a test course created automatically",
+                        description="Test course description",
+                        price=99.99,
+                        teacher=teacher,
+                        status='published',
+                        created_at=datetime.today(),
+                        updated_at=datetime.today()
+                    )
+                    teacher_courses.append(test_course)
+                    print(f"Created test course: {test_course.name}, ID: {test_course.id}")
+                except Exception as e:
+                    print(f"Error creating test course: {e}")
+        
+        # Make sure teacher_courses is a list, not a QuerySet
+        teacher_courses = list(teacher_courses)
+            
+        # Calculate additional data for each course
+        for course in teacher_courses:
+            # Count total modules
+            course.total_module = course.module_set.count()
+            
+            # Count total videos
+            course.total_videos = sum(module.video_set.count() for module in course.module_set.all())
+            
+            # Count enrolled students
+            course.enrolled_students = course.enrollments.count()
+            
+            # Calculate rating (example calculation)
+            course.rating = 4.5  # Default rating, replace with actual calculation if available
+            
+            # Set videos time (example)
+            course.videos_time = "5h 30m"  # Replace with actual calculation if available
+        
+        total_courses = len(teacher_courses) if isinstance(teacher_courses, list) else teacher_courses.count()
+        
+        # Count total students enrolled in teacher's courses
+        total_students = Enrollment.objects.filter(course__teacher=teacher).count()
+        
+        # Calculate total earnings (assuming price field represents earnings)
+        total_earnings = sum(getattr(course, 'price', 0) for course in teacher_courses)
     
     context = {
         'profile': profile,
@@ -863,6 +893,7 @@ def create_course(request):
                 tags.append(tag)
             try:
                 teacher = Teacher.objects.get(profile=request.user.profile)
+                # Create the course with the teacher explicitly assigned
                 course = Course(
                     name=name,
                     description=description,
@@ -872,12 +903,17 @@ def create_course(request):
                     price=price,
                     small_description=small_description,
                     learned=learned,
-                    teacher=teacher,
+                    teacher=teacher,  # Explicitly assign the teacher
                     organization=teacher.organization,
                     created_at=datetime.today(),
-                    updated_at=datetime.today()
+                    updated_at=datetime.today(),
+                    status='published'  # Set status to published by default
                 )
                 course.save()
+                
+                # Print debug info
+                print(f"Created course: {course.name} with teacher: {teacher}")
+                print(f"Teacher ID: {teacher.id}, Course ID: {course.id}")
                 course.tags.set(tags)
                 
                 # Process modules and quizzes
