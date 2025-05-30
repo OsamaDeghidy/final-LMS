@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Tags, Course, Module, Video, Comment, SubComment, Notes, Monitor, UserProgress, CourseProgress, Quiz, Question, Answer, Enrollment, Certification, Attachment, Exam, ExamQuestion, ExamAnswer, UserExamAttempt, UserExamAnswer, Assignment, AssignmentSubmission, Attendance, QuizAttempt, QuizUserAnswer, School, Meeting, Participant, Notification, BookCategory, Book, ArticleCategory, Article
+from .models import Category, Tags, Course, Module, Video, Comment, SubComment, Notes, Monitor, UserProgress, CourseProgress, Quiz, Question, Answer, Enrollment, Certification, Attachment, Exam, ExamQuestion, ExamAnswer, UserExamAttempt, UserExamAnswer, Assignment, AssignmentSubmission, Attendance, QuizAttempt, QuizUserAnswer, School, Meeting, Participant, Notification, BookCategory, Book, Article
 
 # Register your models here.
 
@@ -38,6 +38,15 @@ admin.site.register(Participant)
 admin.site.register(Notification)
 admin.site.register(BookCategory)
 admin.site.register(Book)
-admin.site.register(ArticleCategory)
-admin.site.register(Article)
+
+# Enhanced Article admin
+class ArticleAdmin(admin.ModelAdmin):
+    list_display = ('title', 'author', 'category', 'status', 'created_at', 'views_count', 'featured')
+    list_filter = ('status', 'featured', 'category', 'created_at')
+    search_fields = ('title', 'content', 'summary')
+    prepopulated_fields = {'slug': ('title',)}
+    date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
+
+admin.site.register(Article, ArticleAdmin)
 

@@ -64,3 +64,8 @@ urlpatterns += [
     path('submission/<int:submission_id>/grade/', views_assignment.grade_submission, name='grade_submission'),
     path('delete-attachment/<int:attachment_id>/', views_assignment.delete_attachment, name='delete_attachment'),
 ]
+
+# Include article URLs
+from . import urls_article
+
+urlpatterns += urls_article.urlpatterns

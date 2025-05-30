@@ -1,0 +1,199 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}المقالات{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <h1 class="mb-4">المقالات</h1>
+            
+            <!-- Search and Filter -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-body">
+                    <form method="get" action="{% url 'article_list' %}">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <input type="text" name="q" class="form-control" placeholder="ابحث عن مقالة..." value="{{ search_query|default:'' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <select name="category" class="form-select">
+                                    <option value="">كل التصنيفات</option>
+                                    {% for category in categories %}
+                                        <option value="{{ category.id }}" {% if current_category == category.id|stringformat:"i" %}selected{% endif %}>
+                                            {{ category.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-primary w-100">بحث</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Featured Articles -->
+            {% if featured_articles and not search_query and not current_category and not current_tag and not page %}
+            <div class="mb-5">
+                <h3 class="mb-3">مقالات مميزة</h3>
+                <div class="row">
+                    {% for article in featured_articles %}
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100 shadow-sm hover-effect">
+                            {% if article.image %}
+                            <img src="{{ article.image.url }}" class="card-img-top" alt="{{ article.title }}" style="height: 180px; object-fit: cover;">
+                            {% else %}
+                            <img src="{% static 'img/article-placeholder.jpg' %}" class="card-img-top" alt="صورة افتراضية" style="height: 180px; object-fit: cover;">
+                            {% endif %}
+                            <div class="card-body">
+                                <h5 class="card-title">{{ article.title }}</h5>
+                                <p class="card-text text-muted">
+                                    <small>{{ article.created_at|date:"d M, Y" }} • {{ article.reading_time }} دقيقة للقراءة</small>
+                                </p>
+                                <p class="card-text">{{ article.summary|truncatechars:100 }}</p>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <a href="{% url 'article_detail' article.slug %}" class="btn btn-outline-primary btn-sm">قراءة المزيد</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Articles List -->
+            <div class="row">
+                {% if articles %}
+                    {% for article in articles %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100 shadow-sm hover-effect">
+                            {% if article.image %}
+                            <img src="{{ article.image.url }}" class="card-img-top" alt="{{ article.title }}" style="height: 180px; object-fit: cover;">
+                            {% else %}
+                            <img src="{% static 'img/article-placeholder.jpg' %}" class="card-img-top" alt="صورة افتراضية" style="height: 180px; object-fit: cover;">
+                            {% endif %}
+                            <div class="card-body">
+                                <h5 class="card-title">{{ article.title }}</h5>
+                                <p class="card-text text-muted">
+                                    <small>{{ article.created_at|date:"d M, Y" }} • {{ article.reading_time }} دقيقة للقراءة</small>
+                                </p>
+                                <p class="card-text">{{ article.summary|truncatechars:100 }}</p>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <a href="{% url 'article_detail' article.slug %}" class="btn btn-outline-primary btn-sm">قراءة المزيد</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            لا توجد مقالات متاحة حالياً
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if articles.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if articles.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ articles.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;</span>
+                    </li>
+                    {% endif %}
+                    
+                    {% for i in articles.paginator.page_range %}
+                        {% if articles.number == i %}
+                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ i }}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}">{{ i }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if articles.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ articles.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Categories -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">التصنيفات</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for category in categories %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="{% url 'articles_by_category' category.id %}" class="text-decoration-none text-dark">
+                                {{ category.name }}
+                            </a>
+                            <span class="badge bg-primary rounded-pill">{{ category.articles.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">لا توجد تصنيفات</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Tags -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">الوسوم</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for tag in tags %}
+                        <a href="{% url 'articles_by_tag' tag.id %}" class="btn btn-sm btn-outline-primary">
+                            {{ tag.name }}
+                        </a>
+                        {% empty %}
+                        <p>لا توجد وسوم</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Create Article Button (for authenticated users) -->
+            {% if user.is_authenticated %}
+            <div class="d-grid gap-2 mb-4">
+                <a href="{% url 'create_article' %}" class="btn btn-success">
+                    <i class="fas fa-plus-circle me-2"></i> إنشاء مقالة جديدة
+                </a>
+                <a href="{% url 'my_articles' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-list me-2"></i> مقالاتي
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock dashboard_content %}

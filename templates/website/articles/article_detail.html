@@ -1,0 +1,195 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5" dir="rtl">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <article class="blog-post">
+                <!-- Article Header -->
+                <header class="mb-4">
+                    <h1 class="display-5 fw-bold">{{ article.title }}</h1>
+                    <div class="text-muted mb-2">
+                        <span><i class="far fa-calendar-alt me-1"></i> {{ article.created_at|date:"d M, Y" }}</span>
+                        <span class="mx-2">•</span>
+                        <span><i class="far fa-clock me-1"></i> {{ article.reading_time }} دقيقة للقراءة</span>
+                        <span class="mx-2">•</span>
+                        <span><i class="far fa-eye me-1"></i> {{ article.views_count }} مشاهدة</span>
+                    </div>
+                    
+                    <!-- Author Info -->
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{% if article.author.profile.image %}{{ article.author.profile.image.url }}{% else %}{% static 'img/user-placeholder.jpg' %}{% endif %}" 
+                             class="rounded-circle me-2" alt="{{ article.author.username }}" width="40" height="40">
+                        <div>
+                            <div class="fw-bold">{{ article.author.get_full_name|default:article.author.username }}</div>
+                            <div class="text-muted small">{{ article.author.profile.title|default:"كاتب" }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Category and Tags -->
+                    <div class="mb-3">
+                        {% if article.category %}
+                        <a href="{% url 'articles_by_category' article.category.id %}" class="badge bg-primary text-decoration-none">
+                            {{ article.category.name }}
+                        </a>
+                        {% endif %}
+                        
+                        {% for tag in article.tags.all %}
+                        <a href="{% url 'articles_by_tag' tag.id %}" class="badge bg-secondary text-decoration-none">
+                            {{ tag.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </header>
+                
+                <!-- Featured Image -->
+                {% if article.image %}
+                <figure class="figure mb-4 w-100">
+                    <img src="{{ article.image.url }}" class="figure-img img-fluid rounded shadow-sm" alt="{{ article.title }}" style="max-height: 500px; width: 100%; object-fit: cover;">
+                </figure>
+                {% endif %}
+                
+                <!-- Article Content -->
+                <div class="article-content mb-5">
+                    {{ article.content|safe }}
+                </div>
+                
+                <!-- Article Actions -->
+                {% if user.is_authenticated and user == article.author or user.is_staff %}
+                <div class="d-flex gap-2 mb-5">
+                    <a href="{% url 'update_article' article.slug %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-1"></i> تعديل
+                    </a>
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteArticleModal">
+                        <i class="fas fa-trash-alt me-1"></i> حذف
+                    </button>
+                </div>
+                
+                <!-- Delete Confirmation Modal -->
+                <div class="modal fade" id="deleteArticleModal" tabindex="-1" aria-labelledby="deleteArticleModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="deleteArticleModalLabel">تأكيد الحذف</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                هل أنت متأكد من رغبتك في حذف هذه المقالة؟ هذا الإجراء لا يمكن التراجع عنه.
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                <form action="{% url 'delete_article' article.slug %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger">حذف</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Related Articles -->
+                {% if related_articles %}
+                <div class="related-articles mt-5">
+                    <h3 class="mb-4">مقالات ذات صلة</h3>
+                    <div class="row">
+                        {% for related in related_articles %}
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 shadow-sm hover-effect">
+                                {% if related.image %}
+                                <img src="{{ related.image.url }}" class="card-img-top" alt="{{ related.title }}" style="height: 150px; object-fit: cover;">
+                                {% else %}
+                                <img src="{% static 'img/article-placeholder.jpg' %}" class="card-img-top" alt="صورة افتراضية" style="height: 150px; object-fit: cover;">
+                                {% endif %}
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ related.title }}</h5>
+                                    <p class="card-text text-muted">
+                                        <small>{{ related.created_at|date:"d M, Y" }}</small>
+                                    </p>
+                                </div>
+                                <div class="card-footer bg-transparent border-0">
+                                    <a href="{% url 'article_detail' related.slug %}" class="btn btn-outline-primary btn-sm">قراءة المزيد</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </article>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Categories -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">التصنيفات</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for category in categories %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="{% url 'articles_by_category' category.id %}" class="text-decoration-none text-dark">
+                                {{ category.name }}
+                            </a>
+                            <span class="badge bg-primary rounded-pill">{{ category.articles.count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">لا توجد تصنيفات</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Popular Articles -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">مقالات شائعة</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for pop_article in popular_articles %}
+                        <li class="list-group-item">
+                            <div class="d-flex align-items-center">
+                                {% if pop_article.image %}
+                                <img src="{{ pop_article.image.url }}" class="rounded me-3" alt="{{ pop_article.title }}" width="60" height="60" style="object-fit: cover;">
+                                {% else %}
+                                <img src="{% static 'img/article-placeholder.jpg' %}" class="rounded me-3" alt="صورة افتراضية" width="60" height="60" style="object-fit: cover;">
+                                {% endif %}
+                                <div>
+                                    <h6 class="mb-0">
+                                        <a href="{% url 'article_detail' pop_article.slug %}" class="text-decoration-none text-dark">
+                                            {{ pop_article.title|truncatechars:40 }}
+                                        </a>
+                                    </h6>
+                                    <small class="text-muted">{{ pop_article.views_count }} مشاهدة</small>
+                                </div>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">لا توجد مقالات شائعة</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Create Article Button (for authenticated users) -->
+            {% if user.is_authenticated %}
+            <div class="d-grid gap-2 mb-4">
+                <a href="{% url 'create_article' %}" class="btn btn-success">
+                    <i class="fas fa-plus-circle me-2"></i> إنشاء مقالة جديدة
+                </a>
+                <a href="{% url 'my_articles' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-list me-2"></i> مقالاتي
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

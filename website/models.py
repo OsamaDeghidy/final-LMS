@@ -857,26 +857,63 @@ class Book(models.Model):
         return self.title
 
 
-class ArticleCategory(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return self.name
-
-
 class Article(models.Model):
-    title = models.CharField(max_length=255)
-    content = models.TextField()
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    category = models.ForeignKey(ArticleCategory, on_delete=models.SET_NULL, null=True, related_name='articles')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    image = models.ImageField(upload_to='articles/', null=True, blank=True)
-    is_published = models.BooleanField(default=True)
-
+    STATUS_CHOICES = [
+        ('draft', 'مسودة'),
+        ('published', 'منشور'),
+    ]
+    
+    title = models.CharField(max_length=255, verbose_name='العنوان')
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name='الرابط')
+    content = RichTextField(verbose_name='المحتوى')
+    summary = models.TextField(blank=True, null=True, verbose_name='ملخص')
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='articles', verbose_name='الكاتب')
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='articles', verbose_name='التصنيف')
+    tags = models.ManyToManyField(Tags, blank=True, related_name='articles', verbose_name='الوسوم')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')
+    image = models.ImageField(upload_to='articles/', null=True, blank=True, verbose_name='الصورة')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', verbose_name='الحالة')
+    views_count = models.PositiveIntegerField(default=0, verbose_name='عدد المشاهدات')
+    featured = models.BooleanField(default=False, verbose_name='مميز')
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'مقالة'
+        verbose_name_plural = 'المقالات'
+    
     def __str__(self):
         return self.title
+    
+    def save(self, *args, **kwargs):
+        # Generate a slug if it doesn't exist
+        if not self.slug:
+            from django.utils.text import slugify
+            # Create a unique slug
+            base_slug = slugify(self.title)
+            unique_slug = base_slug
+            num = 1
+            while Article.objects.filter(slug=unique_slug).exists():
+                unique_slug = f"{base_slug}-{num}"
+                num += 1
+            self.slug = unique_slug
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('article_detail', kwargs={'slug': self.slug})
+    
+    def increment_views(self):
+        self.views_count += 1
+        self.save(update_fields=['views_count'])
+    
+    @property
+    def reading_time(self):
+        # Estimate reading time based on content length
+        words_per_minute = 200  # Average reading speed
+        word_count = len(self.content.split())
+        minutes = word_count / words_per_minute
+        return max(1, round(minutes))  # Minimum 1 minute
 
 
 class Cart(models.Model):
