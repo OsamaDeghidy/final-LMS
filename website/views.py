@@ -706,11 +706,51 @@ def dashboard(request):
     else:
         try:
             profile = Profile.objects.get(user=request.user)
-            # Query all courses to display in the dashboard
+            
+            # Get enrollments for students
+            enrollments = []
+            if profile.status == 'Student':
+                enrollments = Enrollment.objects.filter(student=request.user).select_related(
+                    'course',
+                    'course__teacher__profile'
+                ).prefetch_related(
+                    'course__tags',
+                    'course__module_set',
+                    'course__module_set__video_set'
+                )
+                
+                # Calculate progress for each enrollment
+                for enrollment in enrollments:
+                    # Calculate total videos in course
+                    total_videos = sum(module.video_set.count() for module in enrollment.course.module_set.all())
+                    
+                    if total_videos > 0:
+                        # Get watched videos for this course
+                        watched_videos = VideoProgress.objects.filter(
+                            student=request.user,
+                            video__module__course=enrollment.course,
+                            watched=True
+                        ).count()
+                        
+                        # Calculate progress percentage
+                        progress = (watched_videos / total_videos) * 100
+                    else:
+                        progress = 0
+                        
+                    # Update enrollment progress
+                    enrollment.progress = progress
+                    enrollment.save(update_fields=['progress'])
+                    
+                    # Set completed flag
+                    enrollment.completed = progress == 100
+            
+            # Query all courses to display in the dashboard (for teachers/admins)
             courses = Course.objects.all()
+            
             context = {
                 "profile": profile,
-                "courses": courses
+                "courses": courses,
+                "enrollments": enrollments
             }
             return render(request, 'website/dashboard.html', context)
         except Profile.DoesNotExist:
