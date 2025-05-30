@@ -233,10 +233,10 @@
  
       </div>
       <div class="card-body p-0">
-        {% if teacher_courses %}
+        {% if courses %}
         <div class="container-fluid px-0">
           <div class="row g-4">
-            {% for course in teacher_courses %}
+            {% for course in courses %}
             <div class="col-12">
               <div id="course-{{ course.id }}" class="card mb-4 shadow-sm border-0" style="border-radius: 12px;">
                 <div class="row g-0 align-items-stretch">

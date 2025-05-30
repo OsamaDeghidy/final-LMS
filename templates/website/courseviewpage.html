@@ -254,10 +254,12 @@
             </span>
           </div>
           
-          <div class="progress mb-3" style="height: 8px;">
-            <div class="progress-bar bg-primary" role="progressbar" 
-                 style="width: {{ progress }}%" aria-valuenow="{{ progress }}" 
-                 aria-valuemin="0" aria-valuemax="100"></div>
+          <div class="progress mb-3" style="height: 12px;">
+            <div class="progress-bar bg-success" role="progressbar" 
+                 aria-valuenow="{{ progress }}" 
+                 aria-valuemin="0" aria-valuemax="100" 
+                 style="width: {{ progress }}%">
+            </div>
           </div>
           <div class="d-flex justify-content-between">
             <small class="text-muted progress-text">إكمال الدورة: {{ progress }}%</small>
