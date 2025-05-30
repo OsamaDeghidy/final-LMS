@@ -461,10 +461,8 @@
                         <a href="{% url 'courseviewpage' course_id=course.id %}" class="btn btn-success sidebar-btn">عرض الدورة</a>
                     {% elif user.is_authenticated %}
                         {% if in_cart %}
-                            <a href="{% url 'view_cart' %}" class="btn btn-info sidebar-btn">عرض السلة</a>
-                            <div class="mt-2 text-center">
-                                <small class="text-muted">الدورة موجودة في سلة التسوق</small>
-                            </div>
+                            <a href="{% url 'add_to_cart' course_id=course.id %}?next=view_course" class="btn btn-success sidebar-btn">عرض الدورة</a>
+                            <a href="{% url 'view_cart' %}" class="btn btn-info sidebar-btn mt-2">عرض السلة</a>
                         {% else %}
                             <form method="post" action="{% url 'add_to_cart' course_id=course.id %}" class="mb-2">
                                 {% csrf_token %}

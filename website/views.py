@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress, Cart, CartItem
+from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt
 from user.models import Profile, Student, Organization, Teacher
 from .utils import searchCourses
 
@@ -154,6 +154,16 @@ def add_to_cart(request, course_id):
         CartItem.objects.create(cart=cart, course=course)
         messages.success(request, 'تمت إضافة الدورة إلى سلة التسوق')
     
+    # Check if the user wants to view the course directly
+    next_page = request.GET.get('next', None)
+    if next_page and next_page == 'view_course':
+        # Clear any pending messages to prevent them from showing up
+        storage = messages.get_messages(request)
+        for message in storage:
+            pass  # Iterating through messages marks them as read
+        storage.used = True
+        return redirect('courseviewpage', course_id=course_id)
+    
     return redirect('view_cart')
 
 @login_required
@@ -232,26 +242,137 @@ def checkout(request):
 def courseviewpage(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     is_enrolled = False
+    in_cart = False
     enrollment = None
     progress = 0
+    completed_videos = []
+    completed_quizzes = []
+    completed_pdfs = []
+    completed_assignments = []
     
     if request.user.is_authenticated:
+        # Check if user is enrolled
         enrollment = Enrollment.objects.filter(course=course, student=request.user).first()
         if enrollment:
             is_enrolled = True
             # Update last accessed time and get progress
             from .utils import update_enrollment_progress
             progress = update_enrollment_progress(enrollment)
+            
+            # Get completed videos
+            completed_videos = VideoProgress.objects.filter(
+                student=request.user,
+                video__course=course,
+                watched=True
+            ).values_list('video_id', flat=True)
+            
+            # Get completed quizzes
+            try:
+                from django.db.models import Q
+                completed_quizzes = UserExamAttempt.objects.filter(
+                    user=request.user,
+                    exam__course=course,
+                    passed=True
+                ).values_list('exam_id', flat=True)
+            except:
+                completed_quizzes = []
+            
+            # Get accessed PDFs (Notes)
+            try:
+                # This is a placeholder - you'll need to implement PDF tracking
+                # For now, we'll assume no PDFs are completed
+                completed_pdfs = []
+            except:
+                completed_pdfs = []
+            
+            # Get completed assignments
+            try:
+                completed_assignments = AssignmentSubmission.objects.filter(
+                    user=request.user,
+                    assignment__course=course,
+                    status='graded'
+                ).values_list('assignment_id', flat=True)
+            except:
+                completed_assignments = []
+        else:
+            # Check if course is in user's cart
+            try:
+                cart = Cart.objects.get(user=request.user)
+                in_cart = CartItem.objects.filter(cart=cart, course=course).exists()
+            except (Cart.DoesNotExist, CartItem.DoesNotExist):
+                in_cart = False
     
-    if is_enrolled:
-        context = {
-            'course': course,
-            'enrollment': enrollment,
-            'progress': progress
-        }
-        return render(request, 'website/courseviewpage.html', context)
-    else:
+    # Allow access if user is enrolled or has the course in their cart
+    if not (is_enrolled or in_cart):
         return redirect('course_detail', course_id=course.id)
+    
+    # Get all modules for the course with related content
+    modules = course.module_set.all().prefetch_related(
+        'video_set', 'notes_set'
+    )
+    
+    # Get quizzes and assignments for the course
+    quizzes = Quiz.objects.filter(course=course)
+    assignments = Assignment.objects.filter(course=course)
+    
+    # Count quizzes, PDFs, and assignments
+    quizzes_count = Quiz.objects.filter(course=course).count()
+    pdfs_count = Notes.objects.filter(course=course).count()
+    assignments_count = Assignment.objects.filter(course=course).count()
+    
+    # Get the first video from the first module as the default content
+    current_content = None
+    prev_content = None
+    next_content = None
+    
+    # Build a list of all content items (videos and notes) in order
+    all_content = []
+    for module in modules:
+        for video in module.video_set.all():
+            all_content.append({
+                'type': 'video',
+                'content': video,
+                'module': module
+            })
+        for note in module.notes_set.all():
+            all_content.append({
+                'type': 'note',
+                'content': note,
+                'module': module
+            })
+        # Add quizzes and assignments to all_content if needed
+    
+    # Sort content by module number and then by content number
+    all_content.sort(key=lambda x: (x['module'].number or 0, 
+                                   x['content'].number if hasattr(x['content'], 'number') else 0))
+    
+    # If there's content, set the first one as current
+    if all_content:
+        current_content = all_content[0]
+        if len(all_content) > 1:
+            next_content = all_content[1]
+    
+    context = {
+        'course': course,
+        'enrollment': enrollment,
+        'progress': progress,
+        'modules': modules,
+        'quizzes': quizzes,
+        'assignments': assignments,
+        'current_content': current_content,
+        'prev_content': prev_content,
+        'next_content': next_content,
+        'completed_videos': completed_videos,
+        'completed_quizzes': completed_quizzes,
+        'completed_pdfs': completed_pdfs,
+        'completed_assignments': completed_assignments,
+        'quizzes_count': quizzes_count,
+        'pdfs_count': pdfs_count,
+        'assignments_count': assignments_count,
+        'all_content': all_content
+    }
+    
+    return render(request, 'website/courseviewpage.html', context)
 
 def courseviewpagevideo(request, course_id, video_id):
     course = get_object_or_404(Course, id=course_id)
@@ -259,6 +380,7 @@ def courseviewpagevideo(request, course_id, video_id):
     is_enrolled = False
     enrollment = None
     video_progress = None
+    completed_videos = []
     
     if request.user.is_authenticated:
         enrollment = Enrollment.objects.filter(course=course, student=request.user).first()
@@ -275,20 +397,72 @@ def courseviewpagevideo(request, course_id, video_id):
                 defaults={'watched': False}
             )
             
-    if is_enrolled:
-        quiz = Quiz.objects.filter(video=video).first()
-        questions = quiz.question_set.all() if quiz else []
-        
-        context = {
-            'course': course, 
-            'video': video, 
-            'questions': questions, 
-            'quiz': quiz,
-            'video_progress': video_progress
-        }
-        return render(request, 'website/courseviewvideo.html', context)
-    else:
+            # Get completed videos
+            completed_videos = VideoProgress.objects.filter(
+                student=request.user,
+                video__course=course,
+                watched=True
+            ).values_list('video_id', flat=True)
+            
+    if not is_enrolled:
         return redirect('course_detail', course_id=course.id)
+    
+    # Get all modules for the course
+    modules = course.module_set.all().prefetch_related('video_set', 'notes_set')
+    
+    # Build a list of all content items (videos and notes) in order
+    all_content = []
+    for module in modules:
+        for v in module.video_set.all():
+            all_content.append({
+                'type': 'video',
+                'content': v,
+                'module': module
+            })
+        for note in module.notes_set.all():
+            all_content.append({
+                'type': 'note',
+                'content': note,
+                'module': module
+            })
+    
+    # Sort content by module number and then by content number
+    all_content.sort(key=lambda x: (x['module'].number or 0, 
+                                   x['content'].number if hasattr(x['content'], 'number') else 0))
+    
+    # Find current content index
+    current_index = -1
+    current_content = None
+    for i, content in enumerate(all_content):
+        if content['type'] == 'video' and content['content'].id == video.id:
+            current_index = i
+            current_content = content
+            break
+    
+    # Set previous and next content
+    prev_content = all_content[current_index - 1] if current_index > 0 else None
+    next_content = all_content[current_index + 1] if current_index < len(all_content) - 1 else None
+    
+    # Get quiz for this video if exists
+    quiz = Quiz.objects.filter(video=video).first()
+    questions = quiz.question_set.all() if quiz else []
+    
+    context = {
+        'course': course, 
+        'video': video, 
+        'questions': questions, 
+        'quiz': quiz,
+        'video_progress': video_progress,
+        'modules': modules,
+        'current_content': current_content,
+        'prev_content': prev_content,
+        'next_content': next_content,
+        'completed_videos': completed_videos,
+        'all_content': all_content,
+        'progress': enrollment.progress
+    }
+    
+    return render(request, 'website/courseviewpage.html', context)
 
 def submit_quiz(request):
     if request.method == 'POST' and request.user.is_authenticated:
@@ -349,14 +523,76 @@ def courseviewpagenote(request, course_id, note_id):
     course = get_object_or_404(Course, id=course_id)
     note = get_object_or_404(Notes, id=note_id)
     is_enrolled = False
+    enrollment = None
+    completed_videos = []
+    
     if request.user.is_authenticated:
         enrollment = Enrollment.objects.filter(course=course, student=request.user).first()
         if enrollment:
             is_enrolled = True
-    if is_enrolled:
-        return render(request, 'website/courseviewnote.html', {'course': course, 'note': note})
-    else:
+            # Update last accessed time
+            enrollment.last_accessed = timezone.now()
+            enrollment.save(update_fields=['last_accessed'])
+            
+            # Get completed videos
+            completed_videos = VideoProgress.objects.filter(
+                student=request.user,
+                video__course=course,
+                watched=True
+            ).values_list('video_id', flat=True)
+    
+    if not is_enrolled:
         return redirect('course_detail', course_id=course.id)
+    
+    # Get all modules for the course
+    modules = course.module_set.all().prefetch_related('video_set', 'notes_set')
+    
+    # Build a list of all content items (videos and notes) in order
+    all_content = []
+    for module in modules:
+        for video in module.video_set.all():
+            all_content.append({
+                'type': 'video',
+                'content': video,
+                'module': module
+            })
+        for n in module.notes_set.all():
+            all_content.append({
+                'type': 'note',
+                'content': n,
+                'module': module
+            })
+    
+    # Sort content by module number and then by content number
+    all_content.sort(key=lambda x: (x['module'].number or 0, 
+                                   x['content'].number if hasattr(x['content'], 'number') else 0))
+    
+    # Find current content index
+    current_index = -1
+    current_content = None
+    for i, content in enumerate(all_content):
+        if content['type'] == 'note' and content['content'].id == note.id:
+            current_index = i
+            current_content = content
+            break
+    
+    # Set previous and next content
+    prev_content = all_content[current_index - 1] if current_index > 0 else None
+    next_content = all_content[current_index + 1] if current_index < len(all_content) - 1 else None
+    
+    context = {
+        'course': course, 
+        'note': note,
+        'modules': modules,
+        'current_content': current_content,
+        'prev_content': prev_content,
+        'next_content': next_content,
+        'completed_videos': completed_videos,
+        'all_content': all_content,
+        'progress': enrollment.progress
+    }
+    
+    return render(request, 'website/courseviewpage.html', context)
 
 def dashboard(request):
     if not request.user.is_authenticated:

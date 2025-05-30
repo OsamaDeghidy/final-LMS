@@ -26,28 +26,74 @@ def searchCourses(request):
 def update_enrollment_progress(enrollment):
     """
     Updates the progress of a student's enrollment in a course
+    Includes videos, quizzes, PDFs, and assignments in the progress calculation
     """
     course = enrollment.course
     student = enrollment.student
     
-    # Get total number of videos in the course
+    # Get total number of content items in the course
     total_videos = Video.objects.filter(module__course=course).count()
     
-    if total_videos == 0:
-        # No videos to track progress for
+    try:
+        total_quizzes = Quiz.objects.filter(course=course).count()
+    except:
+        total_quizzes = 0
+        
+    try:
+        total_pdfs = Notes.objects.filter(course=course).count()
+    except:
+        total_pdfs = 0
+        
+    try:
+        total_assignments = Assignment.objects.filter(course=course).count()
+    except:
+        total_assignments = 0
+    
+    total_content_items = total_videos + total_quizzes + total_pdfs + total_assignments
+    
+    if total_content_items == 0:
+        # No content to track progress for
         return 0
     
-    # Count completed videos using VideoProgress model
+    # Count completed videos
     completed_videos = VideoProgress.objects.filter(
         student=student,
         video__module__course=course,
         watched=True
     ).count()
     
+    # Count completed quizzes
+    try:
+        completed_quizzes = UserExamAttempt.objects.filter(
+            user=student,
+            exam__course=course,
+            passed=True
+        ).count()
+    except:
+        completed_quizzes = 0
+    
+    # Count accessed PDFs (Notes)
+    # This is a placeholder - you'll need to implement PDF tracking
+    # For now, we'll assume no PDFs are completed
+    completed_pdfs = 0
+    
+    # Count completed assignments
+    try:
+        completed_assignments = AssignmentSubmission.objects.filter(
+            user=student,
+            assignment__course=course,
+            status='graded'
+        ).count()
+    except:
+        completed_assignments = 0
+    
+    # Calculate total completed items
+    total_completed = completed_videos + completed_quizzes + completed_pdfs + completed_assignments
+    
     # Calculate progress percentage
-    if total_videos > 0:
-        progress = (completed_videos / total_videos) * 100
-        enrollment.progress = progress
+    if total_content_items > 0:
+        progress = (total_completed / total_content_items) * 100
+        enrollment.progress = min(progress, 100)  # Cap at 100%
     
     # Update last accessed time
     enrollment.last_accessed = timezone.now()

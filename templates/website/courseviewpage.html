@@ -13,311 +13,274 @@
 
 {% block content %}
 
-<!-- Course Header Section -->
-<div class="course-header bg-gradient-primary text-white py-5 mb-4" dir="rtl">
-  <div class="container">
-    <div class="row align-items-center">
-      <div class="col-lg-8">
-        <nav aria-label="breadcrumb">
-          <ol class="breadcrumb bg-transparent p-0 mb-3">
-            <li class="breadcrumb-item"><a href="#" class="text-white-50">الرئيسية</a></li>
-            <li class="breadcrumb-item"><a href="#" class="text-white-50">الدورات</a></li>
-            <li class="breadcrumb-item active text-white" aria-current="page">{{ course.name }}</li>
-          </ol>
-        </nav>
-        
-        <h1 class="display-5 fw-bold mb-3">{{ course.name }}</h1>
-        <p class="lead mb-4">{{ course.description|truncatewords:20 }}</p>
-        
-        <div class="d-flex flex-wrap gap-3 mb-4">
-          <span class="badge bg-white text-primary rounded-pill px-3 py-2 d-inline-flex align-items-center">
-            <i class="fas fa-graduation-cap me-2"></i> {{ course.total_video }} دروس
-          </span>
-          <span class="badge bg-white text-primary rounded-pill px-3 py-2 d-inline-flex align-items-center">
-            <i class="fas fa-clock me-2"></i> {{ course.vidoes_time }}
-          </span>
-          <span class="badge bg-white text-primary rounded-pill px-3 py-2 d-inline-flex align-items-center">
-            <i class="fas fa-signal me-2"></i> {{ course.get_level_display }}
-          </span>
-        </div>
-        
-        <div class="d-flex align-items-center">
-          {% if course.teacher.profile.image %}
-            <img src="{{ course.teacher.profile.image.url }}" alt="{{ course.teacher.profile.name }}" 
-                 class="rounded-circle me-3 border border-3 border-white" width="50" height="50">
-          {% else %}
-            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3 border border-3 border-white" 
-                 style="width: 50px; height: 50px;">
-              {{ course.teacher.profile.name|slice:':1'|upper }}
-            </div>
-          {% endif %}
-          <div>
-            <p class="mb-0 text-white-50">مقدم الدورة:</p>
-            <p class="mb-0 fw-bold text-white">{{ course.teacher.profile.name }}</p>
+<div class="container py-4" dir="rtl">
+  <div class="row">
+    <!-- Course Image and Basic Info -->
+    <div class="col-md-4 mb-4">
+      <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+        {% if course.image_course %}
+          <img src="{{ course.image_course.url }}" class="card-img-top" alt="{{ course.name }}">
+        {% endif %}
+        <div class="card-body">
+          <h4 class="card-title fw-bold">{{ course.name }}</h4>
+          <p class="text-muted">{{ course.description|truncatewords:15 }}</p>
+          
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">
+              <i class="fas fa-graduation-cap me-1"></i> {{ course.total_video }} دروس
+            </span>
+            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">
+              <i class="fas fa-signal me-1"></i> {{ course.get_level_display }}
+            </span>
+          </div>
+          
+          <div class="progress mb-3" style="height: 8px;">
+            <div class="progress-bar bg-primary" role="progressbar" 
+                 style="width: {{ progress }}%" aria-valuenow="{{ progress }}" 
+                 aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <div class="d-flex justify-content-between">
+            <small class="text-muted progress-text">إكمال الدورة: {{ progress }}%</small>
+            <small>
+              <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill me-1" title="فيديوهات">
+                <i class="fas fa-play-circle"></i> {{ completed_videos|length }}/{{ course.total_video|default:0 }}
+              </span>
+              {% if quizzes_count %}
+              <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill me-1" title="اختبارات">
+                <i class="fas fa-question-circle"></i> {{ completed_quizzes|length }}/{{ quizzes_count }}
+              </span>
+              {% endif %}
+              {% if assignments_count %}
+              <span class="badge bg-success bg-opacity-10 text-success rounded-pill me-1" title="واجبات">
+                <i class="fas fa-tasks"></i> {{ completed_assignments|length }}/{{ assignments_count }}
+              </span>
+              {% endif %}
+              {% if pdfs_count %}
+              <span class="badge bg-info bg-opacity-10 text-info rounded-pill" title="ملفات PDF">
+                <i class="fas fa-file-pdf"></i> {{ completed_pdfs|length }}/{{ pdfs_count }}
+              </span>
+              {% endif %}
+            </small>
           </div>
         </div>
       </div>
       
-      <div class="col-lg-4 mt-4 mt-lg-0">
-        {% if course.image_course %}
-          <div class="course-thumbnail-container shadow-lg rounded-4 overflow-hidden">
-            <img src="{{ course.image_course.url }}" alt="{{ course.name }}" 
-                 class="img-fluid w-100 h-auto object-fit-cover">
-          </div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Main Course Content -->
-<div class="container-fluid" dir="rtl">
-  <div class="row">
-    <!-- Sidebar Navigation -->
-    <div class="col-lg-3 course-sidebar pe-lg-0">
-      <div class="sidebar-content bg-white border-end h-100 overflow-auto shadow-sm">
-        <div class="p-4 border-bottom sticky-top bg-white">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="text-muted small">تقدمك في الدورة</span>
-            <span class="fw-bold text-primary">{{ progress }}%</span>
-          </div>
-          <div class="progress mb-3" style="height: 8px;">
-            <div class="progress-bar bg-gradient-primary progress-bar-striped progress-bar-animated" 
-                 role="progressbar" style="width: {{ progress }}%;" 
-                 aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
-          </div>
-          <button class="btn btn-primary w-100 rounded-pill py-2">
-            <i class="fas fa-certificate me-2"></i> شهادة الإتمام
-          </button>
-        </div>
-
-        <!-- Course Modules Navigation -->
-        <div class="modules-nav">
-          {% for module in course.module_set.all %}
-          <div class="module-section border-bottom">
-            <div class="module-header p-3 d-flex align-items-center" 
-                 data-bs-toggle="collapse" data-bs-target="#module{{ module.id }}" 
-                 role="button" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}">
-              <div class="module-icon bg-light-primary text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px;">
-                <i class="fas fa-book-open"></i>
+      <!-- Instructor Card -->
+      <div class="card shadow-sm border-0 rounded-4 mt-3">
+        <div class="card-body">
+          <h6 class="fw-bold mb-3">مقدم الدورة</h6>
+          <div class="d-flex align-items-center">
+            {% if course.teacher.profile.image %}
+              <img src="{{ course.teacher.profile.image.url }}" 
+                   class="rounded-circle me-3 border border-2 border-primary" 
+                   width="60" height="60" alt="{{ course.teacher.profile.name }}">
+            {% else %}
+              <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" 
+                   style="width: 60px; height: 60px;">
+                {{ course.teacher.profile.name|slice:':1'|upper }}
               </div>
-              <div class="flex-grow-1">
-                <h6 class="mb-1 fw-bold">{{ module.name }}</h6>
-                <small class="text-muted">{{ module.video_set.count }} دروس • {{ module.notes_set.count }} ملاحظات</small>
-              </div>
-              <i class="fas fa-chevron-down text-muted ms-2 transition-all"></i>
-            </div>
-            
-            <div class="collapse {% if forloop.first %}show{% endif %}" id="module{{ module.id }}">
-              <div class="module-content">
-                <!-- Videos -->
-                {% for video in module.video_set.all %}
-                <a href="#video-{{ video.id }}" class="content-item p-3 d-flex align-items-center text-decoration-none text-dark {% if video.id == video_id %}active bg-light-primary{% endif %}" data-content-id="video-{{ video.id }}">
-                  <div class="position-relative me-3">
-                    <div class="icon-wrapper {% if video.id in completed_videos %}bg-success{% else %}bg-light-primary{% endif %} rounded-circle p-2" style="width: 36px; height: 36px;">
-                      <i class="fas {% if video.id in completed_videos %}fa-check{% else %}fa-play{% endif %} {% if video.id in completed_videos %}text-white{% else %}text-primary{% endif %}"></i>
-                    </div>
-                    {% if video.id == video_id %}
-                    <div class="position-absolute top-0 start-100 translate-middle">
-                      <div class="bg-primary rounded-circle" style="width: 12px; height: 12px;"></div>
-                    </div>
-                    {% endif %}
-                  </div>
-                  <div class="flex-grow-1">
-                    <h6 class="mb-1 small fw-bold">{{ video.name }}</h6>
-                    <small class="text-muted d-flex align-items-center">
-                      <i class="fas fa-clock me-1"></i> {{ video.duration|default:"0:00" }}
-                    </small>
-                  </div>
-                  {% if video.id in completed_videos %}
-                  <span class="badge bg-success bg-opacity-10 text-success small ms-2">مكتمل</span>
-                  {% endif %}
-                </a>
-                {% endfor %}
-                
-                <!-- Notes -->
-                {% for note in module.notes_set.all %}
-                <a href="#note-{{ note.id }}" class="content-item p-3 d-flex align-items-center text-decoration-none text-dark" data-content-id="note-{{ note.id }}">
-                  <div class="icon-wrapper bg-light-info text-info rounded-circle me-3 p-2" style="width: 36px; height: 36px;">
-                    <i class="fas fa-file-alt"></i>
-                  </div>
-                  <div class="flex-grow-1">
-                    <h6 class="mb-1 small fw-bold">ملاحظات {{ forloop.counter }}</h6>
-                    <small class="text-muted d-flex align-items-center">
-                      <i class="fas fa-file-pdf me-1"></i> PDF
-                    </small>
-                  </div>
-                </a>
-                {% endfor %}
-              </div>
+            {% endif %}
+            <div>
+              <h6 class="mb-0 fw-bold">{{ course.teacher.profile.name }}</h6>
+              <small class="text-muted">مدرب معتمد</small>
             </div>
           </div>
-          {% endfor %}
         </div>
       </div>
     </div>
     
-    <!-- Main Content Area -->
-    <div class="col-lg-9 main-content px-lg-4 py-lg-0 py-4">
-      <div class="content-container bg-white rounded-4 shadow-sm overflow-hidden">
-        {% for module in course.module_set.all %}
-          {% for video in module.video_set.all %}
-          <div id="video-{{ video.id }}" class="content-section {% if not forloop.first or not forloop.parentloop.first %}d-none{% endif %}">
-            <div class="card border-0">
-              <div class="card-header bg-white py-3 border-bottom">
-                <div class="d-flex justify-content-between align-items-center">
-                  <h4 class="mb-0 fw-bold">{{ video.name }}</h4>
-                  <span class="badge bg-primary bg-opacity-10 text-primary">
-                    <i class="fas fa-clock me-1"></i> {{ video.duration|default:"0:00" }}
-                  </span>
-                </div>
-              </div>
-              <div class="card-body p-0">
-                <div class="video-container position-relative">
-                  <video
-                    src="{{ video.video.url }}"
-                    type="{{ video.video.content_type }}"
-                    class="w-100"
-                    controls
-                    {% if video.id in video_progress %}data-last-position="{{ video_progress.last_position }}"{% endif %}
-                    {% if video.id in completed_videos %}data-watched="true"{% endif %}
-                  >
-                    Your browser does not support the video tag.
-                  </video>
-                  
-                  {% if video.id in completed_videos %}
-                  <div class="video-completed-badge position-absolute top-0 end-0 m-3">
-                    <span class="badge bg-success rounded-pill px-3 py-2 shadow-sm">
-                      <i class="fas fa-check-circle me-1"></i> تم المشاهدة
-                    </span>
-                  </div>
-                  {% endif %}
-                </div>
-                
-                <!-- Video Description -->
-                <div class="p-4 border-bottom">
-                  <h5 class="fw-bold mb-3"><i class="fas fa-info-circle text-primary me-2"></i>عن هذا الدرس</h5>
-                  <p class="mb-0">{{ video.description|default:"لا يوجد وصف متاح لهذا الفيديو." }}</p>
-                </div>
-                
-                <!-- Video Resources -->
-                <div class="p-4">
-                  <h5 class="fw-bold mb-3"><i class="fas fa-paperclip text-primary me-2"></i>الملفات المرفقة</h5>
-                  {% if video.resources %}
-                    <div class="d-flex flex-wrap gap-3">
-                      {% for resource in video.resources.all %}
-                      <a href="{{ resource.file.url }}" class="btn btn-outline-primary rounded-pill px-3 py-2">
-                        <i class="fas fa-download me-2"></i> {{ resource.name }}
-                      </a>
-                      {% endfor %}
-                    </div>
-                  {% else %}
-                    <p class="text-muted">لا توجد ملفات مرفقة لهذا الدرس</p>
-                  {% endif %}
-                </div>
-              </div>
+    <!-- Course Content -->
+    <div class="col-md-8">
+      <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+        <!-- Current Video/Content -->
+        <div class="video-container bg-dark">
+          {% if current_content.type == 'video' %}
+            <video src="{{ current_content.content.video.url }}" 
+                   class="w-100" controls style="max-height: 450px;">
+              Your browser does not support the video tag.
+            </video>
+          {% else %}
+            <div class="pdf-viewer-container" style="height: 450px;">
+              <embed src="{{ current_content.content.file.url }}" 
+                     type="application/pdf" width="100%" height="100%">
             </div>
-          </div>
-          {% endfor %}
-          
-          {% for note in module.notes_set.all %}
-          <div id="note-{{ note.id }}" class="content-section d-none">
-            <div class="card border-0">
-              <div class="card-header bg-white py-3 border-bottom">
-                <h4 class="mb-0 fw-bold">ملاحظات {{ forloop.counter }}</h4>
-              </div>
-              <div class="card-body">
-                <div class="pdf-viewer-container border rounded-3 overflow-hidden">
-                  <embed src="{{ note.file.url }}" type="application/pdf" width="100%" height="600px">
-                </div>
-                <div class="mt-4">
-                  <a href="{{ note.file.url }}" download class="btn btn-primary rounded-pill px-4 py-2">
-                    <i class="fas fa-download me-2"></i> تنزيل الملاحظات
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-        {% endfor %}
-      </div>
-      
-      <!-- Discussion Section -->
-      <div class="mt-4">
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-          <div class="card-header bg-white py-3 border-bottom">
-            <h4 class="mb-0 d-flex align-items-center">
-              <i class="fas fa-comments text-primary me-2"></i>منتدى النقاش
-              <span class="badge bg-primary rounded-pill ms-2">{{ course.comment_set.count }}</span>
-            </h4>
-          </div>
-          
-          <div class="card-body">
-            <!-- New Comment Form -->
-            <form method="post" action="{% url 'add_comment' course_id=course.id %}" class="mb-4 comment-form bg-light-primary p-4 rounded-4">
-              {% csrf_token %}
-              <h5 class="mb-3 fw-bold text-primary"><i class="fas fa-edit me-2"></i>أضف تعليقاً</h5>
-              <div class="form-floating mb-3">
-                <textarea class="form-control border-0 shadow-sm" placeholder="اكتب سؤالك أو تعليقك هنا" 
-                          id="commentTextarea" name="comment_text" style="height: 120px" required></textarea>
-                <label for="commentTextarea">ما الذي تريد مناقشته؟</label>
-              </div>
-              <div class="text-end">
-                <button type="submit" class="btn btn-primary rounded-pill px-4 py-2 shadow-sm">
-                  <i class="fas fa-paper-plane me-2"></i> نشر التعليق
-                </button>
-              </div>
-            </form>
-            
-            <!-- Comments List -->
-            <div class="comments-list">
-              {% if course.comment_set.all %}
-                <h5 class="fw-bold mb-4"><i class="fas fa-comment-dots text-primary me-2"></i>التعليقات ({{ course.comment_set.count }})</h5>
-                
-                {% for comment in course.comment_set.all %}
-                <div class="comment-item mb-4 p-3 bg-light rounded-4">
-                  <div class="d-flex">
-                    <div class="flex-shrink-0">
-                      {% if comment.user.profile.image %}
-                        <img src="{{ comment.user.profile.image.url }}" alt="{{ comment.user.profile.name }}" 
-                             class="rounded-circle me-3 border border-2 border-white shadow-sm" width="50" height="50">
-                      {% else %}
-                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3 border border-2 border-white shadow-sm" 
-                             style="width: 50px; height: 50px;">
-                          {{ comment.user.profile.name|slice:':1'|upper }}
-                        </div>
-                      {% endif %}
-                    </div>
-                    <div class="flex-grow-1">
-                      <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0 fw-bold">{{ comment.user.profile.name }}</h6>
-                        <small class="text-muted">
-                          <i class="far fa-clock me-1"></i> {{ comment.created_at|timesince }} منذ
-                        </small>
-                      </div>
-                      <div class="comment-content bg-white p-3 rounded-3 shadow-sm">
-                        {{ comment.description|safe }}
-                      </div>
-                      <div class="mt-2 d-flex gap-2">
-                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                          <i class="far fa-thumbs-up me-1"></i> أعجبني
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                          <i class="fas fa-reply me-1"></i> رد
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {% endfor %}
+          {% endif %}
+        </div>
+        
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0 fw-bold">
+              {% if current_content.type == 'video' %}
+                {{ current_content.content.name }}
               {% else %}
-                <div class="text-center py-5">
-                  <img src="https://cdn-icons-png.flaticon.com/512/4089/4089733.png" alt="No comments" style="width: 120px; opacity: 0.6;" class="mb-4">
-                  <h5 class="fw-bold text-muted">لا يوجد تعليقات بعد</h5>
-                  <p class="text-muted">كن أول من يشارك في النقاش!</p>
-                </div>
+                ملاحظات {{ current_content.module.name }}
+              {% endif %}
+            </h4>
+            <div>
+              {% if prev_content %}
+                {% if prev_content.type == 'video' %}
+                  <a href="{% url 'courseviewpagevideo' course.id prev_content.content.id %}" 
+                     class="btn btn-sm btn-outline-primary rounded-pill me-2">
+                    <i class="fas fa-arrow-right"></i> السابق
+                  </a>
+                {% elif prev_content.type == 'note' %}
+                  <a href="{% url 'courseviewpagenote' course.id prev_content.content.id %}" 
+                     class="btn btn-sm btn-outline-primary rounded-pill me-2">
+                    <i class="fas fa-arrow-right"></i> السابق
+                  </a>
+                {% endif %}
+              {% endif %}
+              {% if next_content %}
+                {% if next_content.type == 'video' %}
+                  <a href="{% url 'courseviewpagevideo' course.id next_content.content.id %}" 
+                     class="btn btn-sm btn-primary rounded-pill">
+                    التالي <i class="fas fa-arrow-left"></i>
+                  </a>
+                {% elif next_content.type == 'note' %}
+                  <a href="{% url 'courseviewpagenote' course.id next_content.content.id %}" 
+                     class="btn btn-sm btn-primary rounded-pill">
+                    التالي <i class="fas fa-arrow-left"></i>
+                  </a>
+                {% endif %}
+              {% else %}
+                <button class="btn btn-sm btn-success rounded-pill">
+                  إكمال الدورة <i class="fas fa-check"></i>
+                </button>
               {% endif %}
             </div>
+          </div>
+          
+          <p class="text-muted">
+            {% if current_content.type == 'video' %}
+              {{ current_content.content.description|default:"لا يوجد وصف متاح لهذا الفيديو." }}
+            {% else %}
+              ملاحظات مرفقة لمساعدتك في فهم المحتوى بشكل أفضل.
+            {% endif %}
+          </p>
+          
+          {% if current_content.type == 'video' and current_content.content.resources %}
+            <div class="resources-section mt-4">
+              <h6 class="fw-bold mb-3"><i class="fas fa-paperclip me-2"></i>الملفات المرفقة</h6>
+              <div class="d-flex flex-wrap gap-2">
+                {% for resource in current_content.content.resources.all %}
+                  <a href="{{ resource.file.url }}" class="btn btn-sm btn-outline-primary rounded-pill">
+                    <i class="fas fa-download me-1"></i> {{ resource.name }}
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Course Modules Accordion -->
+      <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-body">
+          <h5 class="fw-bold mb-4">محتوى الدورة</h5>
+          
+          <div class="accordion" id="courseModules">
+            {% for module in course.module_set.all %}
+            <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
+              <h6 class="accordion-header" id="moduleHeading{{ module.id }}">
+                <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} bg-light" 
+                        type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#moduleCollapse{{ module.id }}" 
+                        aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" 
+                        aria-controls="moduleCollapse{{ module.id }}">
+                  <div class="d-flex align-items-center">
+                    <span class="badge bg-primary rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                          style="width: 30px; height: 30px;">{{ forloop.counter }}</span>
+                    <span class="fw-bold">{{ module.name }}</span>
+                  </div>
+                </button>
+              </h6>
+              
+              <div id="moduleCollapse{{ module.id }}" 
+                   class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" 
+                   aria-labelledby="moduleHeading{{ module.id }}" 
+                   data-bs-parent="#courseModules">
+                <div class="accordion-body pt-0">
+                  <div class="list-group list-group-flush">
+                    {% for video in module.video_set.all %}
+                      <a href="{% url 'courseviewpagevideo' course.id video.id %}" 
+                         class="list-group-item list-group-item-action border-0 py-3 d-flex align-items-center {% if current_content.type == 'video' and current_content.content.id == video.id %}active{% endif %}">
+                        <div class="content-icon me-3">
+                          <i class="fas fa-play-circle {% if current_content.type == 'video' and current_content.content.id == video.id %}text-white{% else %}text-primary{% endif %}"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                          <div class="d-flex justify-content-between">
+                            <span class="content-title">{{ video.name }}</span>
+                            <small class="text-muted">{{ video.duration|default:"0:00" }}</small>
+                          </div>
+                          {% if video.id in completed_videos %}
+                            <small class="text-success"><i class="fas fa-check-circle"></i> مكتمل</small>
+                          {% endif %}
+                        </div>
+                      </a>
+                    {% endfor %}
+                    
+                    {% for note in module.notes_set.all %}
+                      <a href="{% url 'courseviewpagenote' course.id note.id %}" 
+                         class="list-group-item list-group-item-action pdf-item border-0 py-3 d-flex align-items-center {% if current_content.type == 'note' and current_content.content.id == note.id %}active{% endif %}" data-pdf-id="{{ note.id }}">
+                        <div class="content-icon me-3">
+                          <i class="fas fa-file-pdf {% if current_content.type == 'note' and current_content.content.id == note.id %}text-white{% else %}text-info{% endif %}"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                          <div class="d-flex justify-content-between">
+                            <span class="content-title">ملاحظات {{ forloop.counter }}</span>
+                            <small class="text-muted">PDF</small>
+                          </div>
+                          {% if note.id in completed_pdfs %}
+                            <small class="text-success"><i class="fas fa-check-circle"></i> تمت القراءة</small>
+                          {% endif %}
+                        </div>
+                      </a>
+                    {% endfor %}
+                    
+                    {% for quiz in quizzes %}
+                      {% if quiz.module.id == module.id %}
+                      <a href="{% url 'quiz_detail' quiz.id %}" 
+                         class="list-group-item list-group-item-action quiz-item border-0 py-3 d-flex align-items-center" data-quiz-id="{{ quiz.id }}">
+                        <div class="content-icon me-3">
+                          <i class="fas fa-question-circle text-warning"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                          <div class="d-flex justify-content-between">
+                            <span class="content-title">{{ quiz.title }}</span>
+                            <small class="text-muted">{{ quiz.questions.count }} سؤال</small>
+                          </div>
+                          {% if quiz.id in completed_quizzes %}
+                            <small class="text-success"><i class="fas fa-check-circle"></i> تم الإكمال</small>
+                          {% endif %}
+                        </div>
+                      </a>
+                      {% endif %}
+                    {% endfor %}
+                    
+                    {% for assignment in assignments %}
+                      {% if assignment.module.id == module.id %}
+                      <a href="{% url 'assignment_detail' assignment.id %}" 
+                         class="list-group-item list-group-item-action assignment-item border-0 py-3 d-flex align-items-center" data-assignment-id="{{ assignment.id }}">
+                        <div class="content-icon me-3">
+                          <i class="fas fa-tasks text-success"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                          <div class="d-flex justify-content-between">
+                            <span class="content-title">{{ assignment.title }}</span>
+                            <small class="text-muted">تسليم: {{ assignment.due_date|date:"d/m/Y" }}</small>
+                          </div>
+                          {% if assignment.id in completed_assignments %}
+                            <small class="text-success"><i class="fas fa-check-circle"></i> تم التسليم</small>
+                          {% endif %}
+                        </div>
+                      </a>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
           </div>
         </div>
       </div>

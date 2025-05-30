@@ -1,87 +1,140 @@
+/* Course View Page Styling */
 
-
-.course-header.bg-gradient-primary {
-  background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);
+/* General Styles */
+body {
+    font-family: 'Tajawal', sans-serif;
 }
 
-.course-thumbnail-container {
-  transition: all 0.3s ease;
-  border: 3px solid white;
+/* Card Styling */
+.card {
+    transition: all 0.3s ease;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
 }
 
-.course-thumbnail-container:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
 }
 
-.sidebar-content {
-  height: calc(100vh - 120px);
-  position: sticky;
-  top: 80px;
+/* Progress Bar */
+.progress {
+    height: 8px;
+    border-radius: 4px;
+    background-color: #e9ecef;
+    overflow: hidden;
 }
 
-.module-header {
-  cursor: pointer;
-  transition: all 0.2s ease;
+.progress-bar {
+    background-color: #0d6efd;
+    transition: width 0.6s ease;
 }
 
-.module-header:hover {
-  background-color: #f8f9fa;
-}
-
-.module-header[aria-expanded="true"] .fa-chevron-down {
-  transform: rotate(180deg);
-}
-
-.content-item {
-  transition: all 0.2s ease;
-}
-
-.content-item:hover {
-  background-color: #f8f9fa;
-}
-
-.content-item.active {
-  background-color: #e9f5ff;
-}
-
+/* Video Container */
 .video-container {
-  background-color: #000;
-}
-
-.video-completed-badge .badge {
-  font-size: 0.8rem;
-}
-
-.bg-light-primary {
-  background-color: #e9f5ff;
-}
-
-.bg-light-info {
-  background-color: #e6f7ff;
-}
-
-.progress-bar.bg-gradient-primary {
-  background: linear-gradient(90deg, #4e54c8 0%, #8f94fb 100%);
-}
-
-.rounded-4 {
-  border-radius: 1rem !important;
-}
-
-.comment-item {
-  transition: all 0.3s ease;
-}
-
-.comment-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-}
-
-@media (max-width: 992px) {
-  .sidebar-content {
-    height: auto;
     position: relative;
-    top: 0;
-  }
+    overflow: hidden;
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+}
+
+video {
+    width: 100%;
+    background-color: #000;
+    max-height: 450px;
+}
+
+/* PDF Viewer */
+.pdf-viewer-container {
+    height: 450px;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+/* Course Content Accordion */
+.accordion-button:not(.collapsed) {
+    color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.1);
+    box-shadow: none;
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(13, 110, 253, 0.25);
+}
+
+.accordion-item {
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    margin-bottom: 0.5rem;
+    border-radius: 0.5rem !important;
+    overflow: hidden;
+}
+
+/* List Group Items */
+.list-group-item-action {
+    transition: all 0.2s ease;
+}
+
+.list-group-item-action:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+.list-group-item-action.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Content Type Icons */
+.content-icon {
+    font-size: 1.2rem;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Quiz and Assignment Styling */
+.quiz-item, .assignment-item, .pdf-item {
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.quiz-item {
+    border-left-color: #ffc107;
+}
+
+.assignment-item {
+    border-left-color: #20c997;
+}
+
+.pdf-item {
+    border-left-color: #6f42c1;
+}
+
+/* Completion Badges */
+.completion-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+}
+
+/* Resource Downloads */
+.resource-download {
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: #495057;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    display: block;
+}
+
+.resource-download:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+    color: #0d6efd;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .video-container, .pdf-viewer-container {
+        height: 300px;
+    }
 }
