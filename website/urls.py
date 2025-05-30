@@ -69,3 +69,8 @@ urlpatterns += [
 from . import urls_article
 
 urlpatterns += urls_article.urlpatterns
+
+# Include enrollment URLs
+from . import urls_enrollment
+
+urlpatterns += urls_enrollment.urlpatterns

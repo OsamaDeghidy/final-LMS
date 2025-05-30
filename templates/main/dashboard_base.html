@@ -78,18 +78,21 @@
                 <a href="{% url 'profile_detail' profile_id=request.user.profile.id %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-user text-muted me-2" style="padding-left: 5px;"></i> ملفي الشخصي
                 </a>
-                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                {% if profile.status == 'Student' %}
+                <a href="{% url 'my_courses' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-book text-muted me-2" style="padding-left: 5px;"></i> الدورات الملتحق بها
                 </a>
+           
                 <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-heart text-muted me-2" style="padding-left: 5px;"></i> قائمتي المفضلة
                 </a>
                 <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-star text-muted me-2" style="padding-left: 5px;"></i> التقييمات
                 </a>
-                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                {% endif %}
+                <!-- <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-file-alt text-muted me-2" style="padding-left: 5px;"></i> اختباراتي
-                </a>
+                </a> -->
                 <!-- <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-history text-muted me-2" style="padding-left: 5px;"></i> تاريخ الطلب
                 </a> -->
@@ -102,22 +105,21 @@
                 <!-- <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-certificate text-muted me-2" style="padding-left: 5px;"></i> شهاداتي
                 </a> -->
-              </div>
-            </div>
-          </div>
-
-          <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white border-0 py-3">
-              <h5 class="mb-0 text" style="color: #2a5a7c;"><i class="fas fa-user-tie me-2"style="padding-left: 5px;"></i> المدرب والدورات</h5>
-            </div>
-            <div class="card-body p-0">
-              <div class="list-group list-group-flush rounded"> 
-                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
-                  <i class="fas fa-graduation-cap text-muted me-2"style="padding-left: 5px;"></i> دوراتي
+                {% if profile.status == 'Teacher' %}
+                <a href="{% url 'teacher_courses' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-chalkboard-teacher text-muted me-2" style="padding-left: 5px;"></i> دوراتي كمدرب
                 </a>
-                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
-                  <i class="fas fa-boxes text-muted me-2"style="padding-left: 5px;"></i> مقالاتي
+                <a href="{% url 'my_courses' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-graduation-cap text-muted me-2" style="padding-left: 5px;"></i> دوراتي
                 </a>
+       
+                <a href="{% url 'all_assignments' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-tasks text-muted me-2" style="padding-left: 5px;"></i> الواجبات
+                </a>
+                <a href="{% url 'my_articles' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-boxes text-muted me-2" style="padding-left: 5px;"></i> مقالاتي
+                </a>               
+                {% endif %}
                 <!-- <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-bullhorn text-muted me-2"style="padding-left: 5px;"></i> الإعلانات
                 </a> -->
@@ -127,16 +129,9 @@
                 <!-- <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-redo text-muted me-2"style="padding-left: 5px;"></i> محاولات اختبار
                 </a> -->
-                <a href="{% url 'all_assignments' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
-                  <i class="fas fa-tasks text-muted me-2" style="padding-left: 5px;"></i> الواجبات
-                </a>
-                <a href="{% url 'my_articles' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
-                  <i class="fas fa-boxes text-muted me-2" style="padding-left: 5px;"></i> مقالاتي
-                </a>
                 <!-- <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-chart-line text-muted me-2"style="padding-left: 5px;"></i> Analytics
                 </a> -->
-                
               </div>
             </div>
           </div>
