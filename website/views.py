@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
 
-from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt
+from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt, Article
 from user.models import Profile, Student, Organization, Teacher
 from .utils import searchCourses
 
@@ -2186,7 +2186,7 @@ def delete_pdf(request, course_id, pdf_type):
 
 def course_category(request, category_slug):
     """
-    View to display all courses belonging to a specific category
+    View to display all content belonging to a specific category (courses and articles)
     """
     # Get the category or return 404 if not found
     category = get_object_or_404(Category, name=category_slug)
@@ -2194,9 +2194,13 @@ def course_category(request, category_slug):
     # Get all courses in this category
     courses = Course.objects.filter(category=category, status='published')
     
+    # Get all articles in this category
+    articles = Article.objects.filter(category=category, status='published')
+    
     context = {
         'category': category,
         'courses': courses,
+        'articles': articles,
     }
     
     return render(request, 'website/category_courses.html', context)

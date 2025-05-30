@@ -85,7 +85,7 @@
                     </li>
                     {% for category in categories %}
                     <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
-                        <a class="nav-link px-3 py-2 fw-semibold" href="{% url 'course_category' category.name %}"
+                        <a class="nav-link px-3 py-2 fw-semibold" href="{% url 'course_category' category_slug=category.name %}"
                            style="color: #495057; border-radius: 8px;">
                            {{ category.name }}
                         </a>
