@@ -1,0 +1,51 @@
+{% load static %}
+
+<div class="quiz-container">
+  <div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-header bg-warning bg-opacity-10 py-3">
+      <h4 class="mb-0 text-warning">
+        <i class="fas fa-question-circle me-2"></i>{{ quiz.title }}
+      </h4>
+    </div>
+    <div class="card-body">
+      <p class="quiz-description mb-4">{{ quiz.description|default:"اختبار قصير لتقييم فهمك لهذا الدرس." }}</p>
+      
+      <form id="quiz-form-{{ quiz.id }}" class="quiz-form">
+        {% for question in quiz.questions.all %}
+        <div class="quiz-question mb-4" data-question-id="{{ question.id }}">
+          <h5 class="question-text mb-3">{{ forloop.counter }}. {{ question.text }}</h5>
+          <div class="options-container">
+            {% for choice in question.choices.all %}
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" 
+                     name="question_{{ question.id }}" 
+                     id="choice_{{ choice.id }}" 
+                     value="{{ choice.id }}"
+                     data-correct="{{ choice.is_correct|yesno:'true,false' }}">
+              <label class="form-check-label" for="choice_{{ choice.id }}">
+                {{ choice.text }}
+              </label>
+            </div>
+            {% empty %}
+            <p class="text-muted">لا توجد خيارات لهذا السؤال.</p>
+            {% endfor %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="alert alert-info">
+          لا توجد أسئلة في هذا الاختبار بعد.
+        </div>
+        {% endfor %}
+        
+        {% if quiz.questions.all %}
+        <div class="d-flex justify-content-center mt-4">
+          <button type="button" class="btn btn-primary quiz-submit-btn px-5 py-2" 
+                  data-quiz-id="{{ quiz.id }}">
+            <i class="fas fa-check-circle me-2"></i>إرسال الإجابات
+          </button>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>

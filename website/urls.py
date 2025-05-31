@@ -31,6 +31,7 @@ urlpatterns = [
     path('courseviewpage/<int:course_id>/video/<int:video_id>/', views.courseviewpagevideo, name='courseviewpagevideo'),
     path('courseviewpage/<int:course_id>/note/<int:note_id>/', views.courseviewpagenote, name='courseviewpagenote'),
     path('api/video/<int:video_id>/mark-watched/', views.mark_video_watched, name='mark_video_watched'),
+    path('api/quiz/<int:quiz_id>/mark-completed/', views.mark_quiz_completed, name='mark_quiz_completed'),
 
 
     path('enroll/<int:course_id>/', views.enroll_course, name='enroll_course'),

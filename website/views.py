@@ -479,7 +479,7 @@ def courseviewpage(request, course_id):
             # Get completed videos
             completed_videos = VideoProgress.objects.filter(
                 student=request.user,
-                video__course=course,
+                video__module__course=course,
                 watched=True
             ).values_list('video_id', flat=True)
             
@@ -491,7 +491,8 @@ def courseviewpage(request, course_id):
                     exam__course=course,
                     passed=True
                 ).values_list('exam_id', flat=True)
-            except:
+            except Exception as e:
+                print(f"Error getting completed quizzes: {e}")
                 completed_quizzes = []
             
             # Get accessed PDFs (Notes)
@@ -512,7 +513,8 @@ def courseviewpage(request, course_id):
                     assignment__course=course,
                     status='graded'
                 ).values_list('assignment_id', flat=True)
-            except:
+            except Exception as e:
+                print(f"Error getting completed assignments: {e}")
                 completed_assignments = []
         else:
             # Check if course is in user's cart
@@ -536,38 +538,76 @@ def courseviewpage(request, course_id):
     assignments = Assignment.objects.filter(course=course)
     
     # Count quizzes, PDFs, and assignments
-    quizzes_count = Quiz.objects.filter(course=course).count()
+    quizzes_count = quizzes.count()
     pdfs_count = Notes.objects.filter(module__course=course).count()
-    assignments_count = Assignment.objects.filter(course=course).count()
+    assignments_count = assignments.count()
     
-    # Get the first video from the first module as the default content
-    current_content = None
-    prev_content = None
-    next_content = None
+    # Get content from URL parameters if provided
+    content_type = request.GET.get('content_type')
+    content_id = request.GET.get('content_id')
     
-    # Build a list of all content items (videos and notes) in order
+    # Build a list of all content items in order
     all_content = []
     for module in modules:
+        # Add videos
         for video in module.video_set.all():
             all_content.append({
                 'type': 'video',
                 'content': video,
                 'module': module
             })
+        
+        # Add notes (PDFs)
         for note in module.notes_set.all():
             all_content.append({
                 'type': 'note',
                 'content': note,
                 'module': module
             })
-        # Add quizzes and assignments to all_content if needed
+        
+        # Add quizzes that belong to this module
+        for quiz in quizzes:
+            if quiz.module == module:
+                all_content.append({
+                    'type': 'quiz',
+                    'content': quiz,
+                    'module': module
+                })
+        
+        # Add assignments that belong to this module
+        for assignment in assignments:
+            if assignment.module == module:
+                all_content.append({
+                    'type': 'assignment',
+                    'content': assignment,
+                    'module': module
+                })
     
     # Sort content by module number and then by content number
     all_content.sort(key=lambda x: (x['module'].number or 0, 
-                                   x['content'].number if hasattr(x['content'], 'number') else 0))
+                                   getattr(x['content'], 'number', 0) or 0))
     
-    # If there's content, set the first one as current
-    if all_content:
+    # Initialize content navigation
+    current_content = None
+    prev_content = None
+    next_content = None
+    
+    # Find the current content based on URL parameters or default to first item
+    if content_type and content_id:
+        # Try to find the specified content
+        for i, item in enumerate(all_content):
+            if item['type'] == content_type and str(item['content'].id) == content_id:
+                current_content = item
+                # Set previous content if not first item
+                if i > 0:
+                    prev_content = all_content[i-1]
+                # Set next content if not last item
+                if i < len(all_content) - 1:
+                    next_content = all_content[i+1]
+                break
+    
+    # If no content was found or specified, use the first item
+    if not current_content and all_content:
         current_content = all_content[0]
         if len(all_content) > 1:
             next_content = all_content[1]
@@ -722,11 +762,48 @@ def submit_quiz(request):
         # Determine if passed based on quiz pass mark
         passed = False
         quiz_id = request.POST.get('quiz_id')
+        quiz = None
         if quiz_id:
             try:
                 quiz = Quiz.objects.get(id=quiz_id)
                 passed = score >= quiz.pass_mark
+                
+                # If passed, create or update user exam attempt
+                if passed:
+                    UserExamAttempt.objects.update_or_create(
+                        user=request.user,
+                        exam=quiz,
+                        defaults={
+                            'score': score,
+                            'passed': True,
+                            'date_taken': timezone.now()
+                        }
+                    )
+                    
+                    # Update enrollment progress if quiz is associated with a course
+                    if quiz.course:
+                        try:
+                            enrollment = Enrollment.objects.get(student=request.user, course=quiz.course)
+                            from .utils import update_enrollment_progress
+                            progress = update_enrollment_progress(enrollment)
+                        except Enrollment.DoesNotExist:
+                            progress = 0
+                    else:
+                        progress = 0
+                else:
+                    # Record the failed attempt
+                    UserExamAttempt.objects.update_or_create(
+                        user=request.user,
+                        exam=quiz,
+                        defaults={
+                            'score': score,
+                            'passed': False,
+                            'date_taken': timezone.now()
+                        }
+                    )
+                    progress = 0
             except Quiz.DoesNotExist:
+                progress = 0
                 pass
         
         # Return JSON response with results
@@ -734,7 +811,8 @@ def submit_quiz(request):
             'score': score,
             'passed': passed,
             'correct_answers': correct_answers,
-            'total_questions': total_questions
+            'total_questions': total_questions,
+            'progress': progress
         })
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
@@ -2123,9 +2201,12 @@ def mark_video_watched(request, video_id):
     try:
         video = Video.objects.get(id=video_id)
         
+        # Get the student object
+        student = Student.objects.get(profile__user=request.user)
+        
         # Get or create video progress
         video_progress, created = VideoProgress.objects.get_or_create(
-            student=request.user,
+            student=student,
             video=video,
             defaults={'watched': False}
         )
@@ -2135,8 +2216,8 @@ def mark_video_watched(request, video_id):
         
         # Update enrollment progress
         enrollment = Enrollment.objects.filter(
-            student=request.user, 
-            course=video.course
+            student=student, 
+            course=video.module.course
         ).first()
         
         if enrollment:
@@ -2158,6 +2239,68 @@ def mark_video_watched(request, video_id):
 
 def analytics(request):
     return render(request, 'website/analytics.html')
+
+
+@csrf_exempt
+def mark_quiz_completed(request, quiz_id):
+    """API endpoint to mark a quiz as completed"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'User not authenticated'}, status=401)
+    
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Only POST method allowed'}, status=405)
+    
+    try:
+        quiz = Quiz.objects.get(id=quiz_id)
+        
+        # Get the score from the request
+        data = json.loads(request.body)
+        score = data.get('score', 0)
+        
+        # Create or update quiz attempt
+        QuizAttempt.objects.update_or_create(
+            user=request.user,
+            quiz=quiz,
+            defaults={
+                'score': score,
+                'passed': True,  # We assume it's passed if this endpoint is called
+                'end_time': timezone.now()
+            }
+        )
+        
+        # Get the course through the video or module relationship
+        course = None
+        if quiz.video:
+            course = quiz.video.module.course
+        elif quiz.module:
+            course = quiz.module.course
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Quiz is not associated with a course'}, status=400)
+            
+        # Get the student
+        student = Student.objects.get(profile__user=request.user)
+        
+        # Update enrollment progress
+        enrollment = Enrollment.objects.filter(
+            student=student, 
+            course=course
+        ).first()
+        
+        if enrollment:
+            from .utils import update_enrollment_progress
+            progress = update_enrollment_progress(enrollment)
+            return JsonResponse({
+                'status': 'success', 
+                'message': 'Quiz marked as completed',
+                'progress': progress
+            })
+        else:
+            return JsonResponse({'status': 'error', 'message': 'User not enrolled in this course'}, status=400)
+            
+    except Quiz.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Quiz not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
 @login_required

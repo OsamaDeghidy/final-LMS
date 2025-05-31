@@ -179,6 +179,10 @@
     background: #f0fdf4;
   }
   
+  .content-item.accessed {
+    background: #f8fafc;
+  }
+  
   .content-icon {
     width: 36px;
     height: 36px;
@@ -229,6 +233,14 @@
   .completed-badge {
     color: #10b981;
     font-size: 0.9rem;
+    margin-right: auto;
+  }
+  
+  .accessed-indicator {
+    margin-right: 8px;
+    color: #4e54c8;
+    font-size: 0.75rem;
+    opacity: 0.7;
   }
   
   .course-card {
@@ -282,6 +294,14 @@
     margin-top: 1.5rem;
   }
   
+  .video-completed-badge {
+    z-index: 10;
+  }
+  
+  #dynamic-content-area {
+    position: relative;
+  }
+  
   .progress-wrapper {
     margin-bottom: 1rem;
   }
@@ -294,6 +314,7 @@
   .progress-bar {
     background: linear-gradient(to right, #4e54c8, #8f94fb);
     border-radius: 50px;
+    transition: width 0.5s ease-in-out;
   }
   
   .progress-text {
