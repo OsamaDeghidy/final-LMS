@@ -150,6 +150,9 @@ class Module(models.Model):
     total_video = models.IntegerField(null=True, blank=True, default=0)
     total_notes = models.IntegerField(null=True, blank=True, default=0)
     duration = models.CharField(max_length=2000, blank=True, null=True)
+    # Add PDF fields to Module
+    module_pdf = models.FileField(upload_to='module_pdfs/', null=True, blank=True, help_text='Upload module PDF materials')
+    additional_materials = models.FileField(upload_to='module_materials/', null=True, blank=True, help_text='Upload additional materials')
 
     def get_ordered_content(self):
         """
@@ -194,16 +197,19 @@ class Module(models.Model):
 
     def save(self, *args, **kwargs):
         # Save the instance first to ensure it has a primary key
-        if not self.pk:
-            super().save(*args, **kwargs)
-        
-        # Perform related queries and update fields
-        self.total_video = Video.objects.filter(module=self).count()
-        time = sum([video.duration for video in Video.objects.filter(module=self)])
-        self.duration = str(timedelta(seconds=time))
-        
-        # Save again to persist the updated fields
         super().save(*args, **kwargs)
+        
+        # Update video count after saving
+        self.total_video = Video.objects.filter(module=self).count()
+        
+        # Calculate total duration from videos
+        total_seconds = sum([video.duration for video in Video.objects.filter(module=self) if video.duration])
+        self.duration = str(timedelta(seconds=total_seconds)) if total_seconds else "0:00:00"
+        
+        # Update course module count if needed
+        if self.course:
+            self.course.total_module = Module.objects.filter(course=self.course).count()
+            self.course.save()
 
     def __str__(self):
         return self.name + " - " + self.course.name
@@ -324,6 +330,7 @@ class Notes(models.Model):
     video = models.ForeignKey(Video, null=True, blank=True, on_delete=models.CASCADE)
     module = models.ForeignKey(Module, null=True, blank=True, on_delete=models.CASCADE)
     course = models.ForeignKey(Course, null=True, blank=True, on_delete=models.CASCADE)
+    file = models.FileField(upload_to='notes_files/', null=True, blank=True, help_text='Upload PDF or other document files')
     
     def save(self, *args, **kwargs):
         foreign_key_count = sum([bool(getattr(self, f)) for f in ['video', 'module', 'course']])
@@ -943,4 +950,32 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"{self.course.name} in {self.cart}"
+
+
+class ContentProgress(models.Model):
+    """Track user progress on different types of content"""
+    CONTENT_TYPES = [
+        ('video', 'Video'),
+        ('note', 'Note/PDF'),
+        ('quiz', 'Quiz'),
+        ('assignment', 'Assignment'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    content_type = models.CharField(max_length=20, choices=CONTENT_TYPES)
+    content_id = models.CharField(max_length=100)  # Store as string to handle different ID types
+    completed = models.BooleanField(default=False)
+    completion_date = models.DateTimeField(auto_now_add=True)
+    last_accessed = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['user', 'course', 'content_type', 'content_id']
+        indexes = [
+            models.Index(fields=['user', 'course']),
+            models.Index(fields=['content_type', 'content_id']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.content_type} {self.content_id} in {self.course.name}"
 

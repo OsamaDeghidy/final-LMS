@@ -7,662 +7,1956 @@
 
 {% block head %}
     {{ block.super }}
-<link rel="stylesheet" href="{% static 'css/course-view.css' %}">
-<script src="{% static 'js/course-view.js' %}"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<meta name="course-id" content="{{ course.id }}">
+    <link rel="stylesheet" href="{% static 'css/course-view.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="course-id" content="{{ course.id }}">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+            --dark-color: #1f2937;
+            --light-color: #f8fafc;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+
+        .content-wrapper {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            aspect-ratio: 16/9;
+        }
+
+        .course-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .content-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .content-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .content-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--light-color);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            color: var(--dark-color);
+        }
+
+        .progress-section {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        }
+
+        .progress-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--dark-color);
+        }
+
+        .course-progress {
+            background: white;
+            border-radius: 10px;
+            height: 12px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-color), #34d399);
+            transition: width 0.5s ease;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            padding: 0;
+            overflow: hidden;
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+            color: white;
+        }
+
+        .course-info h3 {
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .course-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .module-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .module-item {
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .module-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            cursor: pointer;
+            transition: background 0.2s;
+            border: none;
+            width: 100%;
+            text-align: right;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .module-header:hover {
+            background: #f3f4f6;
+        }
+
+        .module-title {
+            font-weight: 600;
+            margin: 0;
+            color: var(--dark-color);
+        }
+
+        .module-content {
+            display: none;
+            padding: 0;
+        }
+
+        .module-content.active {
+            display: block;
+        }
+
+        .content-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+            position: relative;
+        }
+
+        .content-item:hover {
+            background: #f9fafb;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .content-item.active {
+            background: rgba(99, 102, 241, 0.1);
+            border-left-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .content-item.completed {
+            background: rgba(16, 185, 129, 0.1);
+            border-left-color: var(--success-color);
+        }
+
+        .content-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 1rem;
+            flex-shrink: 0;
+        }
+
+        .content-item .content-icon {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .content-item.active .content-icon {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .content-item.completed .content-icon {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .content-details {
+            flex: 1;
+        }
+
+        .content-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            font-size: 0.95rem;
+        }
+
+        .content-info {
+            font-size: 0.875rem;
+            color: #6b7280;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .completion-badge {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            background: var(--success-color);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .navigation-controls {
+            padding: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .nav-btn-primary:hover {
+            background: #5856eb;
+        }
+
+        .nav-btn-secondary {
+            background: #e5e7eb;
+            color: var(--dark-color);
+        }
+
+        .nav-btn-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .instructor-card {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .instructor-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .instructor-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .avatar-placeholder {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .pdf-viewer {
+            width: 100%;
+            height: 600px;
+            border: none;
+            background: #f8fafc;
+        }
+
+        .quiz-container {
+            padding: 2rem;
+        }
+
+        .assignment-container {
+            padding: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem 0;
+            }
+            
+            .course-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .content-info {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-
-<div class="container py-4" dir="rtl">
-  <div class="row g-4">
-    <!-- المحتوى الرئيسي -->
-    <div class="col-lg-8">
-      <!-- مشغل الوسائط -->
-      <div id="dynamic-content-area">
-        {% if current_content.type == 'video' %}
-        <!-- فيديو -->
-        <div class="video-wrapper">
-          <video id="course-video" class="w-100" controls
-                 poster="{% if course.image_course %}{{ course.image_course.url }}{% endif %}"
-                 data-video-id="{{ current_content.content.id }}">
-            <source src="{{ current_content.content.video.url }}" type="video/mp4">
-            متصفحك لا يدعم تشغيل الفيديو
-          </video>
-          <div class="video-controls">
-            <div class="progress-container">
-              <div class="progress-bar" style="width: 0%"></div>
-            </div>
-          </div>
-        </div>
-        {% elif current_content.type == 'quiz' %}
-        <!-- كويز -->
-        <div class="quiz-section">
-          {% include 'website/quiz_detail_inline.html' with quiz=current_content.content %}
-        </div>
-        {% elif current_content.type == 'assignment' %}
-        <!-- واجب -->
-        <div class="assignment-section">
-          {% include 'website/assignment_detail_inline.html' with assignment=current_content.content %}
-        </div>
-        {% elif current_content.type == 'pdf' %}
-        <!-- ملف PDF -->
-        <div class="pdf-viewer">
-          <embed src="{{ current_content.content.file.url }}" 
-                 type="application/pdf" class="w-100 h-100">
-        </div>
-        {% endif %}
-        <!-- معلومات المحتوى -->
-        <div class="card-body content-info">
-          <div class="d-flex justify-content-between align-items-start mb-3">
-            <div>
-              <h2 class="content-title">
-                {% if current_content.type == 'video' %}
-                <i class="fas fa-play-circle text-primary me-2"></i>
-                {% elif current_content.type == 'quiz' %}
-                <i class="fas fa-question-circle text-warning me-2"></i>
-                {% elif current_content.type == 'assignment' %}
-                <i class="fas fa-tasks text-success me-2"></i>
-                {% elif current_content.type == 'pdf' %}
-                <i class="fas fa-file-pdf text-danger me-2"></i>
-                {% endif %}
-                {{ current_content.content.title }}
-              </h2>
-              {% if current_content.type == 'video' %}
-              <span class="badge duration-badge">
-                <i class="far fa-clock me-1"></i> 
-                {{ current_content.content.duration|default:'10:00' }}
-              </span>
-              {% endif %}
-            </div>
-          </div>
-          <p class="content-description">
-            {% if current_content.type == 'video' %}
-              {{ current_content.content.description|default:"لا يوجد وصف متاح لهذا الفيديو." }}
-            {% elif current_content.type == 'quiz' %}
-              اختبار قصير لتقييم فهمك لهذا الدرس.
-            {% elif current_content.type == 'assignment' %}
-              واجب عملي لتعزيز التعلم.
-            {% elif current_content.type == 'pdf' %}
-              ملاحظات مرفقة لمساعدتك في فهم المحتوى بشكل أفضل.
-            {% endif %}
-          </p>
-          {% if current_content.type == 'video' and current_content.content.resources %}
-          <div class="attachments mt-4">
-            <h5 class="attachments-title">
-              <i class="fas fa-paperclip me-2"></i>الملفات المرفقة
-            </h5>
-            <div class="d-flex flex-wrap gap-2">
-              {% for resource in current_content.content.resources.all %}
-              <a href="{{ resource.file.url }}" class="btn download-btn">
-                <i class="fas fa-download me-1"></i> 
-                {{ resource.name }}
-              </a>
-              {% endfor %}
-            </div>
-          </div>
-          {% endif %}
-        </div>
-        {% if next_content %}
-        <div class="text-center my-4">
-          <button id="next-content-btn" class="btn btn-primary px-5 py-2" 
-                 data-next-type="{{ next_content.type }}" 
-                 data-next-id="{{ next_content.content.id }}">
-            التالي <i class="fas fa-arrow-left ms-2"></i>
-          </button>
-        </div>
-        {% endif %}
-      </div>
-      
-      <!-- محتوى الدورة -->
-      <div class="card curriculum-card shadow-lg border-0 rounded-4">
-        <div class="card-header">
-          <h3 class="mb-0">محتوى الدورة</h3>
-        </div>
-        
-        <div class="accordion curriculum-accordion">
-          {% for module in course.module_set.all %}
-          <div class="accordion-item module-item">
-            <div class="accordion-header module-header" 
-                 data-bs-toggle="collapse" 
-                 data-bs-target="#module-{{ module.id }}">
-              <div class="d-flex w-100 align-items-center">
-                <span class="module-number">{{ forloop.counter }}</span>
-                <h4 class="module-title">{{ module.name }}</h4>
-                <span class="module-stats ms-auto">
-                  {{ forloop.counter }} من {{ modules|length }}
-                </span>
-                <i class="fas fa-chevron-down toggle-icon"></i>
-              </div>
+<div class="main-container" dir="rtl">
+    <div class="container">
+        <div class="row g-4">
+            <!-- المحتوى الرئيسي -->
+            <div class="col-lg-8">
+                <div class="content-wrapper">
+                    <!-- عرض المحتوى -->
+                    <div id="dynamic-content-area">
+                        {% if current_content %}
+                            {% if current_content.type == 'video' %}
+                            <!-- عرض الفيديو -->
+                            <div class="video-container">
+                                <video controls class="course-video" data-video-id="{{ current_content.content.id }}">
+                                    <source src="{{ current_content.content.video.url }}" type="video/mp4">
+                                    متصفحك لا يدعم تشغيل الفيديو.
+                                </video>
+                            </div>
+                            
+                            {% elif current_content.type == 'note' %}
+                            <!-- عرض ملف PDF أو النص -->
+                            <div class="note-display-container" data-note-id="{{ current_content.content.id }}">
+                                {% if current_content.content.file %}
+                                <!-- عرض ملف PDF -->
+                                <div class="pdf-viewer-container">
+                                    <div class="pdf-controls">
+                                        <h4><i class="fas fa-file-pdf text-danger me-2"></i>{{ current_content.content.description|truncatewords:8|default:"ملف PDF" }}</h4>
+                                        <div class="pdf-actions">
+                                            <a href="{{ current_content.content.file.url }}" target="_blank" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-eye me-2"></i>عرض في صفحة جديدة
+                                            </a>
+                                            <a href="{{ current_content.content.file.url }}" download class="btn btn-success btn-sm">
+                                                <i class="fas fa-download me-2"></i>تحميل الملف
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <!-- PDF Placeholder instead of iframe -->
+                                    <div class="pdf-placeholder">
+                                        <i class="fas fa-file-pdf fa-3x text-danger mb-3"></i>
+                                        <h4>ملف PDF متاح للعرض والتحميل</h4>
+                                        <p class="text-muted">استخدم الأزرار أعلاه لعرض الملف في صفحة جديدة أو تحميله</p>
+                                        <div class="pdf-info mt-3">
+                                            <p><i class="fas fa-info-circle me-2"></i>{{ current_content.content.description|safe }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% elif current_content.content.description %}
+                                <!-- عرض المحتوى النصي -->
+                                <div class="note-content-display">
+                                    <div class="note-header">
+                                        <h4><i class="fas fa-file-text me-2"></i>المحتوى النصي</h4>
+                                    </div>
+                                    <div class="note-text-content">
+                                        {{ current_content.content.description|safe }}
+                                    </div>
+                                </div>
+                                {% else %}
+                                <!-- لا يوجد محتوى -->
+                                <div class="pdf-placeholder">
+                                    <i class="fas fa-file-text fa-3x text-muted mb-3"></i>
+                                    <h4>لا يوجد محتوى متاح</h4>
+                                    <p class="text-muted">لم يتم إضافة محتوى لهذه الملاحظة بعد</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            {% elif current_content.type == 'quiz' %}
+                            <!-- عرض الكويز -->
+                            <div class="quiz-display-container">
+                                <div class="quiz-header">
+                                    <h3><i class="fas fa-question-circle text-warning me-2"></i>{{ current_content.content.title }}</h3>
+                                    <p class="text-muted mb-4">{{ current_content.content.description }}</p>
+                                </div>
+                                
+                                {% if current_content.content.question_set.exists %}
+                                <div class="quiz-content">
+                                    <div class="quiz-info-bar">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="quiz-stat">
+                                                    <i class="fas fa-question-circle me-2"></i>
+                                                    <span>{{ current_content.content.question_set.count }} سؤال</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="quiz-stat">
+                                                    <i class="far fa-clock me-2"></i>
+                                                    <span>{{ current_content.content.time_limit|default:"15" }} دقيقة</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="quiz-stat">
+                                                    <i class="fas fa-percentage me-2"></i>
+                                                    <span>{{ current_content.content.pass_mark|default:"60" }}% للنجاح</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="quiz-start-section">
+                                        <div class="quiz-instructions">
+                                            <h5><i class="fas fa-info-circle me-2"></i>تعليمات الاختبار:</h5>
+                                            <ul>
+                                                <li>يجب الإجابة على جميع الأسئلة</li>
+                                                <li>الوقت المحدد: {{ current_content.content.time_limit|default:"15" }} دقيقة</li>
+                                                <li>الدرجة المطلوبة للنجاح: {{ current_content.content.pass_mark|default:"60" }}%</li>
+                                                <li>يمكنك المراجعة قبل التسليم</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <div class="quiz-actions">
+                                            <button class="btn btn-warning btn-lg start-quiz-btn" data-quiz-id="{{ current_content.content.id }}">
+                                                <i class="fas fa-play me-2"></i>بدء الاختبار
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Quiz Questions (Hidden Initially) -->
+                                    <div class="quiz-questions" id="quiz-questions-{{ current_content.content.id }}" style="display: none;">
+                                        <form id="quiz-form-{{ current_content.content.id }}" method="post" action="{% url 'submit_quiz' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="quiz_id" value="{{ current_content.content.id }}">
+                                            
+                                            {% for question in current_content.content.question_set.all %}
+                                            <div class="question-card">
+                                                <div class="question-header">
+                                                    <h6>السؤال {{ forloop.counter }}</h6>
+                                                    <span class="question-points">{{ question.points|default:1 }} نقطة</span>
+                                                </div>
+                                                <div class="question-text">
+                                                    {{ question.text }}
+                                                </div>
+                                                <div class="question-answers">
+                                                    {% for answer in question.answer_set.all %}
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" 
+                                                               name="question_{{ question.id }}" 
+                                                               value="{{ answer.id }}" 
+                                                               id="answer_{{ answer.id }}">
+                                                        <label class="form-check-label" for="answer_{{ answer.id }}">
+                                                            {{ answer.text }}
+                                                        </label>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            
+                                            <div class="quiz-submit-section">
+                                                <button type="submit" class="btn btn-success btn-lg">
+                                                    <i class="fas fa-check me-2"></i>تسليم الاختبار
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    لا توجد أسئلة في هذا الاختبار بعد
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            {% elif current_content.type == 'assignment' %}
+                            <!-- عرض الواجب -->
+                            <div class="assignment-container">
+                                <h3><i class="fas fa-tasks text-success me-2"></i>{{ current_content.content.title }}</h3>
+                                <p class="text-muted mb-4">{{ current_content.content.description }}</p>
+                                
+                                <div class="assignment-info">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><i class="far fa-calendar-alt me-2"></i>تاريخ التسليم: {{ current_content.content.due_date|date:"d/m/Y"|default:"غير محدد" }}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><i class="fas fa-star me-2"></i>الدرجة: {{ current_content.content.max_points|default:"غير محدد" }}</p>
+                                        </div>
+                                    </div>
+                                    <a href="{% url 'assignment_detail' current_content.content.id %}" class="btn btn-success">
+                                        <i class="fas fa-upload me-2"></i>عرض الواجب
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- معلومات المحتوى -->
+                            <div class="content-header">
+                                <h1 class="content-title">
+                                    {% if current_content.type == 'video' %}
+                                        <i class="fas fa-play-circle text-primary me-2"></i>
+                                        {{ current_content.content.name }}
+                                    {% elif current_content.type == 'note' %}
+                                        <i class="fas fa-file-pdf text-danger me-2"></i>
+                                        {{ current_content.content.description|truncatewords:8|default:"ملاحظات" }}
+                                    {% elif current_content.type == 'quiz' %}
+                                        <i class="fas fa-question-circle text-warning me-2"></i>
+                                        {{ current_content.content.title }}
+                                    {% elif current_content.type == 'assignment' %}
+                                        <i class="fas fa-tasks text-success me-2"></i>
+                                        {{ current_content.content.title }}
+                                    {% endif %}
+                                </h1>
+                                
+                                <div class="content-meta">
+                                    {% if current_content.type == 'video' %}
+                                        <span class="meta-badge">
+                                            <i class="far fa-clock"></i>
+                                            {{ current_content.content.duration|default:'10:00' }}
+                                        </span>
+                                        <span class="meta-badge">
+                                            <i class="fas fa-video"></i>
+                                            فيديو تعليمي
+                                        </span>
+                                    {% elif current_content.type == 'note' %}
+                                        <span class="meta-badge">
+                                            <i class="fas fa-file-pdf"></i>
+                                            مادة مكتوبة
+                                        </span>
+                                    {% elif current_content.type == 'quiz' %}
+                                        <span class="meta-badge">
+                                            <i class="far fa-clock"></i>
+                                            {{ current_content.content.time_limit|default:'15' }} دقيقة
+                                        </span>
+                                        <span class="meta-badge">
+                                            <i class="fas fa-question-circle"></i>
+                                            اختبار
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <!-- الصفحة الرئيسية للكورس -->
+                            <div class="course-overview">
+                                <div class="content-header">
+                                    <h1 class="content-title">
+                                        <i class="fas fa-graduation-cap text-primary me-2"></i>
+                                        مرحباً بك في دورة {{ course.name }}
+                                    </h1>
+                                    <p class="text-muted course-description">{{ course.description }}</p>
+                                </div>
+                                
+                                <!-- إحصائيات الدورة -->
+                                <div class="course-overview-stats">
+                                    <div class="row g-3">
+                                        <div class="col-md-3">
+                                            <div class="overview-stat-card">
+                                                <i class="fas fa-video text-primary"></i>
+                                                <div class="stat-info">
+                                                    <span class="stat-num">{{ total_videos|default:0 }}</span>
+                                                    <span class="stat-text">فيديو</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="overview-stat-card">
+                                                <i class="fas fa-file-alt text-success"></i>
+                                                <div class="stat-info">
+                                                    <span class="stat-num">{{ total_notes|default:0 }}</span>
+                                                    <span class="stat-text">ملاحظة</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="overview-stat-card">
+                                                <i class="fas fa-question-circle text-warning"></i>
+                                                <div class="stat-info">
+                                                    <span class="stat-num">{{ total_quizzes|default:0 }}</span>
+                                                    <span class="stat-text">اختبار</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="overview-stat-card">
+                                                <i class="fas fa-tasks text-info"></i>
+                                                <div class="stat-info">
+                                                    <span class="stat-num">{{ assignments_count|default:0 }}</span>
+                                                    <span class="stat-text">واجب</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- رسالة ترحيبية -->
+                                <div class="welcome-message">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        اختر من القائمة الجانبية المحتوى الذي تريد مشاهدته أو متابعة دراسته
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- شريط التقدم -->
+                    <div class="progress-section">
+                        <div class="progress-title">
+                            <i class="fas fa-chart-line me-2"></i>
+                            تقدمك في الدورة: {{ progress|floatformat:1 }}%
+                        </div>
+                        <div class="course-progress">
+                            <div class="progress-fill" data-progress="{{ progress }}"></div>
+                        </div>
+                        <div class="course-stats">
+                            <div class="stat-card">
+                                <span class="stat-number">{{ completed_videos|length }}</span>
+                                <span class="stat-label">فيديو مكتمل</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number">{{ modules|length }}</span>
+                                <span class="stat-label">وحدة دراسية</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- أزرار التنقل -->
+                    <div class="navigation-controls">
+                        {% if prev_content %}
+                        <a href="{% url 'courseviewpage' course.id %}?content_type={{ prev_content.type }}&content_id={{ prev_content.content.id }}" 
+                           class="nav-btn nav-btn-secondary">
+                            <i class="fas fa-arrow-right"></i>
+                            السابق
+                        </a>
+                        {% else %}
+                        <div></div>
+                        {% endif %}
+                        
+                        <!-- Course Completion Section -->
+                        {% if progress >= 80 %}
+                        <div class="completion-section">
+                            {% if progress >= 100 or enrollment.status == 'completed' %}
+                                <button class="nav-btn nav-btn-success completed-btn" disabled>
+                                    <i class="fas fa-check-circle"></i>
+                                    مكتملة بنجاح
+                                </button>
+                            {% elif progress >= 90 %}
+                                <button class="nav-btn nav-btn-warning complete-course-btn" data-course-id="{{ course.id }}">
+                                    <i class="fas fa-trophy"></i>
+                                    إنهاء الدورة
+                                </button>
+                            {% endif %}
+                            
+                            <!-- Final Exam Button -->
+                            {% if progress >= 85 and course.course_quizzes.exists %}
+                                {% for final_quiz in course.course_quizzes.all %}
+                                    {% if final_quiz.quiz_type == 'final' or 'نهائي' in final_quiz.title %}
+                                    <a href="{% url 'courseviewpage' course.id %}?content_type=quiz&content_id={{ final_quiz.id }}" 
+                                       class="nav-btn nav-btn-primary final-exam-btn">
+                                        <i class="fas fa-graduation-cap"></i>
+                                        الاختبار النهائي
+                                    </a>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if next_content %}
+                        <a href="{% url 'courseviewpage' course.id %}?content_type={{ next_content.type }}&content_id={{ next_content.content.id }}" 
+                           class="nav-btn nav-btn-primary">
+                            التالي
+                            <i class="fas fa-arrow-left"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
             
-            <div id="module-{{ module.id }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}">
-              <div class="accordion-body p-0">
-                <!-- فيديوهات -->
-                {% for video in course.video_set.all %}
-                  {% if video.module.id == module.id %}
-                  <a href="{% url 'courseviewpage' course.id %}?content_type=video&content_id={{ video.id }}" 
-                     class="content-item {% if current_content.type == 'video' and current_content.content.id == video.id %}active{% endif %} {% if video.id in completed_videos %}completed{% endif %}"
-                     data-content-type="video" 
-                     data-content-id="{{ video.id }}">
-                    <div class="content-icon">
-                      <i class="fas {% if video.id in completed_videos %}fa-check-circle{% else %}fa-play{% endif %}"></i>
+            <!-- الشريط الجانبي -->
+            <div class="col-lg-4">
+                <div class="sidebar">
+                    <!-- معلومات الدورة -->
+                    <div class="sidebar-header">
+                        <div class="course-info">
+                            <h3>{{ course.name }}</h3>
+                            <p class="mb-0">{{ course.small_description }}</p>
+                        </div>
+                        
+                        <!-- شريط التقدم في الـ Sidebar -->
+                        <div class="sidebar-progress-section">
+                            <div class="progress-title-sidebar">
+                                <i class="fas fa-chart-line me-2"></i>
+                                تقدمك: {{ progress|floatformat:1 }}%
+                                {% if enrollment and is_enrolled %}
+                                <button class="btn btn-sm btn-outline-light ms-2 recalculate-progress-btn" 
+                                        data-course-id="{{ course.id }}" 
+                                        title="إعادة حساب التقدم">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div class="course-progress-sidebar">
+                                <div class="progress-fill-sidebar" data-progress="{{ progress }}"></div>
+                            </div>
+                            
+                            <!-- مؤشر المكان الحالي -->
+                            {% if current_content %}
+                            <div class="current-position-indicator">
+                                <div class="position-info">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    <span class="position-text">أنت هنا:</span>
+                                </div>
+                                <div class="current-content-info">
+                                    {% if current_content.type == 'video' %}
+                                        <i class="fas fa-play-circle text-primary me-1"></i>
+                                        {{ current_content.content.name|truncatewords:4 }}
+                                    {% elif current_content.type == 'note' %}
+                                        <i class="fas fa-file-pdf text-danger me-1"></i>
+                                        {{ current_content.content.description|truncatewords:4 }}
+                                    {% elif current_content.type == 'quiz' %}
+                                        <i class="fas fa-question-circle text-warning me-1"></i>
+                                        {{ current_content.content.title|truncatewords:4 }}
+                                    {% elif current_content.type == 'assignment' %}
+                                        <i class="fas fa-tasks text-success me-1"></i>
+                                        {{ current_content.content.title|truncatewords:4 }}
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- عدد العناصر المكتملة -->
+                                <div class="completion-stats">
+                                    <div class="stat-row">
+                                        <span class="stat-label">مكتمل:</span>
+                                        <span class="stat-value" id="completed-count">{{ completed_videos|length|add:completed_pdfs|length|add:completed_quizzes|length }}</span>
+                                        /
+                                        <span class="stat-total">{{ total_videos|add:total_notes|add:total_quizzes }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="course-stats">
+                            <div class="stat-card">
+                                <span class="stat-number">{{ completed_videos|length }}</span>
+                                <span class="stat-label">مكتمل</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number">{{ modules|length }}</span>
+                                <span class="stat-label">وحدة</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="content-details">
-                      <h5>{{ video.name }}</h5>
-                      <div class="content-meta">
-                        <span><i class="far fa-clock"></i> {{ video.duration|default:'10:00' }}</span>
-                        <span><i class="fas fa-video"></i> فيديو</span>
-                      </div>
+                    
+                    <!-- قائمة المحتوى -->
+                    <div class="module-list">
+                        {% for module in modules %}
+                        <div class="module-item">
+                            <button class="module-header" onclick="toggleModule('module-{{ module.id }}')">
+                                <h5 class="module-title">{{ forloop.counter }}. {{ module.name }}</h5>
+                                <i class="fas fa-chevron-down toggle-icon" id="icon-module-{{ module.id }}"></i>
+                            </button>
+                            
+                            <div class="module-content" id="module-{{ module.id }}">
+                                <!-- فيديوهات الوحدة -->
+                                {% for video in module.video_set.all %}
+                                <a href="{% url 'courseviewpage' course.id %}?content_type=video&content_id={{ video.id }}" 
+                                   class="content-item {% if current_content and current_content.type == 'video' and current_content.content.id == video.id %}active current{% endif %} {% if video.id in completed_videos %}completed{% endif %}"
+                                   data-content-type="video" data-content-id="{{ video.id }}" data-position="{{ forloop.counter0 }}">
+                                    <div class="content-icon">
+                                        <i class="fas {% if video.id in completed_videos %}fa-check{% else %}fa-play{% endif %}"></i>
+                                    </div>
+                                    <div class="content-details">
+                                        <div class="content-name">{{ video.name }}</div>
+                                        <div class="content-info">
+                                            <span><i class="far fa-clock"></i> {{ video.duration|default:'10:00' }}</span>
+                                            <span><i class="fas fa-video"></i> فيديو</span>
+                                        </div>
+                                    </div>
+                                    {% if video.id in completed_videos %}
+                                    <div class="completion-badge">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    {% endif %}
+                                </a>
+                                {% endfor %}
+                                
+                                <!-- ملاحظات الوحدة -->
+                                {% for note in module.notes_set.all %}
+                                <a href="{% url 'courseviewpage' course.id %}?content_type=note&content_id={{ note.id }}" 
+                                   class="content-item {% if current_content and current_content.type == 'note' and current_content.content.id == note.id %}active current{% endif %}"
+                                   data-content-type="note" data-content-id="{{ note.id }}" data-position="{{ forloop.counter0 }}">
+                                    <div class="content-icon">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </div>
+                                    <div class="content-details">
+                                        <div class="content-name">{{ note.description|truncatewords:5|default:"ملاحظات "|add:forloop.counter }}</div>
+                                        <div class="content-info">
+                                            <span><i class="fas fa-file-pdf"></i> مادة مكتوبة</span>
+                                        </div>
+                                    </div>
+                                </a>
+                                {% endfor %}
+                                
+                                <!-- كويزات الوحدة -->
+                                {% for quiz in module.module_quizzes.all %}
+                                <a href="{% url 'courseviewpage' course.id %}?content_type=quiz&content_id={{ quiz.id }}" 
+                                   class="content-item {% if current_content and current_content.type == 'quiz' and current_content.content.id == quiz.id %}active current{% endif %} {% if quiz.id in completed_quizzes %}completed{% endif %}"
+                                   data-content-type="quiz" data-content-id="{{ quiz.id }}" data-position="{{ forloop.counter0 }}">
+                                    <div class="content-icon">
+                                        <i class="fas {% if quiz.id in completed_quizzes %}fa-check{% else %}fa-question-circle{% endif %}"></i>
+                                    </div>
+                                    <div class="content-details">
+                                        <div class="content-name">{{ quiz.title }}</div>
+                                        <div class="content-info">
+                                            <span><i class="far fa-clock"></i> {{ quiz.time_limit|default:'15' }} دقيقة</span>
+                                            <span><i class="fas fa-question-circle"></i> اختبار</span>
+                                        </div>
+                                    </div>
+                                    {% if quiz.id in completed_quizzes %}
+                                    <div class="completion-badge">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    {% endif %}
+                                </a>
+                                {% endfor %}
+                                
+                                <!-- واجبات الوحدة -->
+                                {% for assignment in assignments %}
+                                    {% if assignment.module and assignment.module.id == module.id %}
+                                    <a href="{% url 'courseviewpage' course.id %}?content_type=assignment&content_id={{ assignment.id }}" 
+                                       class="content-item {% if current_content and current_content.type == 'assignment' and current_content.content.id == assignment.id %}active current{% endif %} {% if assignment.id in completed_assignments %}completed{% endif %}"
+                                       data-content-type="assignment" data-content-id="{{ assignment.id }}" data-position="{{ forloop.counter0 }}">
+                                        <div class="content-icon">
+                                            <i class="fas {% if assignment.id in completed_assignments %}fa-check{% else %}fa-tasks{% endif %}"></i>
+                                        </div>
+                                        <div class="content-details">
+                                            <div class="content-name">{{ assignment.title }}</div>
+                                            <div class="content-info">
+                                                <span><i class="far fa-calendar-alt"></i> {{ assignment.due_date|date:"d/m/Y"|default:'لا يوجد موعد' }}</span>
+                                                <span><i class="fas fa-tasks"></i> واجب</span>
+                                            </div>
+                                        </div>
+                                        {% if assignment.id in completed_assignments %}
+                                        <div class="completion-badge">
+                                            <i class="fas fa-check"></i>
+                                        </div>
+                                        {% endif %}
+                                    </a>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% if video.id in completed_videos %}
-                    <div class="completed-badge">
-                      <i class="fas fa-check"></i>
-                    </div>
-                    {% endif %}
-                  </a>
-                  {% endif %}
-                {% endfor %}
+                </div>
                 
-                <!-- ملفات PDF -->
-                {% for pdf in course.pdf_set.all %}
-                  {% if pdf.module.id == module.id %}
-                  <a href="{% url 'courseviewpage' course.id %}?content_type=pdf&content_id={{ pdf.id }}" 
-                     class="content-item {% if current_content.type == 'pdf' and current_content.content.id == pdf.id %}active{% endif %} {% if pdf.id in completed_pdfs %}completed{% endif %}"
-                     data-content-type="pdf" 
-                     data-content-id="{{ pdf.id }}">
-                    <div class="content-icon">
-                      <i class="fas {% if pdf.id in completed_pdfs %}fa-check-circle{% else %}fa-file-pdf{% endif %}"></i>
+                <!-- بطاقة المدرب -->
+                <div class="instructor-card">
+                    <h5 class="mb-3"><i class="fas fa-user-tie me-2"></i>مقدم الدورة</h5>
+                    <div class="instructor-info">
+                        {% if course.teacher.profile.image %}
+                        <img src="{{ course.teacher.profile.image.url }}" 
+                             class="instructor-avatar" 
+                             alt="{{ course.teacher.profile.name }}">
+                        {% else %}
+                        <div class="avatar-placeholder">
+                            {{ course.teacher.profile.name|slice:':1'|upper }}
+                        </div>
+                        {% endif %}
+                        <div>
+                            <h6 class="mb-1">{{ course.teacher.profile.name }}</h6>
+                            <p class="text-muted mb-0">مدرب معتمد</p>
+                        </div>
                     </div>
-                    <div class="content-details">
-                      <h5>{{ pdf.title }}</h5>
-                      <div class="content-meta">
-                        <span><i class="fas fa-file-pdf"></i> ملف PDF</span>
-                      </div>
-                    </div>
-                    {% if pdf.id in completed_pdfs %}
-                    <div class="completed-badge">
-                      <i class="fas fa-check"></i>
-                    </div>
-                    {% endif %}
-                  </a>
-                  {% endif %}
-                {% endfor %}
-                
-                <!-- اختبارات -->
-                {% for quiz in module.quiz_set.all %}
-                  <a href="{% url 'courseviewpage' course.id %}?content_type=quiz&content_id={{ quiz.id }}" 
-                     class="content-item {% if current_content.type == 'quiz' and current_content.content.id == quiz.id %}active{% endif %} {% if quiz in completed_quizzes %}completed{% endif %}"
-                     data-content-type="quiz" 
-                     data-content-id="{{ quiz.id }}">
-                    <div class="content-icon">
-                      <i class="fas {% if quiz in completed_quizzes %}fa-check-circle{% else %}fa-question-circle{% endif %}"></i>
-                    </div>
-                    <div class="content-details">
-                      <h5>{{ quiz.title }}</h5>
-                      <div class="content-meta">
-                        <span><i class="far fa-clock"></i> {{ quiz.time_limit|default:'15' }} دقيقة</span>
-                        <span><i class="fas fa-question-circle"></i> اختبار</span>
-                      </div>
-                    </div>
-                    {% if quiz in completed_quizzes %}
-                    <div class="completed-badge">
-                      <i class="fas fa-check"></i>
-                    </div>
-                    {% endif %}
-                  </a>
-                {% endfor %}
-                
-                <!-- واجبات -->
-                {% for assignment in assignments %}
-                  {% if assignment.module.id == module.id %}
-                  <a href="{% url 'courseviewpage' course.id %}?content_type=assignment&content_id={{ assignment.id }}" 
-                     class="content-item {% if current_content.type == 'assignment' and current_content.content.id == assignment.id %}active{% endif %} {% if assignment.id in completed_assignments %}completed{% endif %}"
-                     data-content-type="assignment" 
-                     data-content-id="{{ assignment.id }}">
-                    <div class="content-icon">
-                      <i class="fas {% if assignment.id in completed_assignments %}fa-check-circle{% else %}fa-tasks{% endif %}"></i>
-                    </div>
-                    <div class="content-details">
-                      <h5>{{ assignment.title }}</h5>
-                      <div class="content-meta">
-                        <span><i class="far fa-calendar-alt"></i> {{ assignment.due_date|date:"d/m/Y"|default:'لا يوجد موعد' }}</span>
-                        <span><i class="fas fa-tasks"></i> واجب</span>
-                      </div>
-                    </div>
-                    {% if assignment.id in completed_assignments %}
-                    <div class="completed-badge">
-                      <i class="fas fa-check"></i>
-                    </div>
-                    {% endif %}
-                  </a>
-                  {% endif %}
-                {% endfor %}
-              </div>
+                </div>
             </div>
-          </div>
-          {% endfor %}
         </div>
-      </div>
     </div>
-    
-    <!-- الجانب الأيمن -->
-    <div class="col-lg-4">
-      <!-- بطاقة الدورة -->
-      <div class="card course-card shadow-lg border-0 rounded-4 overflow-hidden">
-        {% if course.image_course %}
-        <img src="{{ course.image_course.url }}" class="course-thumbnail" alt="{{ course.name }}">
-        {% endif %}
-        <div class="card-body">
-          <h3 class="course-title">{{ course.name }}</h3>
-          <p class="course-description">{{ course.description|truncatewords:15 }}</p>
-          
-          <div class="course-badges">
-            <span class="badge lessons-badge">
-              <i class="fas fa-graduation-cap"></i> 
-              {{ course.total_video }} دروس
-            </span>
-            <span class="badge level-badge">
-              <i class="fas fa-signal"></i> 
-              {{ course.get_level_display }}
-            </span>
-          </div>
-          
-          <div class="progress-section">
-            <div class="progress-wrapper">
-              <div class="progress" style="height: 10px;">
-                <div class="progress-bar" role="progressbar" 
-                     style="width: {{ progress }}%" 
-                     aria-valuenow="{{ progress }}" 
-                     aria-valuemin="0" aria-valuemax="100"></div>
-              </div>
-              <span class="progress-text">إكمال الدورة: {{ progress }}%</span>
-            </div>
-            
-            <div class="stats-grid">
-              <div class="stat-item">
-                <i class="fas fa-play-circle"></i>
-                <span>{{ completed_videos|length }}/{{ course.total_video|default:0 }}</span>
-              </div>
-              {% if quizzes_count %}
-              <div class="stat-item">
-                <i class="fas fa-question-circle"></i>
-                <span>{{ completed_quizzes|length }}/{{ quizzes_count }}</span>
-              </div>
-              {% endif %}
-              {% if assignments_count %}
-              <div class="stat-item">
-                <i class="fas fa-tasks"></i>
-                <span>{{ completed_assignments|length }}/{{ assignments_count }}</span>
-              </div>
-              {% endif %}
-              {% if pdfs_count %}
-              <div class="stat-item">
-                <i class="fas fa-file-pdf"></i>
-                <span>{{ completed_pdfs|length }}/{{ pdfs_count }}</span>
-              </div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- بطاقة المدرب -->
-      <div class="card instructor-card shadow-lg border-0 rounded-4 mt-4">
-        <div class="card-body">
-          <h4 class="card-title">مقدم الدورة</h4>
-          <div class="instructor-profile">
-            {% if course.teacher.profile.image %}
-            <img src="{{ course.teacher.profile.image.url }}" 
-                 class="instructor-avatar" 
-                 alt="{{ course.teacher.profile.name }}">
-            {% else %}
-            <div class="avatar-placeholder">
-              {{ course.teacher.profile.name|slice:':1'|upper }}
-            </div>
-            {% endif %}
-            <div class="instructor-info">
-              <h5>{{ course.teacher.profile.name }}</h5>
-              <p>مدرب معتمد</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
-  // تفاعلات جافاسكريبت
-  document.addEventListener('DOMContentLoaded', function() {
-    // تحكم في الفيديو
-    const video = document.getElementById('course-video');
-    if (video) {
-      const progressBar = document.querySelector('.progress-bar');
-      
-      video.addEventListener('timeupdate', function() {
-        const percent = (video.currentTime / video.duration) * 100;
-        progressBar.style.width = percent + '%';
-      });
-      
-      document.querySelector('.progress-container').addEventListener('click', function(e) {
-        const percent = e.offsetX / this.offsetWidth;
-        video.currentTime = percent * video.duration;
-      });
+document.addEventListener('DOMContentLoaded', function() {
+    // تعيين عرض شريط التقدم
+    const progressBar = document.querySelector('.progress-fill');
+    const sidebarProgressBar = document.querySelector('.progress-fill-sidebar');
+    
+    if (progressBar) {
+        const progress = progressBar.dataset.progress || 0;
+        progressBar.style.width = progress + '%';
+        
+        // Set dynamic progress attributes
+        document.querySelector('.progress-section').setAttribute('data-progress', progress);
+        document.querySelector('.sidebar-header').setAttribute('data-progress', progress);
     }
     
-    // تفعيل أكورديون الوحدات
-    const moduleHeaders = document.querySelectorAll('.module-header');
-    moduleHeaders.forEach(header => {
-      header.addEventListener('click', function() {
-        const icon = this.querySelector('.toggle-icon');
-        icon.classList.toggle('fa-chevron-up');
-        icon.classList.toggle('fa-chevron-down');
-      });
-    });
-  });
-</script>
-
-
-{% endblock content %}
-
-
-<!-- <div class="container py-4" dir="rtl">
-  <div class="row">
+    if (sidebarProgressBar) {
+        const progress = sidebarProgressBar.dataset.progress || 0;
+        sidebarProgressBar.style.width = progress + '%';
+    }
     
-    <div class="col-md-8">
-      <div class="card shadow-sm border-0 rounded-4 overflow-hidden mb-4">
-     
-        <div class="video-container bg-dark position-relative">
-          {% if current_content.type == 'video' %}
-            <video src="{{ current_content.content.video.url }}" 
-                   class="w-100" controls id="course-video" data-video-id="{{ current_content.content.id }}"
-                   poster="{% if course.image_course %}{{ course.image_course.url }}{% endif %}" 
-                   style="max-height: 450px;">
-              Your browser does not support the video tag.
-            </video>
-            <div class="video-controls-overlay">
-              <div class="video-progress">
-                <div class="video-progress-bar" style="width: 0%"></div>
-              </div>
-            </div>
-          {% else %}
-            <div class="pdf-viewer-container" style="height: 450px;">
-              <embed src="{{ current_content.content.file.url }}" 
-                     type="application/pdf" width="100%" height="100%">
-            </div>
-          {% endif %}
-        </div>
+    // إظهار الوحدة الأولى بشكل افتراضي
+    const firstModule = document.querySelector('.module-content');
+    if (firstModule) {
+        firstModule.classList.add('active');
+        const firstIcon = document.querySelector('.toggle-icon');
+        if (firstIcon) {
+            firstIcon.classList.remove('fa-chevron-down');
+            firstIcon.classList.add('fa-chevron-up');
+        }
+    }
+    
+    // إظهار الوحدة التي تحتوي على المحتوى الحالي
+    const activeContent = document.querySelector('.content-item.active');
+    if (activeContent) {
+        const activeModule = activeContent.closest('.module-content');
+        if (activeModule) {
+            activeModule.classList.add('active');
+            const moduleId = activeModule.id;
+            const icon = document.getElementById('icon-' + moduleId);
+            if (icon) {
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            }
+        }
         
-      
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title fw-bold mb-0">
-              {% if current_content.type == 'video' %}
-                <i class="fas fa-play-circle text-primary me-2"></i>{{ current_content.content.title }}
-              {% elif current_content.type == 'pdf' %}
-                <i class="fas fa-file-pdf text-danger me-2"></i>{{ current_content.content.title }}
-              {% endif %}
-            </h5>
-            <div class="content-meta">
-              {% if current_content.type == 'video' %}
-                <span class="badge bg-light text-dark">
-                  <i class="far fa-clock me-1"></i> {{ current_content.content.duration|default:'10:00' }}
-                </span>
-              {% endif %}
-            </div>
-          </div>
-          
-          <p class="text-muted">
-            {% if current_content.type == 'video' %}
-              {{ current_content.content.description|default:"لا يوجد وصف متاح لهذا الفيديو." }}
-            {% else %}
-              ملاحظات مرفقة لمساعدتك في فهم المحتوى بشكل أفضل.
-            {% endif %}
-          </p>
-          
-          {% if current_content.type == 'video' and current_content.content.resources %}
-            <div class="resources-section mt-4">
-              <h6 class="fw-bold mb-3"><i class="fas fa-paperclip me-2"></i>الملفات المرفقة</h6>
-              <div class="d-flex flex-wrap gap-2">
-                {% for resource in current_content.content.resources.all %}
-                  <a href="{{ resource.file.url }}" class="btn btn-sm btn-outline-primary rounded-pill">
-                    <i class="fas fa-download me-1"></i> {{ resource.name }}
-                  </a>
-                {% endfor %}
-              </div>
-            </div>
-          {% endif %}
-        </div>
-      </div>
-      
-  
-      <div class="card shadow-sm border-0 rounded-4 mt-4">
-        <div class="card-body p-0">
-          <div class="p-4 border-bottom">
-            <h5 class="fw-bold mb-0">محتوى الدورة</h5>
-          </div>
-          
-          <div class="module-list">
-            {% for module in course.module_set.all %}
-            <div class="module-container mb-1">
-              <div class="module-header p-3 d-flex justify-content-between align-items-center" 
-                   data-bs-toggle="collapse" data-bs-target="#module-content-{{ module.id }}" 
-                   aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="module-content-{{ module.id }}">
-                <div class="d-flex align-items-center">
-                  <div class="module-number me-3 bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-                       style="width: 28px; height: 28px; font-size: 14px;">
-                    {{ forloop.counter }}
-                  </div>
-                  <h6 class="mb-0 fw-bold" style="padding-right: 10px;">{{ module.name }}</h6>
-                </div>
-                <div class="d-flex align-items-center">
-                  <span class="module-progress me-3 small">
-             
-                    {{ forloop.counter }} من {{ modules|length }}
-                  </span>
-                  <i class="fas {% if forloop.first %}fa-chevron-up{% else %}fa-chevron-down{% endif %}"></i>
-                </div>
-              </div>
-              
-              <div id="module-content-{{ module.id }}" class="collapse {% if forloop.first %}show{% endif %}">
-                <div class="list-group list-group-flush">
-                  
-             
-                  {% for video in course.video_set.all %}
-                    {% if video.module.id == module.id %}
-                    <a href="{% url 'courseviewpagevideo' course.id video.id %}" 
-                       class="content-item list-group-item list-group-item-action border-0 py-3 d-flex align-items-center {% if current_content.type == 'video' and current_content.content.id == video.id %}active{% endif %} {% if video.id in completed_videos %}completed{% endif %}" 
-                       data-video-id="{{ video.id }}">
-                      <div class="content-icon me-3 {% if video.id in completed_videos %}bg-success-soft{% endif %}">
-                        <i class="fas {% if video.id in completed_videos %}fa-check text-success{% else %}fa-play-circle text-primary{% endif %}"></i>
-                      </div>
-                      <div class="content-info flex-grow-1">
-                        <h6 class="mb-0 fw-semibold" style="padding-right: 10px;">{{ video.name }}</h6>
-                        <div class="d-flex align-items-center">
-                          <small class="text-muted me-2">
-                            <i class="far fa-clock me-1"></i>{{ video.duration|default:'10:00' }}
-                          </small>
-                          <small class="text-muted">
-                            <i class="fas fa-video me-1"></i>فيديو
-                          </small>
-                        </div>
-                      </div>
-                      {% if video.id in completed_videos %}
-                        <span class="ms-2 text-success">
-                          <i class="fas fa-check-circle"></i>
-                        </span>
-                      {% endif %}
-                    </a>
-                    {% endif %}
-                  {% endfor %}
-                  
-           
-                  {% for pdf in course.pdf_set.all %}
-                    {% if pdf.module.id == module.id %}
-                    <a href="{% url 'courseviewpagenote' course.id pdf.id %}" 
-                       class="content-item list-group-item list-group-item-action border-0 py-3 d-flex align-items-center {% if current_content.type == 'note' and current_content.content.id == pdf.id %}active{% endif %} {% if pdf.id in completed_pdfs %}completed{% endif %}" 
-                       data-pdf-id="{{ pdf.id }}">
-                      <div class="content-icon me-3 {% if pdf.id in completed_pdfs %}bg-success-soft{% endif %}">
-                        <i class="fas {% if pdf.id in completed_pdfs %}fa-check text-success{% else %}fa-file-pdf text-danger{% endif %}"></i>
-                      </div>
-                      <div class="content-info flex-grow-1">
-                        <h6 class="mb-0 fw-semibold" style="padding-right: 10px;">{{ pdf.title }}</h6>
-                        <small class="text-muted">
-                          <i class="fas fa-file-pdf me-1"></i>ملف PDF
-                        </small>
-                      </div>
-                      {% if pdf.id in completed_pdfs %}
-                        <span class="ms-2 text-success">
-                          <i class="fas fa-check-circle"></i>
-                        </span>
-                      {% endif %}
-                    </a>
-                    {% endif %}
-                  {% endfor %}
-                  
-            
-                  {% for quiz in quizzes %}
-                    {% if quiz.module.id == module.id %}
-                    <a href="{% url 'quiz_detail' quiz.id %}" 
-                       class="content-item list-group-item list-group-item-action border-0 py-3 d-flex align-items-center {% if quiz.id in completed_quizzes %}completed{% endif %}" 
-                       data-quiz-id="{{ quiz.id }}">
-                      <div class="content-icon me-3 {% if quiz.id in completed_quizzes %}bg-success-soft{% endif %}">
-                        <i class="fas {% if quiz.id in completed_quizzes %}fa-check text-success{% else %}fa-question-circle text-warning{% endif %}"></i>
-                      </div>
-                      <div class="content-info flex-grow-1">
-                        <h6 class="mb-0 fw-semibold" style="padding-right: 10px;">{{ quiz.title }}</h6>
-                        <div class="d-flex align-items-center">
-                          <small class="text-muted me-2">
-                            <i class="far fa-clock me-1" ></i>{{ quiz.time_limit|default:'15' }} دقيقة
-                          </small>
-                          <small class="text-muted">
-                            <i class="fas fa-question-circle me-1"></i>اختبار
-                          </small>
-                        </div>
-                      </div>
-                      {% if quiz.id in completed_quizzes %}
-                        <span class="ms-2 text-success">
-                          <i class="fas fa-check-circle"></i>
-                        </span>
-                      {% endif %}
-                    </a>
-                    {% endif %}
-                  {% endfor %}
-                  
-                  
-                  {% for assignment in assignments %}
-                    {% if assignment.module.id == module.id %}
-                    <a href="{% url 'assignment_detail' assignment.id %}" 
-                       class="content-item list-group-item list-group-item-action border-0 py-3 d-flex align-items-center {% if assignment.id in completed_assignments %}completed{% endif %}" 
-                       data-assignment-id="{{ assignment.id }}">
-                      <div class="content-icon me-3 {% if assignment.id in completed_assignments %}bg-success-soft{% endif %}">
-                        <i class="fas {% if assignment.id in completed_assignments %}fa-check text-success{% else %}fa-tasks text-success{% endif %}"></i>
-                      </div>
-                      <div class="content-info flex-grow-1">
-                        <h6 class="mb-0 fw-semibold" style="padding-right: 10px;">{{ assignment.title }}</h6>
-                        <div class="d-flex align-items-center">
-                          <small class="text-muted me-2">
-                            <i class="far fa-calendar-alt me-1"></i>{{ assignment.due_date|date:"d/m/Y"|default:'لا يوجد موعد تسليم' }}
-                          </small>
-                          <small class="text-muted">
-                            <i class="fas fa-tasks me-1"></i>واجب
-                          </small>
-                        </div>
-                      </div>
-                      {% if assignment.id in completed_assignments %}
-                        <span class="ms-2 text-success">
-                          <i class="fas fa-check-circle"></i>
-                        </span>
-                      {% endif %}
-                    </a>
-                    {% endif %}
-                  {% endfor %}
-                  
-                </div>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    </div>
+        // Add current class to active content
+        activeContent.classList.add('current');
+    }
     
-   
-    <div class="col-md-4 mb-4">
-      <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
-        {% if course.image_course %}
-          <img src="{{ course.image_course.url }}" class="card-img-top" alt="{{ course.name }}">
-        {% endif %}
-        <div class="card-body">
-          <h4 class="card-title fw-bold">{{ course.name }}</h4>
-          <p class="text-muted">{{ course.description|truncatewords:15 }}</p>
-          
-          <div class="d-flex flex-wrap gap-2 mb-3">
-            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">
-              <i class="fas fa-graduation-cap me-1"></i> {{ course.total_video }} دروس
-            </span>
-            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">
-              <i class="fas fa-signal me-1"></i> {{ course.get_level_display }}
-            </span>
-          </div>
-          
-          <div class="progress mb-3" style="height: 12px;">
-            <div class="progress-bar bg-success" role="progressbar" 
-                 aria-valuenow="{{ progress }}" 
-                 aria-valuemin="0" aria-valuemax="100" 
-                 style="width: {{ progress }}%">
-            </div>
-          </div>
-          <div class="d-flex justify-content-between">
-            <small class="text-muted progress-text">إكمال الدورة: {{ progress }}%</small>
-            <small>
-              <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill me-1" title="فيديوهات">
-                <i class="fas fa-play-circle"></i> {{ completed_videos|length }}/{{ course.total_video|default:0 }}
-              </span>
-              {% if quizzes_count %}
-              <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill me-1" title="اختبارات">
-                <i class="fas fa-question-circle"></i> {{ completed_quizzes|length }}/{{ quizzes_count }}
-              </span>
-              {% endif %}
-              {% if assignments_count %}
-              <span class="badge bg-success bg-opacity-10 text-success rounded-pill me-1" title="واجبات">
-                <i class="fas fa-tasks"></i> {{ completed_assignments|length }}/{{ assignments_count }}
-              </span>
-              {% endif %}
-              {% if pdfs_count %}
-              <span class="badge bg-info bg-opacity-10 text-info rounded-pill" title="ملفات PDF">
-                <i class="fas fa-file-pdf"></i> {{ completed_pdfs|length }}/{{ pdfs_count }}
-              </span>
-              {% endif %}
-            </small>
-          </div>
+    // إضافة event listeners لجميع عناصر المحتوى
+    const contentItems = document.querySelectorAll('.content-item[data-content-type]');
+    contentItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            // Update current position indicator
+            updateCurrentPosition(this);
+            
+            const contentType = this.dataset.contentType;
+            const contentId = this.dataset.contentId;
+            if (contentType && contentId) {
+                // تأجيل تسجيل التقدم قليلاً حتى يتم تحميل الصفحة
+                setTimeout(() => {
+                    markContentViewed(contentType, contentId);
+                }, 1000);
+            }
+        });
+    });
+    
+    // Update completion counter on page load
+    updateCompletionCounter();
+    
+    // Recalculate Progress Button Handler
+    const recalculateBtn = document.querySelector('.recalculate-progress-btn');
+    if (recalculateBtn) {
+        recalculateBtn.addEventListener('click', function() {
+            const courseId = this.dataset.courseId;
+            recalculateProgress(courseId);
+        });
+    }
+    
+    // Course Completion Button Handler
+    const completeCourseBtn = document.querySelector('.complete-course-btn');
+    if (completeCourseBtn) {
+        completeCourseBtn.addEventListener('click', function() {
+            const courseId = this.dataset.courseId;
+            if (confirm('هل أنت متأكد من إنهاء هذه الدورة؟ سيتم وضع علامة مكتملة نهائياً.')) {
+                completeCourse(courseId);
+            }
+        });
+    }
+    
+    // Add high progress class for styling
+    const progressValue = parseFloat('{{ progress|default:0 }}');
+    if (progressValue >= 80) {
+        document.body.classList.add('high-progress');
+        
+        // Add appropriate progress section classes
+        const progressSection = document.querySelector('.progress-section');
+        if (progressSection) {
+            if (progressValue >= 100) {
+                progressSection.classList.add('completed');
+            } else if (progressValue >= 90) {
+                progressSection.classList.add('near-completion');
+            }
+        }
+    }
+    
+    // تتبع التقدم الديناميكي
+    const video = document.querySelector('.course-video');
+    if (video) {
+        let hasMarked = false;
+        
+        video.addEventListener('ended', function() {
+            if (!hasMarked) {
+                markVideoCompleted(this.dataset.videoId);
+                hasMarked = true;
+            }
+        });
+        
+        // تتبع الوقت المشاهد
+        video.addEventListener('timeupdate', function() {
+            const percent = (video.currentTime / video.duration) * 100;
+            if (percent > 90 && !hasMarked) { // إذا شاهد 90% من الفيديو
+                markVideoCompleted(this.dataset.videoId);
+                hasMarked = true;
+            }
+        });
+        
+        // Mark video as viewed after 3 seconds
+        setTimeout(() => {
+            if (!hasMarked) {
+                markContentViewed('video', video.dataset.videoId);
+            }
+        }, 3000);
+    }
+    
+    // تتبع عرض PDFs والملاحظات
+    const noteContainer = document.querySelector('.note-display-container');
+    if (noteContainer) {
+        setTimeout(() => {
+            const noteId = noteContainer.dataset.noteId || new URLSearchParams(window.location.search).get('content_id');
+            if (noteId) {
+                markContentViewed('note', noteId);
+            }
+        }, 2000); // بعد ثانيتين من فتح المحتوى
+    }
+    
+    // وظائف الكويز
+    const startQuizBtns = document.querySelectorAll('.start-quiz-btn');
+    startQuizBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const quizId = this.dataset.quizId;
+            startQuiz(quizId);
+        });
+    });
+    
+    // تسجيل التقدم التلقائي للمحتوى الحالي
+    const currentContentType = new URLSearchParams(window.location.search).get('content_type');
+    const currentContentId = new URLSearchParams(window.location.search).get('content_id');
+    
+    if (currentContentType && currentContentId) {
+        // تسجيل أن المستخدم فتح هذا المحتوى
+        console.log('Auto-tracking content:', currentContentType, currentContentId);
+        setTimeout(() => {
+            markContentViewed(currentContentType, currentContentId);
+        }, 3000); // بعد 3 ثوان من فتح المحتوى
+    } else {
+        // If no specific content, this is the overview page
+        console.log('On course overview page');
+    }
+});
+
+// وظيفة تحديث المؤشر الحالي
+function updateCurrentPosition(clickedItem) {
+    // Remove current class from all items
+    document.querySelectorAll('.content-item').forEach(item => {
+        item.classList.remove('current');
+    });
+    
+    // Add current class to clicked item
+    clickedItem.classList.add('current');
+    
+    // Update position indicator if it exists
+    const positionIndicator = document.querySelector('.current-position-indicator');
+    if (positionIndicator) {
+        const contentType = clickedItem.dataset.contentType;
+        const contentName = clickedItem.querySelector('.content-name').textContent;
+        const contentIcon = clickedItem.querySelector('.content-icon i').className;
+        
+        const currentContentInfo = positionIndicator.querySelector('.current-content-info');
+        if (currentContentInfo) {
+            currentContentInfo.innerHTML = `<i class="${contentIcon} me-1"></i>${contentName}`;
+        }
+    }
+}
+
+// وظيفة تحديث عداد الإكمال
+function updateCompletionCounter() {
+    const completedCount = document.querySelectorAll('.content-item.completed').length;
+    const completedCountElement = document.getElementById('completed-count');
+    
+    if (completedCountElement) {
+        completedCountElement.textContent = completedCount;
+        
+        // Add animation when count updates
+        completedCountElement.style.transform = 'scale(1.2)';
+        setTimeout(() => {
+            completedCountElement.style.transform = 'scale(1)';
+        }, 200);
+    }
+}
+
+function toggleModule(moduleId) {
+    const content = document.getElementById(moduleId);
+    const icon = document.getElementById('icon-' + moduleId);
+    
+    if (!content || !icon) return;
+    
+    content.classList.toggle('active');
+    
+    if (content.classList.contains('active')) {
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+    } else {
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+    }
+}
+
+function markProgress(contentType, contentId) {
+    // التحقق من وجود CSRF token
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
+    
+    // إرسال طلب لتسجيل التقدم
+    fetch(`/api/${contentType}/${contentId}/mark-completed/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            content_type: contentType,
+            content_id: contentId
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success' || data.success) {
+            if (data.progress !== undefined) {
+                updateProgressBar(data.progress);
+            }
+            markContentAsCompleted(contentType, contentId);
+        } else {
+            console.log('Progress tracking response:', data.message || 'No progress update');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function markVideoCompleted(videoId) {
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
+    
+    fetch(`/api/video/${videoId}/mark-watched/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            video_id: videoId
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success' || data.success) {
+            // تحديث واجهة المستخدم
+            if (data.progress !== undefined) {
+                updateProgressBar(data.progress);
+            }
+            markContentAsCompleted('video', videoId);
+            
+            // إظهار رسالة نجاح
+            console.log('Video marked as completed successfully');
+        } else {
+            console.log('Video completion response:', data.message || 'No progress update');
+        }
+    })
+    .catch(error => {
+        console.error('Error marking video as completed:', error);
+    });
+}
+
+function updateProgressBar(progress) {
+    if (typeof progress === 'undefined' || progress === null) return;
+    
+    console.log('Updating progress to:', progress + '%');
+    
+    // تحديث شريط التقدم الرئيسي
+    const progressBar = document.querySelector('.progress-fill');
+    if (progressBar) {
+        progressBar.style.width = Math.min(100, Math.max(0, progress)) + '%';
+        progressBar.setAttribute('data-progress', progress);
+        
+        // Update dynamic progress attributes
+        const progressSection = document.querySelector('.progress-section');
+        if (progressSection) {
+            progressSection.setAttribute('data-progress', progress);
+            
+            // Add completion classes based on progress
+            progressSection.classList.remove('completed', 'near-completion');
+            if (progress >= 100) {
+                progressSection.classList.add('completed');
+            } else if (progress >= 90) {
+                progressSection.classList.add('near-completion');
+            }
+        }
+    }
+    
+    // تحديث شريط التقدم في الـ Sidebar
+    const sidebarProgressBar = document.querySelector('.progress-fill-sidebar');
+    if (sidebarProgressBar) {
+        sidebarProgressBar.style.width = Math.min(100, Math.max(0, progress)) + '%';
+        sidebarProgressBar.setAttribute('data-progress', progress);
+        
+        // Update sidebar header dynamic attributes
+        const sidebarHeader = document.querySelector('.sidebar-header');
+        if (sidebarHeader) {
+            sidebarHeader.setAttribute('data-progress', progress);
+        }
+    }
+    
+    // تحديث النص
+    const progressTitle = document.querySelector('.progress-title');
+    if (progressTitle) {
+        progressTitle.innerHTML = `<i class="fas fa-chart-line me-2"></i>تقدمك في الدورة: ${progress.toFixed(1)}%`;
+    }
+    
+    // تحديث نص الـ Sidebar
+    const sidebarProgressTitle = document.querySelector('.progress-title-sidebar');
+    if (sidebarProgressTitle) {
+        sidebarProgressTitle.innerHTML = `<i class="fas fa-chart-line me-2"></i>تقدمك: ${progress.toFixed(1)}%`;
+    }
+    
+    // Update completion counter
+    updateCompletionCounter();
+    
+    // إظهار رسالة تقدم إذا تم إحراز تقدم
+    const currentProgress = parseFloat('{{ progress|default:0 }}');
+    if (progress > currentProgress) {
+        showMessage(`تم تحديث التقدم: ${progress.toFixed(1)}%`, 'success');
+        
+        // Update page progress value for completion button logic
+        if (progress >= 90) {
+            // Show completion button if progress is high enough
+            setTimeout(() => {
+                location.reload(); // Reload to show completion button
+            }, 2000);
+        }
+    }
+    
+    // Add celebration effect if progress reaches milestones
+    if (progress >= 100) {
+        addCelebrationEffect('🎉 تهانينا! أكملت الدورة بنجاح!');
+    } else if (progress >= 90) {
+        addCelebrationEffect('🎊 ممتاز! أوشكت على إنهاء الدورة!');
+    } else if (progress >= 75) {
+        addCelebrationEffect('👍 رائع! أكملت ثلاثة أرباع الدورة!');
+    } else if (progress >= 50) {
+        addCelebrationEffect('💪 ممتاز! وصلت لنصف الدورة!');
+    } else if (progress >= 25) {
+        addCelebrationEffect('🚀 بداية رائعة! استمر!');
+    }
+}
+
+// وظيفة إضافة تأثير الاحتفال
+function addCelebrationEffect(message) {
+    // Prevent showing the same message repeatedly
+    if (window.lastCelebrationProgress === Math.floor(parseFloat('{{ progress|default:0 }}'))) {
+        return;
+    }
+    
+    const celebration = document.createElement('div');
+    celebration.className = 'celebration-popup';
+    celebration.innerHTML = `
+        <div class="celebration-content">
+            <div class="celebration-icon">🎉</div>
+            <div class="celebration-message">${message}</div>
         </div>
-      </div>
-      
-   
-      <div class="card shadow-sm border-0 rounded-4 mt-3">
-        <div class="card-body">
-          <h6 class="fw-bold mb-3">مقدم الدورة</h6>
-          <div class="d-flex align-items-center">
-            {% if course.teacher.profile.image %}
-              <img src="{{ course.teacher.profile.image.url }}" 
-                   class="rounded-circle me-3 border border-2 border-primary" 
-                   width="60" height="60" alt="{{ course.teacher.profile.name }}">
-            {% else %}
-              <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" 
-                   style="width: 60px; height: 60px;">
-                {{ course.teacher.profile.name|slice:':1'|upper }}
-              </div>
-            {% endif %}
-            <div>
-              <h6 class="mb-0 fw-bold" style="padding-right: 10px;">{{ course.teacher.profile.name }}</h6>
-              <small class="text-muted" style="padding-right: 10px;">مدرب معتمد</small>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div> -->
+    `;
+    
+    // Add CSS for the celebration popup
+    celebration.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        z-index: 1000;
+        animation: celebrationBounce 0.6s ease;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        text-align: center;
+        min-width: 300px;
+    `;
+    
+    document.body.appendChild(celebration);
+    
+    setTimeout(() => {
+        celebration.remove();
+    }, 3000);
+    
+    window.lastCelebrationProgress = Math.floor(parseFloat('{{ progress|default:0 }}'));
+}
+
+// Add CSS animation for celebration
+const celebrationStyle = document.createElement('style');
+celebrationStyle.textContent = `
+    @keyframes celebrationBounce {
+        0% { transform: translate(-50%, -50%) scale(0.3) rotate(-15deg); opacity: 0; }
+        50% { transform: translate(-50%, -50%) scale(1.1) rotate(5deg); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+    }
+    
+    .celebration-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .celebration-icon {
+        font-size: 3rem;
+        animation: bounce 1s infinite;
+    }
+    
+    .celebration-message {
+        font-size: 1.2rem;
+        font-weight: 600;
+        text-align: center;
+    }
+`;
+document.head.appendChild(celebrationStyle);
+
+function markContentAsCompleted(type, id) {
+    const contentItem = document.querySelector(`[data-content-type="${type}"][data-content-id="${id}"]`);
+    if (contentItem && !contentItem.classList.contains('completed')) {
+        contentItem.classList.add('completed');
+        const icon = contentItem.querySelector('.content-icon i');
+        if (icon) {
+            icon.className = 'fas fa-check';
+        }
+        
+        // إضافة شارة الإكمال
+        if (!contentItem.querySelector('.completion-badge')) {
+            const badge = document.createElement('div');
+            badge.className = 'completion-badge';
+            badge.innerHTML = '<i class="fas fa-check"></i>';
+            contentItem.appendChild(badge);
+        }
+        
+        // Update completion counter
+        updateCompletionCounter();
+        
+        // Trigger progress recalculation
+        setTimeout(() => {
+            calculateAndUpdateProgress();
+        }, 500);
+        
+        // Add completion animation
+        contentItem.style.animation = 'completionPulse 0.6s ease';
+        setTimeout(() => {
+            contentItem.style.animation = '';
+        }, 600);
+    }
+}
+
+// Add completion animation CSS
+const completionAnimationStyle = document.createElement('style');
+completionAnimationStyle.textContent = `
+    @keyframes completionPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); }
+        100% { transform: scale(1); }
+    }
+`;
+document.head.appendChild(completionAnimationStyle);
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function markContentViewed(contentType, contentId) {
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) return;
+    
+    fetch(`/api/${contentType}/${contentId}/mark-viewed/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            content_type: contentType,
+            content_id: contentId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success' || data.success) {
+            console.log('Content marked as viewed successfully');
+            if (data.progress !== undefined) {
+                updateProgressBar(data.progress);
+            }
+            // Mark content as completed in UI
+            markContentAsCompleted(contentType, contentId);
+        }
+    })
+    .catch(error => {
+        console.error('Error marking content as viewed:', error);
+    });
+}
+
+function startQuiz(quizId) {
+    const quizQuestions = document.getElementById(`quiz-questions-${quizId}`);
+    const startBtn = document.querySelector(`[data-quiz-id="${quizId}"]`);
+    
+    if (quizQuestions && startBtn) {
+        // إخفاء زر البدء وإظهار الأسئلة
+        startBtn.style.display = 'none';
+        quizQuestions.style.display = 'block';
+        
+        // بدء العد التنازلي
+        startQuizTimer(quizId);
+        
+        // تمرير الصفحة إلى الأسئلة
+        quizQuestions.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function startQuizTimer(quizId) {
+    // الحصول على مدة الكويز (افتراضي 15 دقيقة)
+    const timeLimit = 15 * 60; // بالثواني
+    let timeLeft = timeLimit;
+    
+    // إنشاء عنصر العداد
+    const timerDiv = document.createElement('div');
+    timerDiv.className = 'quiz-timer active';
+    timerDiv.id = `quiz-timer-${quizId}`;
+    document.body.appendChild(timerDiv);
+    
+    const timer = setInterval(() => {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        
+        timerDiv.innerHTML = `
+            <i class="fas fa-clock me-2"></i>
+            الوقت المتبقي: ${minutes}:${seconds.toString().padStart(2, '0')}
+        `;
+        
+        // تحذير عندما يبقى 5 دقائق
+        if (timeLeft <= 5 * 60) {
+            timerDiv.classList.add('warning');
+        }
+        
+        // انتهاء الوقت
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            timerDiv.remove();
+            submitQuizAutomatically(quizId);
+        }
+        
+        timeLeft--;
+    }, 1000);
+}
+
+function submitQuizAutomatically(quizId) {
+    const form = document.getElementById(`quiz-form-${quizId}`);
+    if (form) {
+        // إضافة رسالة تنبيه
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-warning';
+        alert.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>انتهى الوقت! تم تسليم الاختبار تلقائياً.';
+        form.insertBefore(alert, form.firstChild);
+        
+        // تسليم النموذج
+        setTimeout(() => {
+            form.submit();
+        }, 2000);
+    }
+}
+
+// إضافة معالج للأخطاء العامة
+window.addEventListener('error', function(e) {
+    console.error('JavaScript error:', e.error);
+});
+
+// إضافة دالة مساعدة لإظهار الرسائل
+function showMessage(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} position-fixed`;
+    alertDiv.style.cssText = `
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1050;
+        min-width: 300px;
+        text-align: center;
+    `;
+    alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+        ${message}
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // إزالة الرسالة بعد 3 ثوان
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 3000);
+}
+
+// تتبع التقدم الديناميكي
+function updateProgress() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch('{% url "dashboard" %}', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.text())
+    .then(data => {
+        // Parse the response to get updated progress
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data, 'text/html');
+        
+        // Try to get progress from the response (this is a simple approach)
+        // Better approach would be a dedicated API endpoint
+        calculateAndUpdateProgress();
+    })
+    .catch(error => {
+        console.error('Error updating progress:', error);
+        calculateAndUpdateProgress();
+    });
+}
+
+function calculateAndUpdateProgress() {
+    // Use data from the page instead of template loops
+    const totalItems = parseInt('{{ total_videos|default:0 }}') + parseInt('{{ total_notes|default:0 }}') + parseInt('{{ total_quizzes|default:0 }}');
+    
+    if (totalItems === 0) {
+        updateProgressBars(0);
+        return;
+    }
+    
+    // Get completed items from page data
+    const completedVideos = document.querySelectorAll('.content-item.completed[data-content-type="video"]').length;
+    const completedPdfs = document.querySelectorAll('.content-item.completed[data-content-type="note"]').length;
+    const completedQuizzes = document.querySelectorAll('.content-item.completed[data-content-type="quiz"]').length;
+    
+    const completedItems = completedVideos + completedPdfs + completedQuizzes;
+    const progressPercentage = Math.round((completedItems / totalItems) * 100);
+    
+    console.log('Progress calculation:', {
+        totalItems,
+        completedVideos,
+        completedPdfs, 
+        completedQuizzes,
+        completedItems,
+        progressPercentage
+    });
+    
+    updateProgressBars(progressPercentage);
+}
+
+function updateProgressBars(percentage) {
+    // Update main progress bar
+    const mainProgressBar = document.querySelector('.progress-bar');
+    const mainProgressText = document.querySelector('.progress-text');
+    
+    if (mainProgressBar) {
+        mainProgressBar.style.width = percentage + '%';
+        mainProgressBar.setAttribute('aria-valuenow', percentage);
+        if (mainProgressText) {
+            mainProgressText.textContent = percentage + '%';
+        }
+    }
+    
+    // Update sidebar progress bar
+    const sidebarProgressBar = document.querySelector('.sidebar-progress .progress-bar');
+    const sidebarProgressText = document.querySelector('.sidebar-progress .progress-text');
+    
+    if (sidebarProgressBar) {
+        sidebarProgressBar.style.width = percentage + '%';
+        sidebarProgressBar.setAttribute('aria-valuenow', percentage);
+        if (sidebarProgressText) {
+            sidebarProgressText.textContent = percentage + '%';
+        }
+    }
+    
+    // Update course overview progress if visible
+    const overviewProgress = document.querySelector('.course-progress-bar .progress-bar');
+    if (overviewProgress) {
+        overviewProgress.style.width = percentage + '%';
+        overviewProgress.setAttribute('aria-valuenow', percentage);
+    }
+    
+    // Update progress text in overview
+    const overviewProgressText = document.querySelector('.progress-percentage');
+    if (overviewProgressText) {
+        overviewProgressText.textContent = percentage + '%';
+    }
+}
+
+function markContentAsViewed(contentType, contentId) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/mark-content-viewed/${contentType}/${contentId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log('Content marked as viewed successfully');
+            if (data.progress !== undefined) {
+                updateProgressBars(data.progress);
+            } else {
+                // Recalculate progress locally
+                setTimeout(() => {
+                    calculateAndUpdateProgress();
+                }, 500);
+            }
+        } else {
+            console.error('Error marking content as viewed:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error marking content as viewed:', error);
+    });
+}
+
+// تتبع مشاهدة الفيديو
+function setupVideoTracking() {
+    const video = document.querySelector('video');
+    if (video) {
+        let hasTrackedView = false;
+        let progressInterval;
+        
+        video.addEventListener('loadedmetadata', function() {
+            console.log('Video loaded, duration:', video.duration);
+        });
+        
+        video.addEventListener('timeupdate', function() {
+            const progress = (video.currentTime / video.duration) * 100;
+            
+            // Mark as viewed when user watches 90% or more than 30 seconds
+            if (!hasTrackedView && (progress >= 90 || video.currentTime >= 30)) {
+                hasTrackedView = true;
+                const videoId = video.getAttribute('data-video-id');
+                if (videoId) {
+                    markContentAsViewed('video', videoId);
+                }
+            }
+        });
+        
+        video.addEventListener('ended', function() {
+            if (!hasTrackedView) {
+                hasTrackedView = true;
+                const videoId = video.getAttribute('data-video-id');
+                if (videoId) {
+                    markContentAsViewed('video', videoId);
+                }
+            }
+        });
+    }
+}
+
+// تتبع عرض الملاحظات
+function setupNoteTracking() {
+    const noteContainer = document.querySelector('.note-display-container');
+    if (noteContainer) {
+        let hasTrackedView = false;
+        let viewTimer;
+        
+        // Mark as viewed after 3 seconds of viewing
+        viewTimer = setTimeout(() => {
+            if (!hasTrackedView) {
+                hasTrackedView = true;
+                const noteId = noteContainer.getAttribute('data-note-id') || 
+                             new URLSearchParams(window.location.search).get('content_id');
+                if (noteId) {
+                    markContentAsViewed('note', noteId);
+                }
+            }
+        }, 3000);
+        
+        // Clear timer if user leaves the page
+        window.addEventListener('beforeunload', () => {
+            if (viewTimer) {
+                clearTimeout(viewTimer);
+            }
+        });
+    }
+}
+
+// تتبع الاختبارات
+function setupQuizTracking() {
+    const quizForm = document.querySelector('.quiz-form');
+    if (quizForm) {
+        quizForm.addEventListener('submit', function(e) {
+            // Quiz completion will be handled by the server
+            // Progress will be updated when the form is submitted
+        });
+    }
+}
+
+// Initialize progress tracking
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial progress calculation
+    calculateAndUpdateProgress();
+    
+    // Setup content tracking
+    setupVideoTracking();
+    setupNoteTracking();
+    setupQuizTracking();
+    
+    // Update progress every 30 seconds
+    setInterval(calculateAndUpdateProgress, 30000);
+});
+
+// Course Completion Function
+function completeCourse(courseId) {
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        showMessage('خطأ في الأمان - يرجى إعادة تحميل الصفحة', 'error');
+        return;
+    }
+    
+    // Show loading
+    const completeBtn = document.querySelector('.complete-course-btn');
+    if (completeBtn) {
+        completeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإنهاء...';
+        completeBtn.disabled = true;
+    }
+    
+    fetch(`/api/course/${courseId}/complete/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            course_id: courseId,
+            force_complete: true
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success' || data.success) {
+            // Update progress to 100%
+            updateProgressBar(100);
+            
+            // Update button to completed state
+            if (completeBtn) {
+                completeBtn.innerHTML = '<i class="fas fa-check-circle"></i> مكتملة بنجاح';
+                completeBtn.className = 'nav-btn nav-btn-success completed-btn';
+                completeBtn.disabled = true;
+            }
+            
+            // Add celebration animation
+            document.body.classList.add('completed-course');
+            
+            // Show success message
+            showMessage('🎉 تهانينا! تم إنهاء الدورة بنجاح', 'success');
+            
+            // Show final exam if available
+            const finalExamBtn = document.querySelector('.final-exam-btn');
+            if (finalExamBtn) {
+                finalExamBtn.style.display = 'inline-flex';
+                finalExamBtn.classList.add('final-exam-available');
+            }
+            
+            // Reload page after 2 seconds to show updated state
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            
+        } else {
+            throw new Error(data.message || 'فشل في إنهاء الدورة');
+        }
+    })
+    .catch(error => {
+        console.error('Error completing course:', error);
+        showMessage('حدث خطأ أثناء إنهاء الدورة: ' + error.message, 'error');
+        
+        // Reset button
+        if (completeBtn) {
+            completeBtn.innerHTML = '<i class="fas fa-trophy"></i> إنهاء الدورة';
+            completeBtn.disabled = false;
+        }
+    });
+}
+
+// Recalculate Progress Function
+function recalculateProgress(courseId) {
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        showMessage('خطأ في الأمان - يرجى إعادة تحميل الصفحة', 'error');
+        return;
+    }
+    
+    // Show loading
+    const recalculateBtn = document.querySelector('.recalculate-progress-btn');
+    if (recalculateBtn) {
+        recalculateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        recalculateBtn.disabled = true;
+    }
+    
+    fetch(`/api/course/${courseId}/recalculate-progress/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            // Update progress bars
+            updateProgressBar(data.progress);
+            
+            showMessage(`تم إعادة حساب التقدم: ${data.progress.toFixed(1)}%`, 'success');
+            
+            // Reload page to show updated completion status
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+            
+        } else {
+            throw new Error(data.message || 'فشل في إعادة حساب التقدم');
+        }
+    })
+    .catch(error => {
+        console.error('Error recalculating progress:', error);
+        showMessage('حدث خطأ أثناء إعادة حساب التقدم: ' + error.message, 'error');
+    })
+    .finally(() => {
+        // Reset button
+        if (recalculateBtn) {
+            recalculateBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            recalculateBtn.disabled = false;
+        }
+    });
+}
+</script>
+{% endblock %}
+
+

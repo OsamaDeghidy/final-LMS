@@ -24,7 +24,19 @@
           </h2>
         </div>
         <div class="card-body p-4">
-          <form id="course-form" method="post" enctype="multipart/form-data" class="needs-validation" action="" novalidate>
+          <!-- Django Messages -->
+          {% if messages %}
+          <div class="messages-container mb-4">
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          
+          <form id="course-form" method="post" enctype="multipart/form-data" class="needs-validation" action="{% url 'update_course' course.id %}" novalidate>
             {% csrf_token %}
             
             <!-- Step Progress Bar -->
@@ -43,6 +55,7 @@
                 <div class="text-center mt-2">المراجعة</div>
               </div>
             </div>
+            
             
             <!-- Step 1: Course Info -->
             <div class="step-card">
@@ -244,6 +257,52 @@
                       <label class="form-label fw-bold">إضافة فيديوهات جديدة</label>
                       <input type="file" class="form-control" name="module_videos_existing_{{ module.id }}" accept="video/*" multiple>
                       <small class="text-muted">الصيغ المدعومة: MP4, MOV, AVI</small>
+                    </div>
+
+                    <!-- Module PDFs Section -->
+                    <div class="card mb-3 border-info">
+                      <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-file-pdf text-danger me-2"></i>ملفات PDF للموديول</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="row">
+                          <!-- Module PDF -->
+                          <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">ملف PDF رئيسي للموديول</label>
+                            {% if module.module_pdf %}
+                            <div class="mb-2">
+                              <div class="d-flex align-items-center p-2 bg-light rounded">
+                                <i class="fas fa-file-pdf text-danger me-2"></i>
+                                <div class="flex-grow-1 text-truncate">{{ module.module_pdf.name }}</div>
+                                <button type="button" class="btn btn-sm btn-danger delete-module-pdf" data-module-id="{{ module.id }}" data-pdf-type="module_pdf">
+                                  <i class="fas fa-trash"></i>
+                                </button>
+                              </div>
+                            </div>
+                            {% endif %}
+                            <input type="file" class="form-control" name="module_pdf_existing_{{ module.id }}" accept="application/pdf">
+                            <small class="text-muted">اختياري. ملف PDF يحتوي على محتوى الموديول</small>
+                          </div>
+                          
+                          <!-- Additional Materials -->
+                          <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">مواد إضافية (PDF)</label>
+                            {% if module.additional_materials %}
+                            <div class="mb-2">
+                              <div class="d-flex align-items-center p-2 bg-light rounded">
+                                <i class="fas fa-file-pdf text-danger me-2"></i>
+                                <div class="flex-grow-1 text-truncate">{{ module.additional_materials.name }}</div>
+                                <button type="button" class="btn btn-sm btn-danger delete-module-pdf" data-module-id="{{ module.id }}" data-pdf-type="additional_materials">
+                                  <i class="fas fa-trash"></i>
+                                </button>
+                              </div>
+                            </div>
+                            {% endif %}
+                            <input type="file" class="form-control" name="additional_materials_existing_{{ module.id }}" accept="application/pdf">
+                            <small class="text-muted">اختياري. مواد إضافية للموديول</small>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     
                     <!-- Notes -->
@@ -466,4 +525,584 @@
         </div>
       </div>
     </div>
+
+<script>
+// Global variables
+let moduleCounter = 0;
+let questionCounter = 0;
+
+// Initialize when document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize existing functionality
+    initializeExistingModules();
+    
+    // Add module button handler
+    document.getElementById('add-module-btn').addEventListener('click', addNewModule);
+    
+    // Submit form handler
+    document.getElementById('submit-course-btn').addEventListener('click', submitForm);
+    
+    // Initialize quiz toggles
+    initializeQuizToggles();
+});
+
+function initializeExistingModules() {
+    // Initialize existing module functionality
+    document.querySelectorAll('.remove-module-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const moduleId = this.getAttribute('data-module-id');
+            if (confirm('هل أنت متأكد من حذف هذا الموديول؟')) {
+                document.getElementById(`delete_module_${moduleId}`).value = '1';
+                document.getElementById(`existing_module_${moduleId}`).style.display = 'none';
+            }
+        });
+    });
+    
+    // Initialize PDF deletion buttons
+    document.querySelectorAll('.delete-module-pdf').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const moduleId = this.getAttribute('data-module-id');
+            const pdfType = this.getAttribute('data-pdf-type');
+            if (confirm('هل أنت متأكد من حذف هذا الملف؟')) {
+                window.location.href = `/delete-module-pdf/${moduleId}/${pdfType}/`;
+            }
+        });
+    });
+    
+    // Initialize note and video name buttons
+    initializeNoteButtons();
+    initializeVideoNameButtons();
+    initializeQuestionButtons();
+}
+
+function initializeQuizToggles() {
+    document.querySelectorAll('.quiz-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const moduleId = this.id.replace('has_quiz_existing_', '').replace('has_quiz_new_', '');
+            const quizSection = document.getElementById(`quiz_section_existing_${moduleId}`) || 
+                               document.getElementById(`quiz_section_new_${moduleId}`);
+            
+            if (quizSection) {
+                if (this.checked) {
+                    quizSection.classList.remove('d-none');
+                } else {
+                    quizSection.classList.add('d-none');
+                }
+            }
+        });
+    });
+}
+
+function addNewModule() {
+    moduleCounter++;
+    const moduleId = `new_${Date.now()}_${moduleCounter}`;
+    
+    const moduleHtml = `
+        <div class="card mb-4 module-card" id="new_module_${moduleId}">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-layer-group text-primary me-2"></i>موديول جديد</h5>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-new-module-btn" data-module-id="${moduleId}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- Module Info -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">اسم الموديول</label>
+                    <input type="text" class="form-control" name="module_name_new_${moduleId}" placeholder="أدخل اسم الموديول" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">وصف الموديول</label>
+                    <textarea class="form-control" name="module_description_new_${moduleId}" rows="3" placeholder="وصف الموديول"></textarea>
+                </div>
+                
+                <!-- Videos -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">رفع فيديوهات</label>
+                    <input type="file" class="form-control" name="module_videos_new_${moduleId}" accept="video/*" multiple>
+                    <small class="text-muted">الصيغ المدعومة: MP4, MOV, AVI</small>
+                </div>
+                
+                <!-- Module PDFs Section -->
+                <div class="card mb-3 border-info">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-file-pdf text-danger me-2"></i>ملفات PDF للموديول</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Module PDF -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">ملف PDF رئيسي للموديول</label>
+                                <input type="file" class="form-control" name="module_pdf_new_${moduleId}" accept="application/pdf">
+                                <small class="text-muted">اختياري. ملف PDF يحتوي على محتوى الموديول</small>
+                            </div>
+                            
+                            <!-- Additional Materials -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">مواد إضافية (PDF)</label>
+                                <input type="file" class="form-control" name="additional_materials_new_${moduleId}" accept="application/pdf">
+                                <small class="text-muted">اختياري. مواد إضافية للموديول</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Video Names -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">عناوين الفيديوهات</label>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div></div>
+                        <button type="button" class="btn btn-sm btn-outline-primary add-video-name-btn" data-module-id="new_${moduleId}">
+                            <i class="fas fa-plus me-1"></i>إضافة عنوان
+                        </button>
+                    </div>
+                    <div class="video-names-container" id="video_names_container_new_${moduleId}">
+                        <div class="input-group mb-2">
+                            <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+                            <input type="text" class="form-control" name="video_name_new_${moduleId}_0" placeholder="أدخل عنوان الفيديو">
+                            <button type="button" class="btn btn-outline-danger remove-video-name-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Notes -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">ملاحظات</label>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div></div>
+                        <button type="button" class="btn btn-sm btn-outline-primary add-note-btn" data-module-id="new_${moduleId}">
+                            <i class="fas fa-plus me-1"></i>إضافة ملاحظة
+                        </button>
+                    </div>
+                    <div class="notes-container" id="notes_container_new_${moduleId}">
+                        <div class="input-group mb-2">
+                            <textarea class="form-control" name="module_notes_new_${moduleId}_0" rows="2" placeholder="أدخل ملاحظة"></textarea>
+                            <button type="button" class="btn btn-outline-danger remove-note-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quiz Section -->
+                <div class="card mb-3 border-primary">
+                    <div class="card-header bg-light">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input quiz-toggle" type="checkbox" id="has_quiz_new_${moduleId}" name="has_quiz_new_${moduleId}">
+                            <label class="form-check-label fw-bold" for="has_quiz_new_${moduleId}">إضافة اختبار للموديول</label>
+                        </div>
+                    </div>
+                    <div class="quiz-section card-body d-none" id="quiz_section_new_${moduleId}">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">عنوان الاختبار</label>
+                            <input type="text" class="form-control" name="quiz_title_new_${moduleId}" placeholder="أدخل عنوان الاختبار">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">وصف الاختبار</label>
+                            <textarea class="form-control" name="quiz_description_new_${moduleId}" rows="2" placeholder="وصف مختصر للاختبار"></textarea>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">درجة النجاح (%)</label>
+                                <input type="number" class="form-control" name="quiz_pass_mark_new_${moduleId}" min="0" max="100" value="50">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">مدة الاختبار (دقائق)</label>
+                                <input type="number" class="form-control" name="quiz_time_limit_new_${moduleId}" min="1" value="10">
+                            </div>
+                        </div>
+                        
+                        <div class="questions-container" id="questions_container_new_${moduleId}">
+                            <!-- Questions will be added here -->
+                        </div>
+                        
+                        <button type="button" class="btn btn-primary w-100 mt-3 add-question-btn" data-module-id="new_${moduleId}">
+                            <i class="fas fa-plus me-1"></i>إضافة سؤال جديد
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('modules-container').insertAdjacentHTML('beforeend', moduleHtml);
+    
+    // Initialize new module functionality
+    initializeNewModuleEvents(moduleId);
+}
+
+function initializeNewModuleEvents(moduleId) {
+    // Remove module button
+    document.querySelector(`[data-module-id="${moduleId}"]`).addEventListener('click', function() {
+        if (confirm('هل أنت متأكد من حذف هذا الموديول؟')) {
+            document.getElementById(`new_module_${moduleId}`).remove();
+        }
+    });
+    
+    // Quiz toggle
+    document.getElementById(`has_quiz_new_${moduleId}`).addEventListener('change', function() {
+        const quizSection = document.getElementById(`quiz_section_new_${moduleId}`);
+        if (this.checked) {
+            quizSection.classList.remove('d-none');
+        } else {
+            quizSection.classList.add('d-none');
+        }
+    });
+    
+    // Initialize buttons for this module
+    initializeNoteButtons();
+    initializeVideoNameButtons();
+    initializeQuestionButtons();
+}
+
+function initializeNoteButtons() {
+    document.querySelectorAll('.add-note-btn').forEach(btn => {
+        btn.removeEventListener('click', addNoteHandler);
+        btn.addEventListener('click', addNoteHandler);
+    });
+    
+    document.querySelectorAll('.remove-note-btn').forEach(btn => {
+        btn.removeEventListener('click', removeNoteHandler);
+        btn.addEventListener('click', removeNoteHandler);
+    });
+}
+
+function addNoteHandler() {
+    const moduleId = this.getAttribute('data-module-id');
+    const container = document.getElementById(`notes_container_${moduleId}`);
+    const noteCount = container.children.length;
+    
+    const noteHtml = `
+        <div class="input-group mb-2">
+            <textarea class="form-control" name="module_notes_${moduleId}_${noteCount}" rows="2" placeholder="أدخل ملاحظة"></textarea>
+            <button type="button" class="btn btn-outline-danger remove-note-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', noteHtml);
+    initializeNoteButtons();
+}
+
+function removeNoteHandler() {
+    this.closest('.input-group').remove();
+}
+
+function initializeVideoNameButtons() {
+    document.querySelectorAll('.add-video-name-btn').forEach(btn => {
+        btn.removeEventListener('click', addVideoNameHandler);
+        btn.addEventListener('click', addVideoNameHandler);
+    });
+    
+    document.querySelectorAll('.remove-video-name-btn').forEach(btn => {
+        btn.removeEventListener('click', removeVideoNameHandler);
+        btn.addEventListener('click', removeVideoNameHandler);
+    });
+}
+
+function addVideoNameHandler() {
+    const moduleId = this.getAttribute('data-module-id');
+    const container = document.getElementById(`video_names_container_${moduleId}`);
+    const nameCount = container.children.length;
+    
+    const nameHtml = `
+        <div class="input-group mb-2">
+            <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+            <input type="text" class="form-control" name="video_name_${moduleId}_${nameCount}" placeholder="أدخل عنوان الفيديو">
+            <button type="button" class="btn btn-outline-danger remove-video-name-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', nameHtml);
+    initializeVideoNameButtons();
+}
+
+function removeVideoNameHandler() {
+    this.closest('.input-group').remove();
+}
+
+function initializeQuestionButtons() {
+    document.querySelectorAll('.add-question-btn').forEach(btn => {
+        btn.removeEventListener('click', addQuestionHandler);
+        btn.addEventListener('click', addQuestionHandler);
+    });
+}
+
+function addQuestionHandler() {
+    const moduleId = this.getAttribute('data-module-id');
+    const container = document.getElementById(`questions_container_${moduleId}`);
+    const questionCount = container.children.length;
+    questionCounter++;
+    
+    const questionHtml = `
+        <div class="card mb-3 question-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">سؤال #${questionCount + 1}</h6>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-question-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="mb-3">
+                    <input type="text" class="form-control" name="question_text_${moduleId}_${questionCounter}" placeholder="نص السؤال" required>
+                </div>
+                
+                <div class="mb-3">
+                    <select class="form-select question-type-select" name="question_type_${moduleId}_${questionCounter}">
+                        <option value="multiple_choice">اختيار من متعدد</option>
+                        <option value="true_false">صح أو خطأ</option>
+                        <option value="short_answer">إجابة قصيرة</option>
+                    </select>
+                </div>
+                
+                <div class="answers-container" id="answers_${moduleId}_${questionCounter}">
+                    <div class="answer-item mb-2">
+                        <div class="input-group">
+                            <div class="input-group-text">
+                                <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${questionCounter}" value="0" checked>
+                            </div>
+                            <input type="text" class="form-control" name="answer_text_${moduleId}_${questionCounter}_0" placeholder="الإجابة 1" required>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-answer-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="answer-item mb-2">
+                        <div class="input-group">
+                            <div class="input-group-text">
+                                <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${questionCounter}" value="1">
+                            </div>
+                            <input type="text" class="form-control" name="answer_text_${moduleId}_${questionCounter}_1" placeholder="الإجابة 2" required>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-answer-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-answer-btn">
+                    <i class="fas fa-plus me-1"></i>إضافة إجابة
+                </button>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', questionHtml);
+    
+    // Initialize question events
+    const questionCard = container.lastElementChild;
+    initializeQuestionEvents(questionCard, moduleId, questionCounter);
+}
+
+function initializeQuestionEvents(questionCard, moduleId, questionIndex) {
+    // Remove question button
+    questionCard.querySelector('.remove-question-btn').addEventListener('click', function() {
+        if (confirm('هل أنت متأكد من حذف هذا السؤال؟')) {
+            questionCard.remove();
+        }
+    });
+    
+    // Question type change
+    questionCard.querySelector('.question-type-select').addEventListener('change', function() {
+        updateAnswersForQuestionType(this.value, moduleId, questionIndex);
+    });
+    
+    // Add answer button
+    questionCard.querySelector('.add-answer-btn').addEventListener('click', function() {
+        addAnswerToQuestion(moduleId, questionIndex);
+    });
+    
+    // Remove answer buttons
+    questionCard.querySelectorAll('.remove-answer-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.closest('.answer-item').remove();
+        });
+    });
+}
+
+function updateAnswersForQuestionType(questionType, moduleId, questionIndex) {
+    const answersContainer = document.getElementById(`answers_${moduleId}_${questionIndex}`);
+    
+    if (questionType === 'true_false') {
+        answersContainer.innerHTML = `
+            <div class="answer-item mb-2">
+                <div class="input-group">
+                    <div class="input-group-text">
+                        <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${questionIndex}" value="0" checked>
+                    </div>
+                    <input type="text" class="form-control" name="answer_text_${moduleId}_${questionIndex}_0" value="صح" readonly>
+                </div>
+            </div>
+            <div class="answer-item mb-2">
+                <div class="input-group">
+                    <div class="input-group-text">
+                        <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${questionIndex}" value="1">
+                    </div>
+                    <input type="text" class="form-control" name="answer_text_${moduleId}_${questionIndex}_1" value="خطأ" readonly>
+                </div>
+            </div>
+        `;
+    } else if (questionType === 'short_answer') {
+        answersContainer.innerHTML = `
+            <div class="mb-3">
+                <label class="form-label">الإجابة الصحيحة</label>
+                <input type="text" class="form-control" name="answer_short_${moduleId}_${questionIndex}" placeholder="أدخل الإجابة الصحيحة" required>
+            </div>
+        `;
+    }
+}
+
+function addAnswerToQuestion(moduleId, questionIndex) {
+    const answersContainer = document.getElementById(`answers_${moduleId}_${questionIndex}`);
+    const answerCount = answersContainer.children.length;
+    
+    const answerHtml = `
+        <div class="answer-item mb-2">
+            <div class="input-group">
+                <div class="input-group-text">
+                    <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${questionIndex}" value="${answerCount}">
+                </div>
+                <input type="text" class="form-control" name="answer_text_${moduleId}_${questionIndex}_${answerCount}" placeholder="الإجابة ${answerCount + 1}" required>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-answer-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    answersContainer.insertAdjacentHTML('beforeend', answerHtml);
+    
+    // Initialize remove button for new answer
+    answersContainer.lastElementChild.querySelector('.remove-answer-btn').addEventListener('click', function() {
+        this.closest('.answer-item').remove();
+    });
+}
+
+function submitForm() {
+    const form = document.getElementById('course-form');
+    const formData = new FormData(form);
+    
+    // Add a hidden field to indicate this is an AJAX submission
+    formData.append('is_ajax', 'true');
+    
+    // Show loading state
+    const submitBtn = document.getElementById('submit-course-btn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري الحفظ...';
+    submitBtn.disabled = true;
+    
+    // Submit via fetch
+    fetch(form.action || '{% url "update_course" course.id %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message with Bootstrap alert
+            showAlert('success', data.message);
+            // Redirect to course detail page after 2 seconds
+            setTimeout(() => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                }
+            }, 2000);
+        } else {
+            // Show error message
+            showAlert('danger', 'حدث خطأ: ' + data.message);
+            // Reset button
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'حدث خطأ في الشبكة');
+        // Reset button
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+}
+
+// Function to show Bootstrap alerts
+function showAlert(type, message) {
+    // Remove existing alerts
+    const existingAlerts = document.querySelectorAll('.alert-custom');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Create new alert
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show alert-custom`;
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.style.minWidth = '300px';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to body
+    document.body.appendChild(alertDiv);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Step navigation functions
+function nextStep() {
+    const currentStep = document.querySelector('.step-card:not(.d-none)');
+    const nextStep = currentStep.nextElementSibling;
+    
+    if (nextStep && nextStep.classList.contains('step-card')) {
+        currentStep.classList.add('d-none');
+        nextStep.classList.remove('d-none');
+        
+        // Update stepper
+        updateStepper();
+    }
+}
+
+function prevStep() {
+    const currentStep = document.querySelector('.step-card:not(.d-none)');
+    const prevStep = currentStep.previousElementSibling;
+    
+    if (prevStep && prevStep.classList.contains('step-card')) {
+        currentStep.classList.add('d-none');
+        prevStep.classList.remove('d-none');
+        
+        // Update stepper
+        updateStepper();
+    }
+}
+
+function updateStepper() {
+    const steps = document.querySelectorAll('.step-item');
+    const currentStepIndex = Array.from(document.querySelectorAll('.step-card')).findIndex(step => !step.classList.contains('d-none'));
+    
+    steps.forEach((step, index) => {
+        if (index <= currentStepIndex) {
+            step.classList.add('active');
+        } else {
+            step.classList.remove('active');
+        }
+    });
+}
+</script>
 {% endblock dashboard_content %}

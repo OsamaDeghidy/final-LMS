@@ -11,6 +11,8 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
+import logging
+from django.db.models import Avg
 
 from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt, Article
 from user.models import Profile, Student, Organization, Teacher
@@ -19,6 +21,9 @@ from .utils import searchCourses
 from django.contrib.gis.geoip2 import GeoIP2
 from django_user_agents.utils import get_user_agent
 import requests
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 @login_required
 def dashboard(request):
@@ -89,11 +94,11 @@ def dashboard(request):
         except Teacher.DoesNotExist:
             # Create teacher if it doesn't exist
             teacher = Teacher.objects.create(profile=profile)
-            print(f"Created new teacher: {teacher}")
+            logger.info(f"Created new teacher: {teacher}")
         
         # Get ALL courses (for debugging and to ensure we get all courses)
         all_courses = Course.objects.all()
-        print(f"Total courses in database: {all_courses.count()}")
+        logger.debug(f"Total courses in database: {all_courses.count()}")
         
         # IMPORTANT: Force a direct query to get all courses for this teacher
         # This is a more direct approach that should work regardless of any caching issues
@@ -104,19 +109,19 @@ def dashboard(request):
             if course.teacher and course.teacher.id == teacher.id:
                 # Add this course to our list
                 teacher_courses.append(course)
-                print(f"Found teacher course: {course.name}, ID: {course.id}")
+                logger.debug(f"Found teacher course: {course.name}, ID: {course.id}")
         
-        print(f"Teacher: {teacher}, ID: {teacher.id}")
-        print(f"Found {len(teacher_courses)} courses for this teacher")
+        logger.debug(f"Teacher: {teacher}, ID: {teacher.id}")
+        logger.debug(f"Found {len(teacher_courses)} courses for this teacher")
         
         # If we still don't have any courses, try creating a test course
         if len(teacher_courses) == 0 and all_courses.count() > 0:
-            print("No courses found for this teacher, but there are courses in the database.")
-            print("This suggests there might be an issue with the teacher-course relationship.")
+            logger.warning("No courses found for this teacher, but there are courses in the database.")
+            logger.warning("This suggests there might be an issue with the teacher-course relationship.")
             
             # For debugging, let's check all courses and their teachers
             for course in all_courses:
-                print(f"Course: {course.name}, Teacher ID: {course.teacher_id if course.teacher else 'None'}")
+                logger.debug(f"Course: {course.name}, Teacher ID: {course.teacher_id if course.teacher else 'None'}")
                 
             # If there are no courses at all, let's create a test course for this teacher
             if all_courses.count() == 0:
@@ -133,9 +138,9 @@ def dashboard(request):
                         updated_at=datetime.today()
                     )
                     teacher_courses.append(test_course)
-                    print(f"Created test course: {test_course.name}, ID: {test_course.id}")
+                    logger.info(f"Created test course: {test_course.name}, ID: {test_course.id}")
                 except Exception as e:
-                    print(f"Error creating test course: {e}")
+                    logger.error(f"Error creating test course: {e}")
         
         # Make sure teacher_courses is a list, not a QuerySet
         teacher_courses = list(teacher_courses)
@@ -180,7 +185,6 @@ def dashboard(request):
     }
     
     return render(request, 'website/dashboard.html', context)
-import json
 
 def batch(iterable, n=1):
     """
@@ -472,50 +476,23 @@ def courseviewpage(request, course_id):
         enrollment = Enrollment.objects.filter(course=course, student=request.user).first()
         if enrollment:
             is_enrolled = True
-            # Update last accessed time and get progress
-            from .utils import update_enrollment_progress
+            # Update progress using new system
+            from .utils import update_enrollment_progress, get_completed_content_ids
             progress = update_enrollment_progress(enrollment)
             
-            # Get completed videos
-            completed_videos = VideoProgress.objects.filter(
-                student=request.user,
-                video__module__course=course,
-                watched=True
-            ).values_list('video_id', flat=True)
+            # Get completed content using new system
+            completed_videos = get_completed_content_ids(request.user, course, 'video')
+            completed_quizzes = get_completed_content_ids(request.user, course, 'quiz')
+            completed_pdfs = get_completed_content_ids(request.user, course, 'note')
+            completed_assignments = get_completed_content_ids(request.user, course, 'assignment')
             
-            # Get completed quizzes
-            try:
-                from django.db.models import Q
-                completed_quizzes = UserExamAttempt.objects.filter(
-                    user=request.user,
-                    exam__course=course,
-                    passed=True
-                ).values_list('exam_id', flat=True)
-            except Exception as e:
-                print(f"Error getting completed quizzes: {e}")
-                completed_quizzes = []
+            print(f"[DEBUG] Completed content for {request.user.username}:")
+            print(f"  - Videos: {completed_videos}")
+            print(f"  - PDFs: {completed_pdfs}")
+            print(f"  - Quizzes: {completed_quizzes}")
+            print(f"  - Assignments: {completed_assignments}")
+            print(f"  - Progress: {progress}%")
             
-            # Get accessed PDFs (Notes)
-            # Since we don't have the PDFAccess table yet, we'll use a temporary solution
-            # that assumes no PDFs are completed
-            try:
-                # For now, we'll assume no PDFs are completed
-                # In a real implementation, you would track PDF views
-                completed_pdfs = []
-            except Exception as e:
-                print(f"Error getting completed PDFs: {e}")
-                completed_pdfs = []
-            
-            # Get completed assignments
-            try:
-                completed_assignments = AssignmentSubmission.objects.filter(
-                    user=request.user,
-                    assignment__course=course,
-                    status='graded'
-                ).values_list('assignment_id', flat=True)
-            except Exception as e:
-                print(f"Error getting completed assignments: {e}")
-                completed_assignments = []
         else:
             # Check if course is in user's cart
             try:
@@ -526,18 +503,19 @@ def courseviewpage(request, course_id):
     
     # Allow access if user is enrolled or has the course in their cart
     if not (is_enrolled or in_cart):
+        messages.warning(request, 'يجب أن تكون مسجلاً في الدورة أو أن تكون في سلة التسوق لعرض هذا المحتوى')
         return redirect('course_detail', course_id=course.id)
     
-    # Get all modules for the course with related content
+    # Get all modules for the course with related content, ordered properly
     modules = course.module_set.all().prefetch_related(
-        'video_set', 'notes_set'
-    )
+        'video_set', 'notes_set', 'module_quizzes'
+    ).order_by('number')
     
     # Get quizzes and assignments for the course
     quizzes = Quiz.objects.filter(course=course)
     assignments = Assignment.objects.filter(course=course)
     
-    # Count quizzes, PDFs, and assignments
+    # Count different types of content
     quizzes_count = quizzes.count()
     pdfs_count = Notes.objects.filter(module__course=course).count()
     assignments_count = assignments.count()
@@ -546,28 +524,56 @@ def courseviewpage(request, course_id):
     content_type = request.GET.get('content_type')
     content_id = request.GET.get('content_id')
     
-    # Build a list of all content items in order
+    # Build a comprehensive list of all content items in order
     all_content = []
     for module in modules:
-        # Add videos
-        for video in module.video_set.all():
+        # Add videos ordered by number
+        for video in module.video_set.all().order_by('number'):
             all_content.append({
                 'type': 'video',
                 'content': video,
                 'module': module
             })
         
-        # Add notes (PDFs)
-        for note in module.notes_set.all():
+        # Add notes (PDFs) ordered by number
+        for note in module.notes_set.all().order_by('number'):
             all_content.append({
                 'type': 'note',
                 'content': note,
                 'module': module
             })
         
+        # Add module PDFs if they exist
+        if module.module_pdf:
+            # Create a pseudo-note for module PDF
+            module_pdf_note = type('obj', (object,), {
+                'id': f'module_pdf_{module.id}',
+                'description': f'ملف PDF - {module.name}',
+                'file': module.module_pdf,
+                'module': module
+            })()
+            all_content.append({
+                'type': 'note',
+                'content': module_pdf_note,
+                'module': module
+            })
+        
+        if module.additional_materials:
+            # Create a pseudo-note for additional materials
+            additional_note = type('obj', (object,), {
+                'id': f'additional_materials_{module.id}',
+                'description': f'مواد إضافية - {module.name}',
+                'file': module.additional_materials,
+                'module': module
+            })()
+            all_content.append({
+                'type': 'note',
+                'content': additional_note,
+                'module': module
+            })
+        
         # Add quizzes that belong to this module
-        for quiz in quizzes:
-            if quiz.module == module:
+        for quiz in module.module_quizzes.all():
                 all_content.append({
                     'type': 'quiz',
                     'content': quiz,
@@ -575,17 +581,12 @@ def courseviewpage(request, course_id):
                 })
         
         # Add assignments that belong to this module
-        for assignment in assignments:
-            if assignment.module == module:
+        for assignment in assignments.filter(module=module):
                 all_content.append({
                     'type': 'assignment',
                     'content': assignment,
                     'module': module
                 })
-    
-    # Sort content by module number and then by content number
-    all_content.sort(key=lambda x: (x['module'].number or 0, 
-                                   getattr(x['content'], 'number', 0) or 0))
     
     # Initialize content navigation
     current_content = None
@@ -596,7 +597,8 @@ def courseviewpage(request, course_id):
     if content_type and content_id:
         # Try to find the specified content
         for i, item in enumerate(all_content):
-            if item['type'] == content_type and str(item['content'].id) == content_id:
+            content_item_id = str(item['content'].id)
+            if item['type'] == content_type and content_item_id == content_id:
                 current_content = item
                 # Set previous content if not first item
                 if i > 0:
@@ -611,6 +613,16 @@ def courseviewpage(request, course_id):
         current_content = all_content[0]
         if len(all_content) > 1:
             next_content = all_content[1]
+    
+    # Calculate course statistics
+    total_videos = sum(module.video_set.count() for module in modules)
+    total_notes = sum(module.notes_set.count() for module in modules)
+    
+    # Add module PDFs to total notes count
+    total_notes += Module.objects.filter(course=course, module_pdf__isnull=False).count()
+    total_notes += Module.objects.filter(course=course, additional_materials__isnull=False).count()
+    
+    total_quizzes = sum(module.module_quizzes.count() for module in modules)
     
     context = {
         'course': course,
@@ -629,7 +641,12 @@ def courseviewpage(request, course_id):
         'quizzes_count': quizzes_count,
         'pdfs_count': pdfs_count,
         'assignments_count': assignments_count,
-        'all_content': all_content
+        'all_content': all_content,
+        'total_videos': total_videos,
+        'total_notes': total_notes,
+        'total_quizzes': total_quizzes,
+        'is_enrolled': is_enrolled,
+        'in_cart': in_cart
     }
     
     return render(request, 'website/courseviewpage.html', context)
@@ -724,98 +741,68 @@ def courseviewpagevideo(request, course_id, video_id):
     
     return render(request, 'website/courseviewpage.html', context)
 
+@login_required  
+@require_POST
 def submit_quiz(request):
-    if request.method == 'POST' and request.user.is_authenticated:
-        # Get all submitted answers
-        submitted_answers = {}
-        for key, value in request.POST.items():
-            # Parse question IDs from form data
-            if key.startswith('question_'):
-                question_id = key.split('_')[1]
-                if question_id not in submitted_answers:
-                    submitted_answers[question_id] = []
-                submitted_answers[question_id].append(value)
+    """Handle quiz submission"""
+    try:
+        quiz_id = request.POST.get('quiz_id')
+        quiz = get_object_or_404(Quiz, id=quiz_id)
         
         # Calculate score
-        total_questions = 0
+        total_questions = quiz.question_set.count()
         correct_answers = 0
         
-        for question_id, answer_ids in submitted_answers.items():
-            try:
-                question = Question.objects.get(id=question_id)
-                total_questions += 1
-                
-                # Get correct answers for this question
-                correct_answer_ids = [str(answer.id) for answer in question.answer_set.filter(is_correct=True)]
-                
-                # Check if submitted answers match correct answers
-                if set(answer_ids) == set(correct_answer_ids):
-                    correct_answers += 1
-            except Question.DoesNotExist:
-                continue
+        for question in quiz.question_set.all():
+            selected_answer_id = request.POST.get(f'question_{question.id}')
+            if selected_answer_id:
+                try:
+                    selected_answer = Answer.objects.get(id=selected_answer_id)
+                    if selected_answer.is_correct:
+                        correct_answers += 1
+                except Answer.DoesNotExist:
+                    pass
         
-        # Calculate percentage score
-        score = 0
-        if total_questions > 0:
-            score = (correct_answers / total_questions) * 100
+        # Calculate percentage
+        score_percentage = (correct_answers / total_questions * 100) if total_questions > 0 else 0
         
-        # Determine if passed based on quiz pass mark
-        passed = False
-        quiz_id = request.POST.get('quiz_id')
-        quiz = None
-        if quiz_id:
-            try:
-                quiz = Quiz.objects.get(id=quiz_id)
-                passed = score >= quiz.pass_mark
-                
-                # If passed, create or update user exam attempt
-                if passed:
-                    UserExamAttempt.objects.update_or_create(
-                        user=request.user,
-                        exam=quiz,
-                        defaults={
-                            'score': score,
-                            'passed': True,
-                            'date_taken': timezone.now()
-                        }
-                    )
-                    
-                    # Update enrollment progress if quiz is associated with a course
-                    if quiz.course:
-                        try:
-                            enrollment = Enrollment.objects.get(student=request.user, course=quiz.course)
-                            from .utils import update_enrollment_progress
-                            progress = update_enrollment_progress(enrollment)
-                        except Enrollment.DoesNotExist:
-                            progress = 0
-                    else:
-                        progress = 0
-                else:
-                    # Record the failed attempt
-                    UserExamAttempt.objects.update_or_create(
-                        user=request.user,
-                        exam=quiz,
-                        defaults={
-                            'score': score,
-                            'passed': False,
-                            'date_taken': timezone.now()
-                        }
-                    )
-                    progress = 0
-            except Quiz.DoesNotExist:
-                progress = 0
-                pass
+        # Check if passed
+        pass_mark = getattr(quiz, 'pass_mark', 60)
+        passed = score_percentage >= pass_mark
         
-        # Return JSON response with results
-        return JsonResponse({
-            'score': score,
-            'passed': passed,
-            'correct_answers': correct_answers,
-            'total_questions': total_questions,
-            'progress': progress
-        })
-    
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+        # Save exam attempt
+        try:
+            UserExamAttempt.objects.create(
+                user=request.user,
+                exam=quiz,
+                score=score_percentage,
+                passed=passed
+            )
+        except Exception:
+            pass
+        
+        # Update progress if passed
+        if passed:
+            enrollment = Enrollment.objects.filter(
+                course=quiz.course,
+                student=request.user
+            ).first()
+            
+            if enrollment:
+                from .utils import update_enrollment_progress
+                progress = update_enrollment_progress(enrollment)
+        
+        # Redirect to results page or back to course
+        if passed:
+            messages.success(request, f'تهانينا! لقد نجحت في الاختبار بدرجة {score_percentage:.1f}%')
+        else:
+            messages.warning(request, f'لم تنجح في الاختبار. حصلت على {score_percentage:.1f}% والمطلوب {pass_mark}%')
+        
+        return redirect('courseviewpage', course_id=quiz.course.id)
+        
+    except Exception as e:
+        messages.error(request, f'حدث خطأ أثناء تسليم الاختبار: {str(e)}')
+        return redirect('courseviewpage', course_id=quiz.course.id)
 
 def courseviewpagenote(request, course_id, note_id):
     course = get_object_or_404(Course, id=course_id)
@@ -1087,7 +1074,7 @@ def create_course(request):
                                 text=question_text,
                                 question_type=question_type,
                                 points=1,
-                                order=int(question_index)
+                                order=int(question_index) if question_index.isdigit() else 0
                             )
                             
                             # Process answers based on question type
@@ -1118,7 +1105,7 @@ def create_course(request):
                                             question=question,
                                             text=answer_text,
                                             is_correct=is_correct,
-                                            order=int(answer_index)
+                                            order=int(answer_index) if answer_index.isdigit() else 0
                                         )
                 
                 course.save()
@@ -1234,48 +1221,58 @@ def update_course(request, course_id):
     logger = logging.getLogger(__name__)
     
     course = get_object_or_404(Course, pk=course_id)
-    if(course.teacher.profile == request.user.profile):
-        # Get user profile and student data
-        profile = get_object_or_404(Profile, user=request.user)
-        student = None
-        try:
-            student = Student.objects.get(profile=profile)
-        except Student.DoesNotExist:
-            pass  # User might be a teacher, not a student
-        
-        # Get all modules associated with this course
+    
+    # Check if user has permission to edit this course
+    if not (course.teacher and course.teacher.profile == request.user.profile):
+        messages.error(request, 'ليس لديك صلاحية لتعديل هذه الدورة')
+        return redirect('course_detail', course_id=course_id)
+    
+    # Get user profile and student data
+    profile = get_object_or_404(Profile, user=request.user)
+    student = None
+    try:
+        student = Student.objects.get(profile=profile)
+    except Student.DoesNotExist:
+        pass  # User might be a teacher, not a student
+    
+    # Get all modules associated with this course
+    modules = Module.objects.filter(course=course).order_by('number')
+    
+    # Ensure course has at least one module
+    if not modules.exists():
+        ensure_course_has_module(course)
         modules = Module.objects.filter(course=course).order_by('number')
-        
-        # Get categories and organizations for the form
-        categories = Category.objects.all()
-        organizations = Organization.objects.all()
-        
-        # Create JSON data for modules
-        modules_json = {}
-        for module in modules:
-            videos = [{'id': video.id, 'name': video.name} for video in module.video_set.all()]
-            modules_json[str(module.id)] = {
-                'id': module.id,
-                'name': module.name,
-                'description': module.description or '',
-                'videos': videos,
-                'total_video': module.total_video,
-                'duration': module.duration or ''
-            }
-        
-        # Prepare tags string for the form
-        tags_string = ", ".join([tag.name for tag in course.tags.all()])
-        
-        if request.method == 'POST':
-            # Update course data
-            course.name = request.POST.get('name')
-            course.description = request.POST.get('description')
-            course.price = request.POST.get('price')
-            course.small_description = request.POST.get('small_description')
-            course.learned = request.POST.get('learned')
-            course.level = request.POST.get('level')
-            tags = request.POST.get('tags', '').split(',')
-            course.update_at = datetime.today()
+    
+    # Get categories and organizations for the form
+    categories = Category.objects.all()
+    organizations = Organization.objects.all()
+    
+    # Create JSON data for modules
+    modules_json = {}
+    for module in modules:
+        videos = [{'id': video.id, 'name': video.name} for video in module.video_set.all()]
+        modules_json[str(module.id)] = {
+            'id': module.id,
+            'name': module.name,
+            'description': module.description or '',
+            'videos': videos,
+            'total_video': module.total_video,
+            'duration': module.duration or ''
+        }
+    
+    # Prepare tags string for the form
+    tags_string = ", ".join([tag.name for tag in course.tags.all()])
+    
+    if request.method == 'POST':
+        try:
+            # Update basic course information
+            course.name = request.POST.get('name', course.name)
+            course.description = request.POST.get('description', course.description)
+            course.price = request.POST.get('price', course.price)
+            course.small_description = request.POST.get('small_description', course.small_description)
+            course.learned = request.POST.get('learned', course.learned)
+            course.level = request.POST.get('level', course.level)
+            course.updated_at = datetime.today()
             
             # Update category if provided
             category_id = request.POST.get('category')
@@ -1283,456 +1280,49 @@ def update_course(request, course_id):
                 try:
                     category = Category.objects.get(pk=category_id)
                     course.category = category
-                    logger.info(f"Updated category for course {course_id} to {category.name}")
                 except Category.DoesNotExist:
                     logger.warning(f"Category with ID {category_id} not found")
-            
-            # Update organization if provided
-            organization_id = request.POST.get('organization')
-            if organization_id:
-                try:
-                    organization = Organization.objects.get(pk=organization_id)
-                    course.organization = organization
-                    logger.info(f"Updated organization for course {course_id} to {organization.name}")
-                except Organization.DoesNotExist:
-                    logger.warning(f"Organization with ID {organization_id} not found")
             
             # Handle image upload
             if 'image_course' in request.FILES:
                 course.image_course = request.FILES['image_course']
                 
             # Handle PDF uploads
-            # Handle syllabus PDF
             if 'syllabus_pdf' in request.FILES:
-                # If there's a new file, replace the old one
                 if course.syllabus_pdf:
                     course.syllabus_pdf.delete(save=False)
                 course.syllabus_pdf = request.FILES['syllabus_pdf']
-                logger.info(f"Uploaded new syllabus PDF for course {course_id}: {request.FILES['syllabus_pdf'].name}")
             elif request.POST.get('delete_syllabus_pdf') == '1':
-                # If delete flag is set and no new file is uploaded, delete the existing file
                 if course.syllabus_pdf:
                     course.syllabus_pdf.delete(save=False)
                     course.syllabus_pdf = None
-                    logger.info(f"Deleted syllabus PDF for course {course_id}")
                     
-            # Handle materials PDF
             if 'materials_pdf' in request.FILES:
-                # If there's a new file, replace the old one
                 if course.materials_pdf:
                     course.materials_pdf.delete(save=False)
                 course.materials_pdf = request.FILES['materials_pdf']
-                logger.info(f"Uploaded new materials PDF for course {course_id}: {request.FILES['materials_pdf'].name}")
             elif request.POST.get('delete_materials_pdf') == '1':
-                # If delete flag is set and no new file is uploaded, delete the existing file
                 if course.materials_pdf:
                     course.materials_pdf.delete(save=False)
                     course.materials_pdf = None
-                    logger.info(f"Deleted materials PDF for course {course_id}")
 
-            # Clear existing tags and add new ones
+            # Handle tags
+            tags_input = request.POST.get('tags', '')
             course.tags.clear()
-            for tag in tags:
-                tag = tag.strip()
-                if tag:
-                    obj, created = Tags.objects.get_or_create(name=tag)
-                    course.tags.add(obj)
-                    
-            # Save course with all updates
+            if tags_input:
+                tags_list = [tag.strip() for tag in tags_input.split(',') if tag.strip()]
+                for tag_name in tags_list:
+                    tag, created = Tags.objects.get_or_create(name=tag_name)
+                    course.tags.add(tag)
+            
+            # Save course first
             course.save()
-            logger.info(f"Course {course_id} updated successfully with basic changes")
+            logger.info(f"Course {course_id} basic info updated successfully")
             
-            # Process existing modules
-            for key, value in request.POST.items():
-                # Handle existing module updates
-                if key.startswith('module_name_existing_'):
-                    parts = key.split('_')
-                    if len(parts) >= 3:
-                        module_id = parts[-1]  # Get the module ID from the end of the key
-                        try:
-                            # Ensure module_id is a valid integer
-                            module_id = int(module_id)
-                            module = Module.objects.get(id=module_id, course=course)
-                            module.name = value
-                            module.description = request.POST.get(f'module_description_existing_{module_id}', '')
-                            module.save()
-                            logger.info(f"Updated module {module_id} for course {course_id}")
-                        except (ValueError, Module.DoesNotExist):
-                            logger.warning(f"Could not update module with ID {module_id} for course {course_id}")
-                            continue
-                        
-                # Handle module deletion
-                elif key.startswith('delete_module_') and value == '1':
-                    module_id = key.replace('delete_module_', '')
-                    try:
-                        # Ensure module_id is a valid integer
-                        module_id = int(module_id)
-                        module = Module.objects.get(id=module_id, course=course)
-                        module.delete()
-                        logger.info(f"Deleted module {module_id} from course {course_id}")
-                    except (ValueError, Module.DoesNotExist):
-                        logger.warning(f"Could not delete module with ID {module_id} for course {course_id}")
-                        continue
+            # Update course totals
+            course.total_module = course.module_set.count()
+            course.save()
             
-            # Process new modules from dynamic form
-            # First identify all new modules by looking for keys that match the pattern
-            new_module_ids = set()
-            for key in request.POST.keys():
-                # Look for module_name_new_TIMESTAMP pattern
-                if key.startswith('module_name_new_'):
-                    module_id = key.replace('module_name_new_', '')
-                    new_module_ids.add(module_id)
-                # Also check for the pattern from the JavaScript-generated modules
-                elif key.startswith('module_title_new_'):
-                    module_id = key.replace('module_title_new_', '')
-                    new_module_ids.add(module_id)
-            
-            logger.info(f"Found {len(new_module_ids)} new modules to process")
-            
-            # Process each new module
-            for module_id in new_module_ids:
-                # Get module name from either naming convention
-                module_name = request.POST.get(f'module_name_new_{module_id}') or \
-                              request.POST.get(f'module_title_new_{module_id}')
-                
-                if not module_name or not module_name.strip():
-                    logger.warning(f"Skipping new module {module_id} with empty name")
-                    continue
-                
-                # Get module description
-                module_description = request.POST.get(f'module_description_new_{module_id}', '')
-                
-                # Create the new module
-                new_module = Module.objects.create(
-                    course=course,
-                    name=module_name,
-                    description=module_description,
-                    number=course.total_module + 1  # Set number to be after existing modules
-                )
-                course.total_module += 1
-                logger.info(f"Created new module {new_module.id} for course {course_id}")
-                
-                # Process videos for this module if any
-                video_files = request.FILES.getlist(f'module_videos_new_{module_id}')
-                video_names = []
-                
-                # Get video names
-                for key in request.POST.keys():
-                    if key.startswith(f'video_name_new_{module_id}_'):
-                        video_name = request.POST.get(key)
-                        if video_name and video_name.strip():
-                            video_names.append(video_name)
-                
-                # Create videos
-                for i, video in enumerate(video_files):
-                    video_name = video_names[i] if i < len(video_names) else video.name.split('.')[0]
-                    Video.objects.create(
-                        name=video_name,
-                        module=new_module,
-                        course=course,
-                        video=video,
-                        number=i+1
-                    )
-                    new_module.total_video += 1
-                
-                # Process notes for this module
-                for key in request.POST.keys():
-                    if key.startswith(f'note_new_{module_id}_'):
-                        note_text = request.POST.get(key)
-                        if note_text and note_text.strip():
-                            Notes.objects.create(
-                                user=request.user,
-                                module=new_module,
-                                description=note_text
-                            )
-                            new_module.total_notes += 1
-                
-                # Process quiz if exists
-                has_quiz = request.POST.get(f'has_quiz_new_{module_id}')
-                if has_quiz == '1' or has_quiz == 'on':
-                    quiz_title = request.POST.get(f'quiz_title_new_{module_id}', f'Quiz for {module_name}')
-                    quiz_description = request.POST.get(f'quiz_description_new_{module_id}', '')
-                    quiz_pass_mark = request.POST.get(f'quiz_pass_mark_new_{module_id}', 50)
-                    quiz_time_limit = request.POST.get(f'quiz_time_limit_new_{module_id}', 10)
-                    
-                    # Create quiz
-                    quiz = Quiz.objects.create(
-                        title=quiz_title,
-                        description=quiz_description,
-                        module=new_module,
-                        course=course,
-                        quiz_type='module',
-                        pass_mark=float(quiz_pass_mark),
-                        time_limit=int(quiz_time_limit),
-                        is_active=True
-                    )
-                    
-                    # Process questions
-                    question_indices = set()
-                    for key in request.POST.keys():
-                        if key.startswith(f'question_text_new_{module_id}_'):
-                            question_index = key.split(f'question_text_new_{module_id}_')[1]
-                            question_indices.add(question_index)
-                    
-                    for question_index in question_indices:
-                        question_text = request.POST.get(f'question_text_new_{module_id}_{question_index}')
-                        if not question_text or not question_text.strip():
-                            continue
-                        
-                        question_type = request.POST.get(f'question_type_new_{module_id}_{question_index}', 'multiple_choice')
-                        
-                        # Create question
-                        question = Question.objects.create(
-                            quiz=quiz,
-                            text=question_text,
-                            question_type=question_type,
-                            points=1,
-                            order=int(question_index) if question_index.isdigit() else 0
-                        )
-                        
-                        # Process answers based on question type
-                        if question_type == 'multiple_choice':
-                            correct_answer = request.POST.get(f'correct_answer_new_{module_id}_{question_index}')
-                            
-                            # Get all answers for this question
-                            answer_indices = set()
-                            for answer_key in request.POST.keys():
-                                if answer_key.startswith(f'answer_text_new_{module_id}_{question_index}_'):
-                                    answer_index = answer_key.split('_')[-1]
-                                    answer_indices.add(answer_index)
-                            
-                            for answer_index in answer_indices:
-                                answer_text = request.POST.get(f'answer_text_new_{module_id}_{question_index}_{answer_index}')
-                                if answer_text and answer_text.strip():
-                                    is_correct = (correct_answer == answer_index)
-                                    Answer.objects.create(
-                                        question=question,
-                                        text=answer_text,
-                                        is_correct=is_correct,
-                                        order=int(answer_index) if answer_index.isdigit() else 0
-                                    )
-                        elif question_type == 'true_false':
-                            correct_answer = request.POST.get(f'correct_answer_new_{module_id}_{question_index}')
-                            
-                            # Create True answer
-                            Answer.objects.create(
-                                question=question,
-                                text="صح",
-                                is_correct=correct_answer == '0',
-                                order=0
-                            )
-                            
-                            # Create False answer
-                            Answer.objects.create(
-                                question=question,
-                                text="خطأ",
-                                is_correct=correct_answer == '1',
-                                order=1
-                            )
-                        elif question_type == 'short_answer':
-                            answer_text = request.POST.get(f'answer_short_new_{module_id}_{question_index}', '')
-                            Answer.objects.create(
-                                question=question,
-                                text=answer_text,
-                                is_correct=True,
-                                order=0
-                            )
-                
-                # Save the module with all updates
-                new_module.save()
-            
-            # Process quizzes
-            # Process existing questions first
-            for key, value in request.POST.items():
-                # Handle existing questions
-                if key.startswith('question_text_existing_'):
-                    parts = key.split('_')
-                    if len(parts) >= 5:  # Format: question_text_existing_MODULE_ID_QUESTION_ID
-                        module_id_str = parts[3]
-                        question_id_str = parts[4]
-                        
-                        # If we have a question ID, use it directly
-                        if question_id_str and question_id_str.isdigit():
-                            question_id = int(question_id_str)
-                            try:
-                                # Get the existing question
-                                question = Question.objects.get(id=question_id)
-                                quiz = question.quiz
-                                module = quiz.module
-                                
-                                # Make sure this question belongs to this course
-                                if module.course.id != course.id:
-                                    logger.warning(f"Question {question_id} does not belong to course {course_id}")
-                                    continue
-                                
-                                # Update question
-                                question_type = request.POST.get(f'question_type_existing_{module_id_str}_{question_id}', question.question_type)
-                                question.text = value
-                                question.question_type = question_type
-                                question.save()
-                                logger.info(f"Updated existing question {question_id} for module {module.id}")
-                                
-                                # Process answers based on question type
-                                if question_type == 'multiple_choice':
-                                    # Get all answer texts for this question
-                                    answer_keys = [k for k in request.POST.keys() if k.startswith(f'answer_text_existing_{question_id}_')]
-                                    
-                                    # Delete existing answers for this question
-                                    Answer.objects.filter(question=question).delete()
-                                    
-                                    # Get the correct answer value
-                                    correct_answer_value = request.POST.get(f'correct_answer_existing_{question_id}', '')
-                                    logger.info(f"Correct answer value for question {question_id}: {correct_answer_value}")
-                                    
-                                    # Create new answers
-                                    for answer_key in answer_keys:
-                                        answer_index = answer_key.split('_')[-1]
-                                        answer_text = request.POST.get(answer_key)
-                                        is_correct = (correct_answer_value == answer_index)
-                                        
-                                        Answer.objects.create(
-                                            question=question,
-                                            text=answer_text,
-                                            is_correct=is_correct
-                                        )
-                                        logger.info(f"Created answer for question {question_id}: {answer_text}, correct: {is_correct}")
-                                        
-                                elif question_type == 'true_false':
-                                    # Delete existing answers
-                                    Answer.objects.filter(question=question).delete()
-                                    
-                                    # Get the correct answer value
-                                    correct_answer_value = request.POST.get(f'correct_answer_existing_{question_id}', '')
-                                    
-                                    # Create True answer
-                                    Answer.objects.create(
-                                        question=question,
-                                        text="صح",
-                                        is_correct=correct_answer_value == '0'
-                                    )
-                                    
-                                    # Create False answer
-                                    Answer.objects.create(
-                                        question=question,
-                                        text="خطأ",
-                                        is_correct=correct_answer_value == '1'
-                                    )
-                                elif question_type == 'short_answer':
-                                    # Delete existing answers
-                                    Answer.objects.filter(question=question).delete()
-                                    
-                                    # Create the correct answer
-                                    correct_answer = request.POST.get(f'answer_short_existing_{question_id}', '')
-                                    Answer.objects.create(
-                                        question=question,
-                                        text=correct_answer,
-                                        is_correct=True
-                                    )
-                            except Question.DoesNotExist:
-                                logger.warning(f"Question with ID {question_id} not found")
-                                continue
-            
-            # Then process new questions for existing modules
-            for key, value in request.POST.items():
-                if key.startswith('question_text_') and not key.startswith('question_text_existing_'):
-                    parts = key.split('_')
-                    if len(parts) >= 3:
-                        module_id = parts[2]
-                        question_index = parts[3] if len(parts) > 3 else '0'
-                        
-                        try:
-                            # Ensure module_id is a valid integer
-                            if not module_id.isdigit():
-                                continue
-                            module_id = int(module_id)
-                            module = Module.objects.get(id=module_id, course=course)
-                            
-                            # Get or create quiz for this module
-                            quiz, created = Quiz.objects.get_or_create(
-                                module=module,
-                                defaults={'name': f"Quiz for {module.name}"}
-                            )
-                            
-                            # Create or update question
-                            question_type = request.POST.get(f'question_type_{module_id}_{question_index}', 'multiple_choice')
-                            question_text = value
-                            
-                            # Check if this is an existing question or a new one
-                            question_id = request.POST.get(f'question_id_{module_id}_{question_index}', '')
-                            
-                            if question_id and question_id.isdigit():
-                                # Update existing question
-                                try:
-                                    question = Question.objects.get(id=int(question_id), quiz=quiz)
-                                    question.text = question_text
-                                    question.question_type = question_type
-                                    question.save()
-                                    logger.info(f"Updated question {question_id} for module {module_id}")
-                                except Question.DoesNotExist:
-                                    continue
-                            else:
-                                # Create new question
-                                question = Question.objects.create(
-                                    quiz=quiz,
-                                    text=question_text,
-                                    question_type=question_type
-                                )
-                                logger.info(f"Created new question {question.id} for module {module_id}")
-                            
-                            # Process answers for this question
-                            if question_type == 'multiple_choice':
-                                # Get all answer texts and correct flags for this question
-                                answer_keys = [k for k in request.POST.keys() if k.startswith(f'answer_text_{module_id}_{question_index}_')]
-                                
-                                # Delete existing answers for this question
-                                Answer.objects.filter(question=question).delete()
-                                
-                                # Get the correct answer value
-                                correct_answer_value = request.POST.get(f'correct_answer_{module_id}_{question_index}', '')
-                                
-                                # Create new answers
-                                for answer_key in answer_keys:
-                                    answer_index = answer_key.split('_')[-1]
-                                    answer_text = request.POST.get(answer_key)
-                                    is_correct = correct_answer_value == answer_index
-                                    
-                                    Answer.objects.create(
-                                        question=question,
-                                        text=answer_text,
-                                        is_correct=is_correct
-                                    )
-                            elif question_type == 'true_false':
-                                # Delete existing answers
-                                Answer.objects.filter(question=question).delete()
-                                
-                                # Create True answer
-                                Answer.objects.create(
-                                    question=question,
-                                    text="صح",
-                                    is_correct=request.POST.get(f'correct_answer_{module_id}_{question_index}') == '0'
-                                )
-                                
-                                # Create False answer
-                                Answer.objects.create(
-                                    question=question,
-                                    text="خطأ",
-                                    is_correct=request.POST.get(f'correct_answer_{module_id}_{question_index}') == '1'
-                                )
-                            elif question_type == 'short_answer':
-                                # Delete existing answers
-                                Answer.objects.filter(question=question).delete()
-                                
-                                # Create the correct answer
-                                correct_answer = request.POST.get(f'answer_short_{module_id}_{question_index}', '')
-                                Answer.objects.create(
-                                    question=question,
-                                    text=correct_answer,
-                                    is_correct=True
-                                )
-                        except Module.DoesNotExist:
-                            continue
-            
-            # Add success message
             messages.success(request, 'تم تحديث الدورة بنجاح')
             
             # Check if this is an AJAX request
@@ -1743,21 +1333,102 @@ def update_course(request, course_id):
                     'redirect_url': reverse('course_detail', args=[course_id])
                 })
             else:
-                # Redirect to course detail page
                 return redirect('course_detail', course_id=course.id)
+                
+        except Exception as e:
+            logger.error(f"Error updating course {course_id}: {str(e)}")
+            messages.error(request, f'حدث خطأ أثناء تحديث الدورة: {str(e)}')
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    
+    return render(request, 'website/update_course.html', {
+        'course': course, 
+        'modules': modules,
+        'modules_json': json.dumps(modules_json),
+        'profile': profile,
+        'student': student,
+        'categories': categories,
+        'organizations': organizations,
+        'tags_string': tags_string
+    })
+
+def _process_quiz_questions(request, quiz, module_prefix):
+    """Helper function to process quiz questions for both new and existing modules"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Get all question text fields for this quiz
+    question_keys = [key for key in request.POST.keys() if key.startswith(f'question_text_{module_prefix}_')]
+    
+    for question_key in question_keys:
+        # Extract question index from key
+        question_index = question_key.replace(f'question_text_{module_prefix}_', '')
+        question_text = request.POST.get(question_key)
         
-        return render(request, 'website/update_course.html', {
-            'course': course, 
-            'modules': modules,
-            'modules_json': json.dumps(modules_json),
-            'profile': profile,
-            'student': student,
-            'categories': categories,
-            'organizations': organizations,
-            'tags_string': tags_string
-        })
-    else:
-        return redirect('course_detail', course_id=course.id)
+        if not question_text or not question_text.strip():
+            continue
+        
+        question_type = request.POST.get(f'question_type_{module_prefix}_{question_index}', 'multiple_choice')
+        
+        # Create or update question
+        question = Question.objects.create(
+            quiz=quiz,
+            text=question_text,
+            question_type=question_type,
+            points=1,
+            order=int(question_index) if question_index.isdigit() else 0
+        )
+        
+        # Process answers based on question type
+        if question_type == 'multiple_choice':
+            correct_answer = request.POST.get(f'correct_answer_{module_prefix}_{question_index}')
+            
+            # Get all answers for this question
+            answer_keys = [k for k in request.POST.keys() if k.startswith(f'answer_text_{module_prefix}_{question_index}_')]
+            
+            for answer_key in answer_keys:
+                answer_index = answer_key.split('_')[-1]
+                answer_text = request.POST.get(answer_key)
+                
+                if answer_text and answer_text.strip():
+                    is_correct = (correct_answer == answer_index)
+                    Answer.objects.create(
+                        question=question,
+                        text=answer_text,
+                        is_correct=is_correct,
+                        order=int(answer_index) if answer_index.isdigit() else 0
+                    )
+        
+        elif question_type == 'true_false':
+            correct_answer = request.POST.get(f'correct_answer_{module_prefix}_{question_index}')
+            
+            # Create True answer
+            Answer.objects.create(
+                question=question,
+                text="صح",
+                is_correct=correct_answer == '0',
+                order=0
+            )
+            
+            # Create False answer
+            Answer.objects.create(
+                question=question,
+                text="خطأ",
+                is_correct=correct_answer == '1',
+                order=1
+            )
+        
+        elif question_type == 'short_answer':
+            answer_text = request.POST.get(f'answer_short_{module_prefix}_{question_index}', '')
+            Answer.objects.create(
+                question=question,
+                text=answer_text,
+                is_correct=True,
+                order=0
+            )
+        
+        logger.info(f"Created question {question.id} for quiz {quiz.id}")
 
 def delete_course(request):
     if request.method == 'POST':
@@ -2189,119 +1860,219 @@ def enroll_course(request, course_id):
     }
     return render(request, 'website/enrollment_confirmation.html', context)
 
-@csrf_exempt
+@login_required
+@require_POST
 def mark_video_watched(request, video_id):
     """API endpoint to mark a video as watched"""
-    if not request.user.is_authenticated:
-        return JsonResponse({'status': 'error', 'message': 'User not authenticated'}, status=401)
-    
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Only POST method allowed'}, status=405)
-    
     try:
-        video = Video.objects.get(id=video_id)
-        
-        # Get the student object
-        student = Student.objects.get(profile__user=request.user)
+        video = get_object_or_404(Video, id=video_id)
         
         # Get or create video progress
         video_progress, created = VideoProgress.objects.get_or_create(
-            student=student,
+            student=request.user,
             video=video,
-            defaults={'watched': False}
+            defaults={'watched': True}
         )
         
-        # Mark as watched
-        video_progress.mark_as_watched()
+        if not video_progress.watched:
+            video_progress.watched = True
+            video_progress.save()
         
         # Update enrollment progress
         enrollment = Enrollment.objects.filter(
-            student=student, 
-            course=video.module.course
+            course=video.module.course,
+            student=request.user
         ).first()
         
         if enrollment:
             from .utils import update_enrollment_progress
             progress = update_enrollment_progress(enrollment)
-            return JsonResponse({
-                'status': 'success', 
-                'message': 'Video marked as watched',
-                'progress': progress
-            })
         else:
-            return JsonResponse({'status': 'error', 'message': 'User not enrolled in this course'}, status=400)
-            
-    except Video.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Video not found'}, status=404)
+            progress = 0
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'تم تسجيل مشاهدة الفيديو',
+            'progress': progress
+        })
+        
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
 
-
-def analytics(request):
-    return render(request, 'website/analytics.html')
-
-
-@csrf_exempt
-def mark_quiz_completed(request, quiz_id):
-    """API endpoint to mark a quiz as completed"""
-    if not request.user.is_authenticated:
-        return JsonResponse({'status': 'error', 'message': 'User not authenticated'}, status=401)
-    
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Only POST method allowed'}, status=405)
-    
+@login_required
+@require_POST
+def mark_content_viewed(request, content_type, content_id):
+    """API endpoint to mark any content as viewed"""
     try:
-        quiz = Quiz.objects.get(id=quiz_id)
+        from .utils import mark_content_completed
+        course = None
         
-        # Get the score from the request
-        data = json.loads(request.body)
-        score = data.get('score', 0)
+        # Get the course based on content type
+        if content_type == 'video':
+            video = get_object_or_404(Video, id=content_id)
+            course = video.module.course
+            
+        elif content_type == 'note':
+            # Handle both regular notes and module PDFs
+            if content_id.startswith('module_pdf_'):
+                module_id = content_id.replace('module_pdf_', '')
+                module = get_object_or_404(Module, id=module_id)
+                course = module.course
+            elif content_id.startswith('additional_materials_'):
+                module_id = content_id.replace('additional_materials_', '')
+                module = get_object_or_404(Module, id=module_id)
+                course = module.course
+            else:
+                note = get_object_or_404(Notes, id=content_id)
+                course = note.module.course
+            
+        elif content_type == 'quiz':
+            quiz = get_object_or_404(Quiz, id=content_id)
+            course = quiz.course
+            
+        elif content_type == 'assignment':
+            assignment = get_object_or_404(Assignment, id=content_id)
+            course = assignment.course
+        else:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'نوع المحتوى غير صالح'
+            }, status=400)
         
-        # Create or update quiz attempt
-        QuizAttempt.objects.update_or_create(
+        # Check if user is enrolled
+        if not Enrollment.objects.filter(course=course, student=request.user).exists():
+            return JsonResponse({
+                'status': 'error',
+                'message': 'غير مسجل في هذه الدورة'
+            }, status=403)
+        
+        # Mark content as completed and get updated progress
+        progress = mark_content_completed(request.user, course, content_type, content_id)
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'تم تسجيل المشاهدة بنجاح',
+            'progress': progress,
+            'content_type': content_type,
+            'content_id': content_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in mark_content_viewed: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': f'حدث خطأ: {str(e)}'
+        }, status=500)
+
+@login_required
+@require_POST
+def submit_quiz(request):
+    """Handle quiz submission"""
+    try:
+        quiz_id = request.POST.get('quiz_id')
+        quiz = get_object_or_404(Quiz, id=quiz_id)
+        
+        # Calculate score
+        total_questions = quiz.question_set.count()
+        correct_answers = 0
+        
+        for question in quiz.question_set.all():
+            selected_answer_id = request.POST.get(f'question_{question.id}')
+            if selected_answer_id:
+                try:
+                    selected_answer = Answer.objects.get(id=selected_answer_id)
+                    if selected_answer.is_correct:
+                        correct_answers += 1
+                except Answer.DoesNotExist:
+                    pass
+        
+        # Calculate percentage
+        score_percentage = (correct_answers / total_questions * 100) if total_questions > 0 else 0
+        
+        # Check if passed
+        pass_mark = getattr(quiz, 'pass_mark', 60)
+        passed = score_percentage >= pass_mark
+        
+        # Save exam attempt
+        try:
+            UserExamAttempt.objects.create(
+                user=request.user,
+                exam=quiz,
+                score=score_percentage,
+                passed=passed
+            )
+        except Exception:
+            pass
+        
+        # Update progress if passed
+        if passed:
+            enrollment = Enrollment.objects.filter(
+                course=quiz.course,
+                student=request.user
+            ).first()
+            
+            if enrollment:
+                from .utils import update_enrollment_progress
+                progress = update_enrollment_progress(enrollment)
+        
+        # Redirect to results page or back to course
+        if passed:
+            messages.success(request, f'تهانينا! لقد نجحت في الاختبار بدرجة {score_percentage:.1f}%')
+        else:
+            messages.warning(request, f'لم تنجح في الاختبار. حصلت على {score_percentage:.1f}% والمطلوب {pass_mark}%')
+        
+        return redirect('courseviewpage', course_id=quiz.course.id)
+        
+    except Exception as e:
+        messages.error(request, f'حدث خطأ أثناء تسليم الاختبار: {str(e)}')
+        return redirect('courseviewpage', course_id=quiz.course.id)
+
+@login_required
+@require_POST
+def mark_assignment_completed(request, assignment_id):
+    """API endpoint to mark an assignment as completed"""
+    try:
+        assignment = get_object_or_404(Assignment, id=assignment_id)
+        
+        # Create or update assignment submission
+        submission, created = AssignmentSubmission.objects.get_or_create(
             user=request.user,
-            quiz=quiz,
+            assignment=assignment,
             defaults={
-                'score': score,
-                'passed': True,  # We assume it's passed if this endpoint is called
-                'end_time': timezone.now()
+                'status': 'submitted',
+                'submitted_at': timezone.now()
             }
         )
         
-        # Get the course through the video or module relationship
-        course = None
-        if quiz.video:
-            course = quiz.video.module.course
-        elif quiz.module:
-            course = quiz.module.course
-        else:
-            return JsonResponse({'status': 'error', 'message': 'Quiz is not associated with a course'}, status=400)
-            
-        # Get the student
-        student = Student.objects.get(profile__user=request.user)
-        
         # Update enrollment progress
         enrollment = Enrollment.objects.filter(
-            student=student, 
-            course=course
+            course=assignment.course,
+            student=request.user
         ).first()
         
         if enrollment:
             from .utils import update_enrollment_progress
             progress = update_enrollment_progress(enrollment)
-            return JsonResponse({
-                'status': 'success', 
-                'message': 'Quiz marked as completed',
-                'progress': progress
-            })
         else:
-            return JsonResponse({'status': 'error', 'message': 'User not enrolled in this course'}, status=400)
-            
-    except Quiz.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Quiz not found'}, status=404)
+            progress = 0
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'تم تسجيل تسليم الواجب',
+            'progress': progress
+        })
+        
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
 
+def analytics(request):
+    return render(request, 'website/analytics.html')
 
 @login_required
 def delete_pdf(request, course_id, pdf_type):
@@ -2319,17 +2090,78 @@ def delete_pdf(request, course_id, pdf_type):
         course.syllabus_pdf.delete(save=False)
         course.syllabus_pdf = None
         course.save()
+        messages.success(request, 'تم حذف ملف المنهج بنجاح')
     elif pdf_type == 'materials_pdf' and course.materials_pdf:
         # Delete the file
         course.materials_pdf.delete(save=False)
         course.materials_pdf = None
         course.save()
+        messages.success(request, 'تم حذف ملف المواد بنجاح')
     else:
         messages.error(request, 'لم يتم العثور على الملف المطلوب')
     
     # Redirect back to the update course page
     return redirect('update_course', course_id=course_id)
 
+@login_required
+def delete_module_pdf(request, module_id, pdf_type):
+    """Delete a PDF file from a module"""
+    module = get_object_or_404(Module, id=module_id)
+    
+    # Check if user is authorized to modify this module
+    if not request.user.is_staff and (not hasattr(request.user, 'teacher') or request.user.teacher != module.course.teacher):
+        messages.error(request, 'ليس لديك صلاحية لحذف هذا الملف')
+        return redirect('update_course', course_id=module.course.id)
+    
+    # Delete the appropriate file based on pdf_type
+    if pdf_type == 'module_pdf' and hasattr(module, 'module_pdf') and module.module_pdf:
+        # Delete the file
+        module.module_pdf.delete(save=False)
+        module.module_pdf = None
+        module.save()
+        messages.success(request, 'تم حذف ملف PDF الرئيسي للموديول بنجاح')
+    elif pdf_type == 'additional_materials' and hasattr(module, 'additional_materials') and module.additional_materials:
+        # Delete the file
+        module.additional_materials.delete(save=False)
+        module.additional_materials = None
+        module.save()
+        messages.success(request, 'تم حذف ملف المواد الإضافية بنجاح')
+    else:
+        messages.error(request, 'لم يتم العثور على الملف المطلوب')
+    
+    # Redirect back to the update course page
+    return redirect('update_course', course_id=module.course.id)
+
+def ensure_course_has_module(course):
+    """Ensure that a course has at least one module. Create one if none exists."""
+    if not course.module_set.exists():
+        # Create a default module
+        module = Module.objects.create(
+            course=course,
+            name="الموديول الأول",
+            description="الموديول الأساسي للدورة",
+            number=1
+        )
+        logger.info(f"Created default module {module.id} for course {course.id}")
+        return module
+    return course.module_set.first()
+
+def ensure_module_has_quiz(module, quiz_title="اختبار الموديول"):
+    """Ensure that a module has a quiz. Create one if none exists and quiz is requested."""
+    quiz = module.module_quizzes.first()
+    if not quiz:
+        quiz = Quiz.objects.create(
+            title=quiz_title,
+            description=f"اختبار للموديول: {module.name}",
+            module=module,
+            course=module.course,
+            quiz_type='module',
+            pass_mark=50.0,
+            time_limit=10,
+            is_active=True
+        )
+        logger.info(f"Created default quiz {quiz.id} for module {module.id}")
+    return quiz
 
 def course_category(request, category_slug):
     """
@@ -2352,7 +2184,6 @@ def course_category(request, category_slug):
     
     return render(request, 'website/category_courses.html', context)
 
-
 @login_required
 @require_POST
 def add_comment(request, course_id):
@@ -2365,7 +2196,81 @@ def add_comment(request, course_id):
             course=course,
             description=comment_text
         )
+        messages.success(request, 'تم إضافة التعليق بنجاح')
         return redirect('courseviewpage', course_id=course_id)
     
-    messages.error(request, 'Comment text is required.')
+    messages.error(request, 'نص التعليق مطلوب')
     return redirect('courseviewpage', course_id=course_id)
+
+def complete_course(request, course_id):
+    """
+    API endpoint to mark a course as completed
+    Forces completion when student has sufficient progress
+    """
+    if request.method == 'POST':
+        try:
+            course = get_object_or_404(Course, id=course_id)
+            
+            # Check if user is enrolled
+            enrollment = get_object_or_404(Enrollment, course=course, student=request.user)
+            
+            # Check if user has sufficient progress (at least 80%)
+            if enrollment.progress >= 80:
+                # Force completion
+                enrollment.status = 'completed'
+                enrollment.progress = 100.0
+                enrollment.last_accessed = timezone.now()
+                enrollment.save()
+                
+                # Update progress using utils function
+                from .utils import update_enrollment_progress
+                final_progress = update_enrollment_progress(enrollment)
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'تم إنهاء الدورة بنجاح',
+                    'progress': final_progress,
+                    'completion_date': enrollment.last_accessed.isoformat() if enrollment.last_accessed else None
+                })
+            else:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': f'يجب إكمال على الأقل 80% من الدورة للإنهاء. التقدم الحالي: {enrollment.progress:.1f}%'
+                }, status=400)
+                
+        except Enrollment.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'غير مسجل في هذه الدورة'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'حدث خطأ: {str(e)}'
+            }, status=500)
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+@login_required
+@require_POST
+def recalculate_progress(request, course_id):
+    """API endpoint to recalculate course progress"""
+    try:
+        course = get_object_or_404(Course, id=course_id)
+        enrollment = get_object_or_404(Enrollment, course=course, student=request.user)
+        
+        from .utils import update_enrollment_progress
+        progress = update_enrollment_progress(enrollment)
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'تم إعادة حساب التقدم بنجاح',
+            'progress': progress
+        })
+        
+    except Exception as e:
+        logger.error(f"Error recalculating progress: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': f'حدث خطأ: {str(e)}'
+        }, status=500)

@@ -31,13 +31,15 @@ urlpatterns = [
     path('courseviewpage/<int:course_id>/video/<int:video_id>/', views.courseviewpagevideo, name='courseviewpagevideo'),
     path('courseviewpage/<int:course_id>/note/<int:note_id>/', views.courseviewpagenote, name='courseviewpagenote'),
     path('api/video/<int:video_id>/mark-watched/', views.mark_video_watched, name='mark_video_watched'),
-    path('api/quiz/<int:quiz_id>/mark-completed/', views.mark_quiz_completed, name='mark_quiz_completed'),
-
+    path('api/<str:content_type>/<int:content_id>/mark-viewed/', views.mark_content_viewed, name='mark_content_viewed'),
+    path('api/<str:content_type>/<int:content_id>/mark-completed/', views.mark_content_viewed, name='mark_content_completed'),
+    path('api/assignment/<int:assignment_id>/mark-completed/', views.mark_assignment_completed, name='mark_assignment_completed'),
 
     path('enroll/<int:course_id>/', views.enroll_course, name='enroll_course'),
     path('analytics/', views.analytics, name='analytic'),
-    path('submit_quiz/', views.submit_quiz, name='submit_quiz'),
+    path('submit-quiz/', views.submit_quiz, name='submit_quiz'),
     path('delete-pdf/<int:course_id>/<str:pdf_type>/', views.delete_pdf, name='delete_pdf'),
+    path('delete-module-pdf/<int:module_id>/<str:pdf_type>/', views.delete_module_pdf, name='delete_module_pdf'),
     path('course-category/<str:category_slug>/', views.course_category, name='course_category'),
     path('course/<int:course_id>/add-comment/', views.add_comment, name='add_comment'),
     #path('create_course', views.create_course, name='create_course'),  # Add this line
@@ -47,6 +49,12 @@ urlpatterns = [
     path('cart/', views.view_cart, name='view_cart'),
     path('cart/remove/<int:course_id>/', views.remove_from_cart, name='remove_from_cart'),
     path('checkout/', views.checkout, name='checkout'),
+
+    # API endpoints for progress tracking
+    path('api/video/<int:video_id>/mark-watched/', views.mark_video_watched, name='mark_video_watched'),
+    path('api/<str:content_type>/<int:content_id>/mark-viewed/', views.mark_content_viewed, name='mark_content_viewed'),
+    path('api/course/<int:course_id>/complete/', views.complete_course, name='complete_course'),
+    path('api/course/<int:course_id>/recalculate-progress/', views.recalculate_progress, name='recalculate_progress'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
