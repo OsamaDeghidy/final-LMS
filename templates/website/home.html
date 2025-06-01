@@ -1,6 +1,43 @@
 {% extends 'main/base.html' %}
 {% load static %}
-{% block head %} {% endblock %}
+{% block head %}
+<style>
+  .course-img-container {
+    position: relative;
+    overflow: hidden;
+    height: 250px; /* Increased from 150px */
+  }
+  .course-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+  .course-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .course-img-container:hover .course-overlay {
+    opacity: 1;
+  }
+  .course-img-container:hover .course-img {
+    transform: scale(1.05);
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+  }
+</style>
+{% endblock %}
 {% block title %} معهد التطوير المهني العالي {% endblock %}
 {% block content %}
 
@@ -270,21 +307,35 @@
   <div class="container">
     <div class="row g-4" id="coursesContainer">
       {% for course in courses %}
-        <div class="col-md-4">
-          <div class="card border-0 shadow h-100" style="border-radius: 10px;">
-            <!-- Institute Badge -->
-            <div class="card-header bg-white border-0 pt-3 pb-0">
-              <span class="badge bg-light text-dark">معهد التطوير المهني</span>
-            </div>
+        <div class="col-md-4 mb-4">
+          <div class="card border-0 shadow h-100" style="border-radius: 15px; transition: transform 0.3s ease;">
+   
             
             <!-- Course Image -->
-            <a href="{% url 'course_detail' course_id=course.id %}">
+            <div class="course-img-container">
               {% if course.image_course.url %}
-              <img src="{{ course.image_course.url }}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="{{ course.name }}">
+              <img
+                src="{{ course.image_course.url }}"
+                class="card-img-top course-img"
+                alt="{{ course.name }}"
+                loading="lazy"
+              />
               {% else %}
-              <img src="{% static '/images/course/02.jpg' %}" class="card-img-top" style="height: 150px; object-fit: cover;" alt="Default image">
+              <img
+                src="{% static '/images/course/02.jpg' %}"
+                class="card-img-top course-img"
+                alt="Default image"
+                loading="lazy"
+              />
               {% endif %}
-            </a>
+              <div class="course-overlay">
+                <div class="overlay-content">
+                  <a href="{% url 'course_detail' course_id=course.id %}" class="btn btn-sm btn-light">
+                    <i class="fas fa-play me-1"></i> Preview
+                  </a>
+                </div>
+              </div>
+            </div>
 
             <!-- Course Body -->
             <div class="card-body text-center">
@@ -318,11 +369,7 @@
                 <span class="fw-bold text-danger">{{ course.price|default:"99,00" }} ر.س</span>
               </div>
             </div>
-            
-            <!-- View Button -->
-            <div class="card-footer bg-white border-0 text-center py-3">
-              <a href="{% url 'course_detail' course_id=course.id %}" class="btn btn-outline-primary w-100">مشاهدة الدورة</a>
-            </div>
+          
           </div>
         </div>
         
@@ -346,6 +393,7 @@
     </div>
 
   </div>
+  
 </section>
 
 <style>
