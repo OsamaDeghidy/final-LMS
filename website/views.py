@@ -200,12 +200,20 @@ def index(request):
     return render(request, 'website/home.html', context)
 
 def allcourses(request):
-    courses = Course.objects.all()
-    context = {
-        "courses": courses
-    }
+    # Get all courses with related teacher and user data for better performance
+    courses = Course.objects.select_related(
+        'teacher',
+        'teacher__profile',
+        'teacher__profile__user'
+    ).all()
+    
+    # Apply search if there's a query
     courses, search_query = searchCourses(request)
-    context = {'courses': courses,'search_query': search_query}
+    
+    context = {
+        'courses': courses,
+        'search_query': search_query
+    }
     return render(request, 'website/allcourses.html', context)
 
 def contact(request):   
