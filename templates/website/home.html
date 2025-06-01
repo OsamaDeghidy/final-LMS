@@ -180,22 +180,7 @@
       </div>
     </div>
   </div>
-  
-  <style>
-    .stat-card {
-      transition: all 0.3s ease;
-    }
-    .stat-card:hover {
-      transform: translateY(-10px) !important;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.12) !important;
-    }
-    .icon-container {
-      transition: all 0.3s ease;
-    }
-    .stat-card:hover .icon-container {
-      transform: scale(1.1);
-    }
-  </style>
+
 </section>
 
 
@@ -257,7 +242,7 @@
             <div class="card-body text-center">
               <!-- Course Type -->
               <span class="badge rounded-pill mb-2" style="background-color: #e9f8fb; color: #17A2B8; font-size: 12px;">
-                التدريب الإلكتروني
+                {{ course.category.name }}
               </span>
               
               <!-- Course Title -->
@@ -265,9 +250,9 @@
               
               <!-- Course Meta -->
               <div class="text-muted mb-3" style="font-size: 13px;">
-                <span>{{ course.lectures|default:"14" }} درس</span>
+                <span>{{ course.total_module|default:"0" }} درس</span>
                 <span class="mx-2">·</span>
-                <span>{{ course.enrollment_count|default:"8" }} طالب</span>
+                <span>{{ course.enrolled_students|default:"0" }} طالب</span>
               </div>
               
               <!-- Rating and Price -->
@@ -388,6 +373,20 @@
 </section>
 
 <style>
+
+.stat-card {
+      transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+      transform: translateY(-10px) !important;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.12) !important;
+    }
+    .icon-container {
+      transition: all 0.3s ease;
+    }
+    .stat-card:hover .icon-container {
+      transform: scale(1.1);
+    }
   /* Course Image Styles */
   .course-img-container {
     position: relative;

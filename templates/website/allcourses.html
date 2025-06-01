@@ -76,64 +76,79 @@
         
         <!-- Card Body -->
         <div class="card-body">
-          <!-- Instructor -->
-          <div class="d-flex align-items-center mb-2">
+          <!-- Instructor & Title -->
+          <div class="d-flex align-items-start mb-3">
             {% if course.teacher and course.teacher.profile %}
               {% with profile=course.teacher.profile %}
-                <div class="instructor-avatar me-2 d-flex align-items-center justify-content-center" 
-                     style="width: 30px; height: 30px; border-radius: 50%; background-color: #4facfe; color: white; font-weight: 600; font-size: 12px;">
+                <div class="instructor-avatar me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
+                     style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; font-weight: 700; font-size: 16px; box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);">
                   {% if profile.avatar %}
                     <img src="{{ profile.avatar.url }}" 
-                         alt="{{ profile.user.get_full_name|default:profile.user.username }}" 
-                         class="rounded-circle w-100 h-100" 
+                         alt="{{ profile.name }}" 
+                         class="rounded-2 w-100 h-100" 
                          style="object-fit: cover;">
                   {% else %}
-                    {{ profile.user.get_full_name|default:profile.user.username|slice:":1"|upper }}
+                    {{ profile.name|default:profile.user.username|slice:":1"|upper }}
                   {% endif %}
                 </div>
-                <div class="d-flex flex-column">
-                  <small class="text-muted">
-                    {{ profile.user.get_full_name|default:profile.user.username }}
-                  </small>
-                  {% if course.tag %}
-                    <small class="text-muted" style="font-size: 0.7rem;">{{ course.tag }}</small>
-                  {% endif %}
+                <div class="flex-grow-1">
+                  <!-- Course Title -->
+                  <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3; padding-right: 10px;">
+                    <a href="{% url 'course_detail' course_id=course.id %}" class="text-dark text-decoration-none hover-primary" style="transition: color 0.2s ease;">
+                      {{ course.name }}
+                    </a>
+                  </h5>
+                  
+                  <!-- Instructor Name & Tag -->
+                  <div class="d-flex align-items-center">
+                    <span class="text-muted small fw-medium" style="font-size: 0.85rem; padding-right: 10px;">
+                      {{ profile.name|default:profile.user.username|truncatechars:20 }}
+                    </span>
+                    {% if course.tag %}
+                      <span class="badge bg-light-primary text-primary ms-2" style="font-size: 0.7rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 600;">
+                        {{ course.tag }}
+                      </span>
+                    {% endif %}
+                  </div>
                 </div>
               {% endwith %}
             {% else %}
-              <div class="instructor-avatar me-2 d-flex align-items-center justify-content-center" 
-                   style="width: 30px; height: 30px; border-radius: 50%; background-color: #6c757d; color: white; font-weight: 600; font-size: 12px;">
-                ?
+              <div class="instructor-avatar me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
+                   style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #6c757d 0%, #9e9e9e 100%); color: white; font-weight: 700; font-size: 18px; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.2);">
+                <i class="fas fa-user"></i>
               </div>
-              <small class="text-muted">مجهول</small>
+              <div class="flex-grow-1">
+                <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3;">
+                  <a href="{% url 'course_detail' course_id=course.id %}" class="text-dark text-decoration-none hover-primary" style="transition: color 0.2s ease;">
+                    {{ course.name }}
+                  </a>
+                </h5>
+                <span class="text-muted small">مجهول</span>
+              </div>
             {% endif %}
           </div>
-          
-          <!-- Course Title -->
-          <h5 class="card-title mb-2">
-            <a href="{% url 'course_detail' course_id=course.id %}" class="text-dark text-decoration-none">
-              {{ course.name }}
-            </a>
-          </h5>
-          
-          <!-- Course Description -->
-          <p class="card-text text-muted mb-3">{{ course.small_description|truncatechars:100 }}</p>
-          
-          <!-- Rating -->
-          <div class="d-flex align-items-center mb-3">
-            <div class="rating-stars me-2">
-              {% with ''|center:5 as range %}
-                {% for _ in range %}
-                  {% if forloop.counter <= course.rating %}
-                  <i class="fas fa-star text-warning"></i>
-                  {% else %}
-                  <i class="far fa-star text-warning"></i>
-                  {% endif %}
-                {% endfor %}
-              {% endwith %}
+
+
+          <!-- Course Type & Rating Row -->
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <!-- Course Type -->
+            <div class="d-flex align-items-center">
+              <div style="width: 32px; height: 32px; background: rgba(14, 165, 233, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-left: 8px;">
+                <i class="fas fa-tag" style="color: #0ea5e9; font-size: 14px;"></i>
+              </div>
+              <span style="color: #1e293b; font-size: 0.9rem; font-weight: 600;">
+                {{ course.category.name }}
+              </span>
             </div>
-            <span class="text-dark fw-bold me-2">{{ course.rating|floatformat:1 }}</span>
-            <span class="text-muted small">({{ course.review_count|default:0 }})</span>
+            
+            <!-- Rating -->
+            <div class="d-flex align-items-center">
+              <i class="fas fa-star text-warning me-1"></i>
+              <span class="fw-bold me-1" style="color: #1e293b;">{{ course.rating|floatformat:1 }}</span>
+              <span class="text-muted" style="font-size: 0.85rem;">
+                ({{ course.review_count|default:0 }})
+              </span>
+            </div>
           </div>
           
           <!-- Course Meta -->
