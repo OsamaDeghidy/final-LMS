@@ -1,0 +1,141 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}إدارة الاختبارات{% if course %} - {{ course.name }}{% endif %}{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5 col-md-8">
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <!-- Card Header with Dropdown -->
+        <div class="card-header bg-gradient-primary text-white py-3 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-file-alt me-2 fs-5 text-primary" style="padding-left: 10px;"></i>
+                <h5 class="card-title mb-0 text-primary fw-bold">إدارة الاختبارات</h5>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-light btn-sm rounded-pill dropdown-toggle d-flex align-items-center" 
+                        type="button" id="addExamDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-plus-circle me-1" style="padding-left: 5px;"></i> إضافة اختبار
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded-3" aria-labelledby="addExamDropdown">
+                    {% for course in teacher_courses %}
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center py-2" 
+                           href="{% url 'create_exam' course.id %}">
+                            <i class="fas fa-book me-2 text-primary"></i>
+                            <span>{{ course.name }}</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        
+        {% if not course %}
+            <!-- Show course selection if no course is selected -->
+            <div class="card-body">
+                <div class="text-center p-5">
+                    <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
+                    <h5 class="mb-3">اختر دورة لعرض اختباراتها</h5>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        {% for c in teacher_courses %}
+                            <a href="{% url 'teacher_exams_course' c.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-book me-1"></i> {{ c.name }}
+                            </a>
+                        {% empty %}
+                            <p class="text-muted">لا توجد دورات متاحة</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- Show course content if a course is selected -->
+            <div class="card-header bg-light border-0 py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">اختبارات دورة: {{ course.name }}</h5>
+                    <div>
+                        <a href="{% url 'create_exam' course.id %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus-circle me-1"></i> إضافة اختبار جديد
+                        </a>
+                        <a href="{% url 'teacher_exams' %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-arrow-right me-1"></i> تغيير الدورة
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if exams %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>عنوان الاختبار</th>
+                                    <th>الوحدة</th>
+                                    <th>تاريخ الإنشاء</th>
+                                    <th>عدد الأسئلة</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for exam in exams %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ exam.title }}</strong>
+                                            {% if exam.is_final %}
+                                                <span class="badge bg-warning text-dark ms-2">اختبار نهائي</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if exam.module %}
+                                                {{ exam.module.title }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ exam.created_at|date:"Y-m-d" }}</td>
+                                        <td>{{ exam.questions.count }}</td>
+                                        <td>
+                                            {% if exam.is_active %}
+                                                <span class="badge bg-success">نشط</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">غير نشط</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{% url 'edit_exam' exam_id=exam.id %}" class="btn btn-outline-primary">
+                                                    <i class="fas fa-edit"></i> تعديل
+                                                </a>
+                                                <a href="{% url 'teacher_exam_attempts' exam_id=exam.id %}" class="btn btn-outline-info">
+                                                    <i class="fas fa-users"></i> المحاولات
+                                                </a>
+                                                <a href="{% url 'delete_exam' exam_id=exam.id %}" class="btn btn-outline-danger">
+                                                    <i class="fas fa-trash-alt"></i> حذف
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center p-5">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">لا توجد اختبارات متاحة لهذه الدورة</p>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-light border-0 py-3">
+                <a href="{% url 'course_detail' course_id=course.id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>العودة إلى صفحة الدورة
+                </a>
+            </div>
+        {% endif %}
+        
+    </div>
+
+
+</div>
+{% endblock dashboard_content %}

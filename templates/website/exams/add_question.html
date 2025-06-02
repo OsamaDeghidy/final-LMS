@@ -1,0 +1,272 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}إضافة سؤال - {{ exam.title }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5 col-lg-8" dir="rtl">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">إضافة سؤال جديد</h2>
+                    <p class="mb-0 small">{{ exam.title }}</p>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="questionForm" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="question_type" class="form-label">نوع السؤال <span class="text-danger">*</span></label>
+                            <select class="form-select" id="question_type" name="question_type" required>
+                                <option value="multiple_choice">اختيار من متعدد</option>
+                                <option value="true_false">صح أو خطأ</option>
+                                <option value="short_answer">إجابة قصيرة</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="text" class="form-label">نص السؤال <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="text" name="text" rows="3" required></textarea>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="points" class="form-label">النقاط</label>
+                            <input type="number" class="form-control" id="points" name="points" min="1" value="1">
+                            <small class="text-muted">عدد النقاط التي يستحقها الطالب عند الإجابة الصحيحة</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="explanation" class="form-label">شرح الإجابة (اختياري)</label>
+                            <textarea class="form-control" id="explanation" name="explanation" rows="2"></textarea>
+                            <small class="text-muted">شرح سيظهر للطلاب بعد الانتهاء من الاختبار (إذا تم تفعيل خيار إظهار الإجابات)</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="image" class="form-label">صورة توضيحية (اختياري)</label>
+                            <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <!-- Multiple Choice Answers Section -->
+                        <div id="multiple_choice_section">
+                            <h4 class="h5 mb-3">خيارات الإجابة</h4>
+                            <div id="answers_container">
+                                <div class="answer-item mb-3">
+                                    <div class="input-group">
+                                        <div class="input-group-text">
+                                            <input type="radio" name="correct_answer" value="0" checked>
+                                        </div>
+                                        <input type="text" class="form-control" name="answer_text[]" placeholder="خيار الإجابة" required>
+                                        <button type="button" class="btn btn-outline-danger remove-answer" disabled>
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="answer-item mb-3">
+                                    <div class="input-group">
+                                        <div class="input-group-text">
+                                            <input type="radio" name="correct_answer" value="1">
+                                        </div>
+                                        <input type="text" class="form-control" name="answer_text[]" placeholder="خيار الإجابة" required>
+                                        <button type="button" class="btn btn-outline-danger remove-answer" disabled>
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" id="add_answer" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-plus me-1"></i> إضافة خيار
+                            </button>
+                        </div>
+                        
+                        <!-- True/False Section -->
+                        <div id="true_false_section" style="display: none;">
+                            <h4 class="h5 mb-3">الإجابة الصحيحة</h4>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="true_false_answer" id="true_answer" value="true" checked>
+                                <label class="form-check-label" for="true_answer">
+                                    صحيح
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="true_false_answer" id="false_answer" value="false">
+                                <label class="form-check-label" for="false_answer">
+                                    خطأ
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Short Answer Section -->
+                        <div id="short_answer_section" style="display: none;">
+                            <h4 class="h5 mb-3">الإجابة النموذجية (اختياري)</h4>
+                            <div class="mb-3">
+                                <textarea class="form-control" id="model_answer" name="model_answer" rows="2" placeholder="اكتب الإجابة النموذجية هنا (سيستخدمها المعلم للتصحيح)"></textarea>
+                                <small class="text-muted">هذه الإجابة للاسترشاد فقط وستظهر للمعلم عند التصحيح</small>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'edit_exam' exam_id=exam.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>إلغاء
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>حفظ السؤال
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const questionTypeSelect = document.getElementById('question_type');
+        const multipleChoiceSection = document.getElementById('multiple_choice_section');
+        const trueFalseSection = document.getElementById('true_false_section');
+        const shortAnswerSection = document.getElementById('short_answer_section');
+        const addAnswerBtn = document.getElementById('add_answer');
+        const answersContainer = document.getElementById('answers_container');
+        
+        // Function to toggle question type sections and handle required attributes
+        function toggleQuestionSections() {
+            const selectedType = questionTypeSelect.value;
+            
+            // Hide all sections first
+            multipleChoiceSection.style.display = 'none';
+            trueFalseSection.style.display = 'none';
+            shortAnswerSection.style.display = 'none';
+            
+            // Remove required attribute from all answer inputs first
+            document.querySelectorAll('input[name^="answer_text"]').forEach(input => {
+                input.required = false;
+            });
+            
+            // Show the selected section and handle required attributes
+            if (selectedType === 'multiple_choice') {
+                multipleChoiceSection.style.display = 'block';
+                // Only make visible answer fields required
+                const visibleInputs = multipleChoiceSection.querySelectorAll('input[name^="answer_text"]');
+                visibleInputs.forEach(input => {
+                    if (input.offsetParent !== null) { // Check if element is visible
+                        input.required = true;
+                    }
+                });
+            } else if (selectedType === 'true_false') {
+                trueFalseSection.style.display = 'block';
+            } else if (selectedType === 'short_answer') {
+                shortAnswerSection.style.display = 'block';
+            }
+        }
+        
+        // Add new answer option
+        addAnswerBtn.addEventListener('click', function() {
+            const answerCount = answersContainer.children.length;
+            const newAnswer = document.createElement('div');
+            newAnswer.className = 'answer-item mb-3';
+            newAnswer.innerHTML = `
+                <div class="input-group">
+                    <div class="input-group-text">
+                        <input type="radio" name="correct_answer" value="${answerCount}">
+                    </div>
+                    <input type="text" class="form-control" name="answer_text[]" placeholder="خيار الإجابة">
+                    <button type="button" class="btn btn-outline-danger remove-answer">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            answersContainer.appendChild(newAnswer);
+            
+            // Only make required if multiple choice is selected
+            if (questionTypeSelect.value === 'multiple_choice') {
+                const inputs = newAnswer.querySelectorAll('input[type="text"]');
+                inputs.forEach(input => input.required = true);
+            }
+            
+            // Enable remove buttons if we have more than 2 answers
+            updateRemoveButtons();
+        });
+        
+        // Remove answer option
+        answersContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-answer') || e.target.parentElement.classList.contains('remove-answer')) {
+                const button = e.target.classList.contains('remove-answer') ? e.target : e.target.parentElement;
+                const answerItem = button.closest('.answer-item');
+                answerItem.remove();
+                
+                // Update radio values
+                const radioInputs = answersContainer.querySelectorAll('input[type="radio"]');
+                radioInputs.forEach((radio, index) => {
+                    radio.value = index;
+                });
+                
+                // Enable/disable remove buttons
+                updateRemoveButtons();
+            }
+        });
+        
+        // Function to update remove buttons state
+        function updateRemoveButtons() {
+            const removeButtons = answersContainer.querySelectorAll('.remove-answer');
+            const enableRemove = removeButtons.length > 2;
+            
+            removeButtons.forEach(button => {
+                if (enableRemove) {
+                    button.disabled = false;
+                } else {
+                    button.disabled = true;
+                }
+            });
+        }
+        
+        // Form submission handler
+        document.getElementById('questionForm').addEventListener('submit', function(e) {
+            const selectedType = questionTypeSelect.value;
+            let isValid = true;
+            
+            // Reset custom validation
+            this.querySelectorAll(':invalid').forEach(el => {
+                el.setCustomValidity('');
+            });
+            
+            // Custom validation based on question type
+            if (selectedType === 'multiple_choice') {
+                const answerInputs = answersContainer.querySelectorAll('input[name^="answer_text"]');
+                let hasText = false;
+                let hasCorrect = document.querySelector('input[name="correct_answer"]:checked') !== null;
+                
+                answerInputs.forEach(input => {
+                    if (input.value.trim() !== '') {
+                        hasText = true;
+                    }
+                });
+                
+                if (!hasText) {
+                    alert('الرجاء إدخال خيار إجابة واحد على الأقل');
+                    isValid = false;
+                }
+                
+                if (!hasCorrect) {
+                    alert('الرجاء تحديد الإجابة الصحيحة');
+                    isValid = false;
+                }
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            this.classList.add('was-validated');
+            return isValid;
+        });
+        
+        // Initial setup
+        toggleQuestionSections();
+        questionTypeSelect.addEventListener('change', toggleQuestionSections);
+    });
+</script>
+{% endblock dashboard_content %}

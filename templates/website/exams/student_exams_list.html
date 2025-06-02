@@ -1,0 +1,50 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}اختباراتي{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5 col-lg-8" dir="rtl">
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="card-header bg-gradient-primary text-white py-3">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-file-alt me-2 fs-5 text-primary" style="padding-left: 10px;"></i>
+                <h5 class="card-title mb-0 text-primary fw-bold">الاختبارات المتاحة</h5>
+            </div>
+        </div>
+        
+        <div class="card-body p-4">
+            {% if courses %}
+                <div class="row g-4">
+                    {% for course_data in courses %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ course_data.course.name }}</h5>
+                                    <p class="text-muted mb-3">
+                                        <i class="fas fa-file-alt me-2"></i>
+                                        {{ course_data.exam_count }} اختبار متاح
+                                    </p>
+                                    <a href="{% url 'student_course_exams' course_id=course_data.course.id %}" 
+                                       class="btn btn-primary w-100">
+                                        عرض الاختبارات
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
+                    <h5 class="mb-3">لا توجد اختبارات متاحة حالياً</h5>
+                    <p class="text-muted">لم يتم العثور على أي دورات مسجلة تحتوي على اختبارات</p>
+                    <a href="{% url 'my_courses' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-arrow-left me-2"></i>العودة للدورات
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

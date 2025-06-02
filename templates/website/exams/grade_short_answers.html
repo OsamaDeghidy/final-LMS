@@ -1,0 +1,148 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}تصحيح الإجابات القصيرة - {{ attempt.exam.title }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5 col-lg-8" dir="rtl">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">تصحيح الإجابات القصيرة</h2>
+                    <p class="mb-0 small">{{ attempt.exam.title }} - {{ attempt.user.get_full_name }}</p>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p class="mb-1">
+                                <span class="fw-bold">الطالب:</span> 
+                                {{ attempt.user.get_full_name }}
+                            </p>
+                            <p class="mb-1">
+                                <span class="fw-bold">تاريخ المحاولة:</span> 
+                                {{ attempt.start_time|date:"Y-m-d H:i" }}
+                            </p>
+                            <p class="mb-1">
+                                <span class="fw-bold">رقم المحاولة:</span> 
+                                {{ attempt.attempt_number }}
+                            </p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <p class="mb-1">
+                                <span class="fw-bold">عدد الأسئلة القصيرة:</span> 
+                                {{ short_answer_questions|length }}
+                            </p>
+                            <p class="mb-1">
+                                <span class="fw-bold">مجموع النقاط:</span> 
+                                {{ total_points }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% for question, answer in questions_with_answers %}
+                            <div class="card mb-4">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h3 class="h5 mb-0">سؤال {{ forloop.counter }}</h3>
+                                    <span class="badge bg-secondary">{{ question.points }} نقطة</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <div class="fw-bold mb-2">نص السؤال:</div>
+                                        <p>{{ question.text }}</p>
+                                        {% if question.image %}
+                                            <div class="mb-2">
+                                                <img src="{{ question.image.url }}" alt="صورة السؤال" class="img-fluid rounded" style="max-height: 200px;">
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    {% if question.answers.exists %}
+                                        <div class="mb-3">
+                                            <div class="fw-bold mb-2">الإجابة النموذجية:</div>
+                                            <div class="border rounded p-2 bg-light">
+                                                {{ question.answers.first.text }}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="mb-3">
+                                        <div class="fw-bold mb-2">إجابة الطالب:</div>
+                                        <div class="border rounded p-2 bg-light">
+                                            {{ answer.text_answer|default:"لم يقدم إجابة" }}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="is_correct_{{ answer.id }}" class="form-label fw-bold">تقييم الإجابة:</label>
+                                        <div class="d-flex">
+                                            <div class="form-check me-4">
+                                                <input class="form-check-input" type="radio" name="is_correct_{{ answer.id }}" id="correct_{{ answer.id }}" value="correct" {% if answer.is_correct %}checked{% endif %}>
+                                                <label class="form-check-label" for="correct_{{ answer.id }}">
+                                                    صحيحة
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="is_correct_{{ answer.id }}" id="incorrect_{{ answer.id }}" value="incorrect" {% if answer.is_correct == False %}checked{% endif %}>
+                                                <label class="form-check-label" for="incorrect_{{ answer.id }}">
+                                                    غير صحيحة
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="feedback_{{ answer.id }}" class="form-label fw-bold">ملاحظات (اختياري):</label>
+                                        <textarea class="form-control" id="feedback_{{ answer.id }}" name="feedback_{{ answer.id }}" rows="2">{{ answer.feedback|default:'' }}</textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="points_{{ answer.id }}" class="form-label fw-bold">النقاط المستحقة:</label>
+                                        <div class="input-group" style="max-width: 200px;">
+                                            <input type="number" class="form-control" id="points_{{ answer.id }}" name="points_{{ answer.id }}" min="0" max="{{ question.points }}" value="{{ answer.points_earned|default:0 }}" step="0.5">
+                                            <span class="input-group-text">من {{ question.points }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'teacher_exam_attempts' exam_id=attempt.exam.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>إلغاء
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>حفظ التصحيح وحساب النتيجة
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-set points when marking correct/incorrect
+        const correctnessRadios = document.querySelectorAll('input[type="radio"][name^="is_correct_"]');
+        
+        correctnessRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                const answerId = this.id.split('_').pop();
+                const pointsInput = document.getElementById(`points_${answerId}`);
+                const maxPoints = parseFloat(pointsInput.max);
+                
+                if (this.value === 'correct') {
+                    pointsInput.value = maxPoints;
+                } else {
+                    pointsInput.value = 0;
+                }
+            });
+        });
+    });
+</script>
+{% endblock dashboard_content %}

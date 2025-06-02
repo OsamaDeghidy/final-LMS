@@ -1,0 +1,270 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}تعديل السؤال - {{ question.exam.title }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5 col-lg-8" dir="rtl">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">تعديل السؤال</h2>
+                    <p class="mb-0 small">{{ question.exam.title }}</p>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="question_type" class="form-label">نوع السؤال <span class="text-danger">*</span></label>
+                            <select class="form-select" id="question_type" name="question_type" required>
+                                <option value="multiple_choice" {% if question.question_type == 'multiple_choice' %}selected{% endif %}>اختيار من متعدد</option>
+                                <option value="true_false" {% if question.question_type == 'true_false' %}selected{% endif %}>صح أو خطأ</option>
+                                <option value="short_answer" {% if question.question_type == 'short_answer' %}selected{% endif %}>إجابة قصيرة</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="text" class="form-label">نص السؤال <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="text" name="text" rows="3" required>{{ question.text }}</textarea>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="points" class="form-label">النقاط</label>
+                            <input type="number" class="form-control" id="points" name="points" min="1" value="{{ question.points }}">
+                            <small class="text-muted">عدد النقاط التي يستحقها الطالب عند الإجابة الصحيحة</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="explanation" class="form-label">شرح الإجابة (اختياري)</label>
+                            <textarea class="form-control" id="explanation" name="explanation" rows="2">{{ question.explanation|default:'' }}</textarea>
+                            <small class="text-muted">شرح سيظهر للطلاب بعد الانتهاء من الاختبار (إذا تم تفعيل خيار إظهار الإجابات)</small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="image" class="form-label">صورة توضيحية (اختياري)</label>
+                            {% if question.image %}
+                                <div class="mb-2">
+                                    <img src="{{ question.image.url }}" alt="صورة السؤال" class="img-thumbnail" style="max-height: 200px;">
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="delete_image" name="delete_image">
+                                        <label class="form-check-label" for="delete_image">
+                                            حذف الصورة الحالية
+                                        </label>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <!-- Multiple Choice Answers Section -->
+                        <div id="multiple_choice_section" {% if question.question_type != 'multiple_choice' %}style="display: none;"{% endif %}>
+                            <h4 class="h5 mb-3">خيارات الإجابة</h4>
+                            <div id="answers_container">
+                                {% if question.question_type == 'multiple_choice' %}
+                                    {% for answer in answers %}
+                                        <div class="answer-item mb-3">
+                                            <div class="input-group">
+                                                <div class="input-group-text">
+                                                    <input type="radio" name="correct_answer" value="{{ forloop.counter0 }}" {% if answer.is_correct %}checked{% endif %}>
+                                                </div>
+                                                <input type="text" class="form-control" name="answer_text[]" value="{{ answer.text }}" placeholder="خيار الإجابة" required>
+                                                <input type="hidden" name="answer_id[]" value="{{ answer.id }}">
+                                                <button type="button" class="btn btn-outline-danger remove-answer" {% if forloop.counter <= 2 %}disabled{% endif %}>
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <!-- Default empty answers for multiple choice if converting from another type -->
+                                    <div class="answer-item mb-3">
+                                        <div class="input-group">
+                                            <div class="input-group-text">
+                                                <input type="radio" name="correct_answer" value="0" checked>
+                                            </div>
+                                            <input type="text" class="form-control" name="answer_text[]" placeholder="خيار الإجابة" required>
+                                            <button type="button" class="btn btn-outline-danger remove-answer" disabled>
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="answer-item mb-3">
+                                        <div class="input-group">
+                                            <div class="input-group-text">
+                                                <input type="radio" name="correct_answer" value="1">
+                                            </div>
+                                            <input type="text" class="form-control" name="answer_text[]" placeholder="خيار الإجابة" required>
+                                            <button type="button" class="btn btn-outline-danger remove-answer" disabled>
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <button type="button" id="add_answer" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-plus me-1"></i> إضافة خيار
+                            </button>
+                        </div>
+                        
+                        <!-- True/False Section -->
+                        <div id="true_false_section" {% if question.question_type != 'true_false' %}style="display: none;"{% endif %}>
+                            <h4 class="h5 mb-3">الإجابة الصحيحة</h4>
+                            {% if question.question_type == 'true_false' %}
+                                {% for answer in answers %}
+                                    {% if answer.text == 'صحيح' or answer.text == 'True' %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" name="true_false_answer" id="true_answer" value="true" {% if answer.is_correct %}checked{% endif %}>
+                                            <label class="form-check-label" for="true_answer">
+                                                صحيح
+                                            </label>
+                                        </div>
+                                    {% elif answer.text == 'خطأ' or answer.text == 'False' %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="true_false_answer" id="false_answer" value="false" {% if answer.is_correct %}checked{% endif %}>
+                                            <label class="form-check-label" for="false_answer">
+                                                خطأ
+                                            </label>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="true_false_answer" id="true_answer" value="true" checked>
+                                    <label class="form-check-label" for="true_answer">
+                                        صحيح
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="true_false_answer" id="false_answer" value="false">
+                                    <label class="form-check-label" for="false_answer">
+                                        خطأ
+                                    </label>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Short Answer Section -->
+                        <div id="short_answer_section" {% if question.question_type != 'short_answer' %}style="display: none;"{% endif %}>
+                            <h4 class="h5 mb-3">الإجابة النموذجية (اختياري)</h4>
+                            <div class="mb-3">
+                                <textarea class="form-control" id="model_answer" name="model_answer" rows="2" placeholder="اكتب الإجابة النموذجية هنا (سيستخدمها المعلم للتصحيح)">{% if question.question_type == 'short_answer' and answers.0 %}{{ answers.0.text }}{% endif %}</textarea>
+                                <small class="text-muted">هذه الإجابة للاسترشاد فقط وستظهر للمعلم عند التصحيح</small>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'edit_exam' exam_id=question.exam.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>العودة للاختبار
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>حفظ التغييرات
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const questionTypeSelect = document.getElementById('question_type');
+        const multipleChoiceSection = document.getElementById('multiple_choice_section');
+        const trueFalseSection = document.getElementById('true_false_section');
+        const shortAnswerSection = document.getElementById('short_answer_section');
+        const addAnswerBtn = document.getElementById('add_answer');
+        const answersContainer = document.getElementById('answers_container');
+        
+        // Function to toggle question type sections
+        function toggleQuestionSections() {
+            const selectedType = questionTypeSelect.value;
+            
+            // Hide all sections first
+            multipleChoiceSection.style.display = 'none';
+            trueFalseSection.style.display = 'none';
+            shortAnswerSection.style.display = 'none';
+            
+            // Remove required attribute from all answer inputs
+            const allAnswerInputs = document.querySelectorAll('input[name^="answer_text"]');
+            allAnswerInputs.forEach(input => {
+                input.removeAttribute('required');
+            });
+            
+            // Show and handle the selected section
+            if (selectedType === 'multiple_choice') {
+                multipleChoiceSection.style.display = 'block';
+                // Add required to visible inputs
+                const visibleInputs = multipleChoiceSection.querySelectorAll('input[name^="answer_text"]');
+                visibleInputs.forEach(input => {
+                    input.setAttribute('required', 'required');
+                });
+            } else if (selectedType === 'true_false') {
+                trueFalseSection.style.display = 'block';
+            } else if (selectedType === 'short_answer') {
+                shortAnswerSection.style.display = 'block';
+            }
+        }
+        
+        // Add new answer option
+        addAnswerBtn.addEventListener('click', function() {
+            const answerCount = document.querySelectorAll('.answer-item').length;
+            const newAnswer = document.createElement('div');
+            newAnswer.className = 'answer-item mb-3';
+            newAnswer.innerHTML = `
+                <div class="input-group">
+                    <div class="input-group-text">
+                        <input type="radio" name="correct_answer" value="${answerCount}">
+                    </div>
+                    <input type="text" class="form-control" name="answer_text[]" placeholder="خيار الإجابة" ${questionTypeSelect.value === 'multiple_choice' ? 'required' : ''}>
+                    <button type="button" class="btn btn-outline-danger remove-answer">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            answersContainer.appendChild(newAnswer);
+            updateRemoveButtons();
+        });
+        
+        // Remove answer option
+        answersContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-answer') || e.target.parentElement.classList.contains('remove-answer')) {
+                const button = e.target.classList.contains('remove-answer') ? e.target : e.target.parentElement;
+                const answerItem = button.closest('.answer-item');
+                answerItem.remove();
+                
+                // Update radio values
+                const radioInputs = answersContainer.querySelectorAll('input[type="radio"]');
+                radioInputs.forEach((radio, index) => {
+                    radio.value = index;
+                });
+                
+                // Enable/disable remove buttons
+                updateRemoveButtons();
+            }
+        });
+        
+        // Function to update remove buttons state
+        function updateRemoveButtons() {
+            const removeButtons = answersContainer.querySelectorAll('.remove-answer');
+            const enableRemove = removeButtons.length > 2;
+            
+            removeButtons.forEach(button => {
+                if (enableRemove) {
+                    button.disabled = false;
+                } else {
+                    button.disabled = true;
+                }
+            });
+        }
+        
+        // Initial setup
+        toggleQuestionSections();
+        questionTypeSelect.addEventListener('change', toggleQuestionSections);
+    });
+</script>
+{% endblock dashboard_content %}

@@ -141,7 +141,6 @@ class Enrollment(models.Model):
         return f"{self.course.name} - {self.student.username}"
 
 
-
 class Module(models.Model):
     name = models.CharField(max_length=2000, blank=True, null=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, blank=True, null=True)
@@ -215,7 +214,6 @@ class Module(models.Model):
         return self.name + " - " + self.course.name
 
 
-
 class Video(models.Model):
     name = models.CharField(max_length=2000, null=True, blank=True)
     number=models.IntegerField(blank=True,null=True, default=0)
@@ -237,7 +235,6 @@ class Video(models.Model):
 
     def __str__(self):
         return self.name + " - " + self.module.name + " - " + self.course.name
-
 
 
 class VideoProgress(models.Model):
@@ -289,7 +286,6 @@ class VideoProgress(models.Model):
                         enrollment.save(update_fields=['status'])
 
 
-
 class Comment(models.Model):
     user=models.ForeignKey(User, on_delete=models.CASCADE,null=True,blank=True)
     description=RichTextField(null=True, blank=True)
@@ -308,7 +304,6 @@ class Comment(models.Model):
         return f"{user_name} - {video_name} - {course_name}"
 
 
-
 class SubComment(models.Model):
     user=models.ForeignKey(User, on_delete=models.CASCADE,null=True,blank=True)
     comment=models.ForeignKey(Comment, on_delete=models.CASCADE,null=True,blank=True)
@@ -319,8 +314,6 @@ class SubComment(models.Model):
         #desc = self.description if self.description else ""
         user_name = self.user.profile.name
         return f"{user_name} - {video_name} - {course_name}"
-
-
 
 
 class Notes(models.Model):
@@ -345,9 +338,6 @@ class Notes(models.Model):
         #desc = self.description if self.description else ""
         user_name = self.user.profile.name
         return f"{user_name} - {video_name} - {module_name} - {course_name}"
-
-
-
 
 
 class UserProgress(models.Model):
@@ -403,9 +393,6 @@ class CourseProgress(models.Model):
 
 
 
-
-
-
 class Quiz(models.Model):
     QUIZ_TYPE_CHOICES = [
         ('video', 'فيديو كويز'),
@@ -435,7 +422,6 @@ class Quiz(models.Model):
             return f"كويز للوحدة: {self.module.name}"
         else:
             return f"كويز {self.id}"
-
 
 
 

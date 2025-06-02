@@ -1,0 +1,254 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+
+{% block title %}تعديل الاختبار - {{ exam.title }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-5 col-lg-8" dir="rtl">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Exam Details Card -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h2 class="h4 mb-0">تعديل الاختبار</h2>
+                    <span class="badge bg-light text-dark">{{ exam.questions.count }} سؤال</span>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="title" class="form-label">عنوان الاختبار <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="title" name="title" value="{{ exam.title }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="module" class="form-label">الوحدة (اختياري)</label>
+                                    <select class="form-select" id="module" name="module">
+                                        <option value="">اختبار عام للدورة</option>
+                                        {% for module in modules %}
+                                            <option value="{{ module.id }}" {% if exam.module and exam.module.id == module.id %}selected{% endif %}>
+                                                {{ module.title }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">وصف الاختبار</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ exam.description|default:'' }}</textarea>
+                            <small class="text-muted">وصف مختصر للاختبار وأهدافه</small>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="time_limit" class="form-label">الوقت المحدد (بالدقائق)</label>
+                                    <input type="number" class="form-control" id="time_limit" name="time_limit" min="1" value="{{ exam.time_limit|default:60 }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="pass_mark" class="form-label">درجة النجاح (%)</label>
+                                    <input type="number" class="form-control" id="pass_mark" name="pass_mark" min="0" max="100" value="{{ exam.pass_mark }}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="total_points" class="form-label">الدرجة الكلية</label>
+                                    <input type="number" class="form-control" id="total_points" name="total_points" min="1" value="{{ exam.total_points }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="start_date" class="form-label">تاريخ البدء (اختياري)</label>
+                                    <input type="datetime-local" class="form-control" id="start_date" name="start_date" 
+                                        value="{% if exam.start_date %}{{ exam.start_date|date:'Y-m-d\TH:i' }}{% endif %}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="end_date" class="form-label">تاريخ الانتهاء (اختياري)</label>
+                                    <input type="datetime-local" class="form-control" id="end_date" name="end_date"
+                                        value="{% if exam.end_date %}{{ exam.end_date|date:'Y-m-d\TH:i' }}{% endif %}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="is_final" name="is_final" {% if exam.is_final %}checked{% endif %}>
+                                    <label class="form-check-label" for="is_final">
+                                        اختبار نهائي للدورة
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="randomize_questions" name="randomize_questions" {% if exam.randomize_questions %}checked{% endif %}>
+                                    <label class="form-check-label" for="randomize_questions">
+                                        ترتيب الأسئلة عشوائياً
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="allow_multiple_attempts" name="allow_multiple_attempts" {% if exam.allow_multiple_attempts %}checked{% endif %}>
+                                    <label class="form-check-label" for="allow_multiple_attempts">
+                                        السماح بمحاولات متعددة
+                                    </label>
+                                </div>
+                                
+                                <div class="mb-3" id="max_attempts_container">
+                                    <label for="max_attempts" class="form-label">الحد الأقصى للمحاولات</label>
+                                    <input type="number" class="form-control" id="max_attempts" name="max_attempts" min="1" value="{{ exam.max_attempts }}">
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="show_answers_after" name="show_answers_after" {% if exam.show_answers_after %}checked{% endif %}>
+                                    <label class="form-check-label" for="show_answers_after">
+                                        إظهار الإجابات الصحيحة بعد الانتهاء
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'teacher_exams_course' course_id=exam.course.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>العودة للقائمة
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>حفظ التغييرات
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Questions Management Card -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h3 class="h5 mb-0">أسئلة الاختبار</h3>
+                    <a href="{% url 'add_question' exam_id=exam.id %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus-circle me-2"></i>إضافة سؤال
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if questions %}
+                        <div class="list-group list-group-flush" id="question-list">
+                            {% for question in questions %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ question.id }}">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-light text-dark me-3">{{ forloop.counter }}</span>
+                                        <div>
+                                            <div class="fw-bold">{{ question.text|truncatechars:100 }}</div>
+                                            <div class="small text-muted">
+                                                {% if question.question_type == 'multiple_choice' %}
+                                                    <span class="badge bg-info text-dark">اختيار من متعدد</span>
+                                                {% elif question.question_type == 'true_false' %}
+                                                    <span class="badge bg-success text-white">صح أو خطأ</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning text-dark">إجابة قصيرة</span>
+                                                {% endif %}
+                                                <span class="ms-2">{{ question.points }} نقطة</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'edit_question' question_id=question.id %}" class="btn btn-outline-secondary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'delete_question' question_id=question.id %}" class="btn btn-outline-danger">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-question-circle fa-3x text-muted mb-3"></i>
+                            <p class="mb-0">لا توجد أسئلة بعد. قم بإضافة أسئلة للاختبار.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const allowMultipleAttemptsCheckbox = document.getElementById('allow_multiple_attempts');
+        const maxAttemptsContainer = document.getElementById('max_attempts_container');
+        
+        function toggleMaxAttempts() {
+            if (allowMultipleAttemptsCheckbox.checked) {
+                maxAttemptsContainer.style.display = 'block';
+            } else {
+                maxAttemptsContainer.style.display = 'none';
+            }
+        }
+        
+        // Initial state
+        toggleMaxAttempts();
+        
+        // Event listener
+        allowMultipleAttemptsCheckbox.addEventListener('change', toggleMaxAttempts);
+        
+        // Make questions sortable if there are any
+        if (document.getElementById('question-list')) {
+            // Check if Sortable library is available
+            if (typeof Sortable !== 'undefined') {
+                const questionList = document.getElementById('question-list');
+                const sortable = Sortable.create(questionList, {
+                    animation: 150,
+                    ghostClass: 'bg-light',
+                    onEnd: function() {
+                        // Get the new order
+                        const questionIds = Array.from(questionList.children).map(item => item.dataset.id);
+                        
+                        // Send the new order to the server
+                        const formData = new FormData();
+                        questionIds.forEach(id => formData.append('question_order[]', id));
+                        
+                        fetch('{% url "reorder_questions" exam_id=exam.id %}', {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                // Update the numbers
+                                const items = questionList.children;
+                                for (let i = 0; i < items.length; i++) {
+                                    const badge = items[i].querySelector('.badge');
+                                    badge.textContent = i + 1;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    });
+</script>
+{% endblock dashboard_content %}

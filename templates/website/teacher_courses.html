@@ -102,14 +102,21 @@
                       
                       <!-- Action Buttons -->
                       <div class="d-flex gap-2">
-                        <a href="{% url 'update_course' course.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                        <a href="{% url 'teacher_exams_course' course.id %}" class="btn btn-sm btn-outline-info rounded-pill px-3" 
+                           data-bs-toggle="tooltip" title="إدارة اختبارات الدورة">
+                          <i class="fas fa-file-alt me-1"></i> الاختبارات
+                        </a>
+                        <a href="{% url 'update_course' course.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                           data-bs-toggle="tooltip" title="تعديل الدورة">
                           <i class="fas fa-edit me-1"></i> تعديل
                         </a>
                         <a href="javascript:void(0);" class="btn btn-sm btn-outline-danger rounded-pill px-3" 
-                          onclick="openDeleteCourseModal('{{ course.id }}', '{{ course.name }}');">
+                          onclick="openDeleteCourseModal('{{ course.id }}', '{{ course.name }}');"
+                          data-bs-toggle="tooltip" title="حذف الدورة">
                           <i class="fas fa-trash-alt me-1"></i> حذف
                         </a>
-                        <a href="{% url 'course_detail' course.id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                        <a href="{% url 'course_detail' course.id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                           data-bs-toggle="tooltip" title="عرض تفاصيل الدورة">
                           <i class="fas fa-info-circle me-1"></i> التفاصيل
                         </a>
                       </div>
@@ -130,4 +137,4 @@
     </div>
   </div>
 </div>
-{% endblock %}
+{% endblock dashboard_content %}

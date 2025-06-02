@@ -87,3 +87,8 @@ urlpatterns += urls_article.urlpatterns
 from . import urls_enrollment
 
 urlpatterns += urls_enrollment.urlpatterns
+
+# Include exam URLs
+from . import urls_exam
+
+urlpatterns += urls_exam.urlpatterns
