@@ -1,6 +1,14 @@
 from datetime import datetime, timedelta
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
+from django.shortcuts import render, redirect, get_object_or_404, reverse
+from django.contrib import messages
+from django.contrib.auth.decorators import user_passes_test, login_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.conf import settings
+from django.utils.translation import gettext as _
+from django.http import HttpResponseForbidden, HttpResponseRedirect
+from django.contrib.admin.views.decorators import staff_member_required
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib import messages
@@ -1790,29 +1798,12 @@ def delete_quiz(request, quiz_id):
         return redirect('quiz_list')
     return render(request, 'website/delete_quiz.html', {'quiz': quiz})
 
-def make_teacher(request):
-    r_profile=get_object_or_404(Profile, user=request.user)
-    organization=Organization.objects.filter(profile=r_profile)
-    if organization.exists():
-        organization=Organization.objects.get(profile=r_profile)
-        profiles = Profile.objects.all()
-        context = {
-            'profiles': profiles
-        }
-        
-        if request.method == 'POST':
-            profile_id=request.POST.get('profile_id')
-            r_profile=get_object_or_404(Profile, id=profile_id)
-            r_profile.status="Teacher"
-            r_profile.save()
-            teacher=Teacher.objects.create(profile=r_profile, organization=organization)
-            student=get_object_or_404(Student,profile=r_profile)
-            student.delete()
-            teacher.save()
-            return redirect('make_teacher')                           
-        return render(request, 'website/make_teacher.html', context)
-    else:
-        return redirect('index')
+import logging
+logger = logging.getLogger(__name__)
+
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+import os
 
 def teacher_list(request):
     r_profile = get_object_or_404(Profile, user=request.user)

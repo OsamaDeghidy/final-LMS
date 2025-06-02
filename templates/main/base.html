@@ -176,6 +176,13 @@
                                     <i class="fas fa-tachometer-alt me-2"></i> لوحة التحكم
                                 </a>
                             </li>
+                            {% if user.profile.status == 'Student' %}
+                            <li>
+                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#becomeTeacherModal">
+                                    <i class="fas fa-chalkboard-teacher me-2"></i>أصبح مدرساً
+                                </a>
+                            </li>
+                            {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item text-danger" href="{% url 'logout' %}">
@@ -204,6 +211,127 @@
 
     {% block content %} {% endblock %}
 
+    <!-- Become Teacher Modal -->
+    <div class="modal fade" id="becomeTeacherModal" tabindex="-1" aria-labelledby="becomeTeacherModalLabel" aria-hidden="true" dir="rtl">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="becomeTeacherModalLabel">طلب الانضمام كمعلم</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" action="{% url 'become_teacher' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <input type="hidden" name="profile_id" value="{{ user.profile.id }}">
+                        <div class="mb-3">
+                            <label for="cv" class="form-label">السيرة الذاتية (اختياري)</label>
+                            <input type="file" class="form-control" id="cv" name="cv" accept=".pdf,.doc,.docx">
+                            <div class="form-text">يمكنك رفع سيرتك الذاتية بصيغة PDF أو Word</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="bio" class="form-label">نبذة عنك</label>
+                            <textarea class="form-control" id="bio" name="bio" rows="3" required></textarea>
+                            <div class="form-text">أخبرنا عن خبراتك التعليمية والمهنية</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="specialization" class="form-label">التخصص</label>
+                            <input type="text" class="form-control" id="specialization" name="specialization" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                        <button type="submit" class="btn btn-primary">إرسال الطلب</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Become Teacher Modal Styles */
+#becomeTeacherModal .modal-content {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+#becomeTeacherModal .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px 10px 0 0;
+    padding: 1.2rem;
+}
+
+#becomeTeacherModal .modal-title {
+    font-weight: 600;
+    font-size: 1.3rem;
+}
+
+#becomeTeacherModal .btn-close {
+    filter: invert(1);
+    margin-left: 0;
+    margin-right: auto;
+}
+
+#becomeTeacherModal .modal-body {
+    padding: 1.5rem;
+}
+
+#becomeTeacherModal .form-label {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+#becomeTeacherModal .form-control {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    background-color: #f9f9f9;
+}
+
+#becomeTeacherModal .form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    background-color: #fff;
+}
+
+#becomeTeacherModal .form-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.3rem;
+}
+
+#becomeTeacherModal textarea.form-control {
+    min-height: 100px;
+}
+
+#becomeTeacherModal .modal-footer {
+    border-top: 1px solid #eee;
+    padding: 1rem 1.5rem;
+}
+
+#becomeTeacherModal .btn-primary {
+    background-color: #0d6efd;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
+#becomeTeacherModal .btn-secondary {
+    background-color: #6c757d;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
+#becomeTeacherModal .btn-primary:hover {
+    background-color: #0b5ed7;
+}
+
+#becomeTeacherModal .btn-secondary:hover {
+    background-color: #5c636a;
+}
+    </style>
 
     <footer class="pt-5 pb-4" style="background-color: #f8f9fa; border-top: 1px solid #e9ecef;" dir="rtl">
       <div class="container">

@@ -1,5 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.http import HttpResponseRedirect
+from django.contrib import messages
+from django.utils.translation import gettext as _
 from . import views
 from django.conf import settings
 from django.conf.urls.static import static
@@ -24,7 +27,6 @@ urlpatterns = [
     path('quiz/create/<int:video_id>/', views.create_quiz, name='create_quiz'),
     path('quiz/<int:quiz_id>', views.view_quiz, name='quiz_detail'),
     path('quiz/<int:pk>/update/', views.update_quiz, name='update_quiz'),
-    path('user_teacher/', views.make_teacher, name='make_teacher'),
     path('teacher_list/', views.teacher_list, name='teacher_list'),
 
     path('courseviewpage/<int:course_id>/', views.courseviewpage, name='courseviewpage'),

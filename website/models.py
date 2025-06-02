@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from ckeditor.fields import RichTextField
 import uuid
 from django.utils import timezone
-from user.models import Profile,Organization,Teacher,Student
+from user.models import Profile, Organization, Teacher, Student
 from moviepy.editor import *
 import subprocess
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
