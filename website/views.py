@@ -942,10 +942,24 @@ def dashboard(request):
             # Query all courses to display in the dashboard (for teachers/admins)
             courses = Course.objects.all()
             
+            # Get upcoming meetings for the user
+            from django.utils import timezone
+            from .models import Meeting, Participant
+            
+            # Get meetings where user is creator or participant
+            created_meetings = Meeting.objects.filter(creator=request.user, start_time__gte=timezone.now())
+            participating_meetings = Meeting.objects.filter(participant__user=request.user, start_time__gte=timezone.now())
+            
+            # Combine and remove duplicates
+            upcoming_meetings = (created_meetings | participating_meetings).distinct().order_by('start_time')[:3]
+            upcoming_meetings_count = (created_meetings | participating_meetings).distinct().count()
+            
             context = {
                 "profile": profile,
                 "courses": courses,
-                "enrollments": enrollments
+                "enrollments": enrollments,
+                "upcoming_meetings": upcoming_meetings,
+                "upcoming_meetings_count": upcoming_meetings_count
             }
             return render(request, 'website/dashboard.html', context)
         except Profile.DoesNotExist:

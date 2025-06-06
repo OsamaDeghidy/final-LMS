@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ meeting.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'meeting_list' %}">الاجتماعات</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ meeting.title }}</li>
+                </ol>
+            </nav>
+            
+            <!-- Meeting Status Badge -->
+            <div class="mb-3">
+                {% if meeting.is_past %}
+                    <span class="badge bg-secondary">انتهى الاجتماع</span>
+                {% elif meeting.is_ongoing %}
+                    <span class="badge bg-success">جاري الآن</span>
+                {% else %}
+                    <span class="badge bg-primary">قادم</span>
+                {% endif %}
+            </div>
+            
+            <!-- Meeting Details -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">{{ meeting.title }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5>تفاصيل الاجتماع</h5>
+                            <hr>
+                            <p><strong>الوصف:</strong> {{ meeting.description }}</p>
+                            <p><strong>النوع:</strong> {{ meeting.get_meeting_type_display }}</p>
+                            <p><strong>تاريخ البدء:</strong> {{ meeting.start_time|date:"Y-m-d" }}</p>
+                            <p><strong>وقت البدء:</strong> {{ meeting.start_time|date:"h:i A" }}</p>
+                            <p><strong>المدة:</strong> {{ meeting.duration }}</p>
+                            <p><strong>وقت الانتهاء:</strong> {{ meeting.end_time|date:"Y-m-d h:i A" }}</p>
+                            <p><strong>المدرسة:</strong> {{ meeting.school.name }}</p>
+                            <p><strong>المنشئ:</strong> {{ meeting.creator.get_full_name|default:meeting.creator.username }}</p>
+                            
+                            {% if meeting.meeting_type == 'ZOOM' and meeting.zoom_link %}
+                                <div class="mt-3">
+                                    <a href="{{ meeting.zoom_link }}" target="_blank" class="btn btn-primary">
+                                        <i class="fas fa-video"></i> انضم إلى اجتماع زووم
+                                    </a>
+                                </div>
+                            {% endif %}
+                            
+                            {% if meeting.recording_url %}
+                                <div class="mt-3">
+                                    <h5>تسجيل الاجتماع</h5>
+                                    <a href="{{ meeting.recording_url }}" target="_blank" class="btn btn-info">
+                                        <i class="fas fa-play-circle"></i> مشاهدة التسجيل
+                                    </a>
+                                </div>
+                            {% endif %}
+                            
+                            {% if meeting.materials %}
+                                <div class="mt-3">
+                                    <h5>مواد الاجتماع</h5>
+                                    <a href="{{ meeting.materials.url }}" target="_blank" class="btn btn-secondary">
+                                        <i class="fas fa-download"></i> تحميل المواد
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <!-- Attendance Card -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">الحضور</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if meeting.is_ongoing %}
+                                        {% if user_participant and user_participant.is_attending %}
+                                            <div class="alert alert-success">
+                                                <i class="fas fa-check-circle"></i> تم تسجيل حضورك في {{ user_participant.attendance_time|date:"h:i A" }}
+                                            </div>
+                                            <button id="mark-exit" class="btn btn-warning btn-block" data-meeting-id="{{ meeting.pk }}">
+                                                <i class="fas fa-sign-out-alt"></i> تسجيل المغادرة
+                                            </button>
+                                        {% else %}
+                                            <button id="mark-attendance" class="btn btn-success btn-block" data-meeting-id="{{ meeting.pk }}">
+                                                <i class="fas fa-check-circle"></i> تسجيل الحضور
+                                            </button>
+                                        {% endif %}
+                                    {% elif meeting.is_past %}
+                                        {% if user_participant and user_participant.is_attending %}
+                                            <div class="alert alert-info">
+                                                <p><i class="fas fa-check-circle"></i> تم تسجيل حضورك في {{ user_participant.attendance_time|date:"h:i A" }}</p>
+                                                {% if user_participant.exit_time %}
+                                                    <p><i class="fas fa-sign-out-alt"></i> تم تسجيل مغادرتك في {{ user_participant.exit_time|date:"h:i A" }}</p>
+                                                    <p><i class="fas fa-clock"></i> مدة الحضور: {{ user_participant.attendance_duration }}</p>
+                                                {% else %}
+                                                    <p><i class="fas fa-exclamation-triangle"></i> لم يتم تسجيل المغادرة</p>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-times-circle"></i> لم تسجل حضورك لهذا الاجتماع
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle"></i> سيكون تسجيل الحضور متاحاً عند بدء الاجتماع
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if meeting.is_past or meeting.is_ongoing %}
+                                        <div class="mt-3">
+                                            <h6>معدل الحضور</h6>
+                                            <div class="progress">
+                                                <div class="progress-bar" role="progressbar" style="width: {{ meeting.attendance_rate }}%;" 
+                                                     aria-valuenow="{{ meeting.attendance_rate }}" aria-valuemin="0" aria-valuemax="100">
+                                                    {{ meeting.attendance_rate|floatformat:1 }}%
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Actions Card -->
+                            {% if meeting.creator == request.user or request.user.is_superuser %}
+                                <div class="card">
+                                    <div class="card-header bg-primary text-white">
+                                        <h5 class="mb-0">إجراءات</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-grid gap-2">
+                                            <a href="{% url 'meeting_update' meeting.pk %}" class="btn btn-warning">
+                                                <i class="fas fa-edit"></i> تعديل الاجتماع
+                                            </a>
+                                            <a href="{% url 'meeting_delete' meeting.pk %}" class="btn btn-danger">
+                                                <i class="fas fa-trash"></i> حذف الاجتماع
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Participants List -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">المشاركون ({{ participants.count }})</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>الاسم</th>
+                                    <th>حالة الحضور</th>
+                                    <th>وقت الحضور</th>
+                                    <th>وقت المغادرة</th>
+                                    <th>مدة الحضور</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for participant in participants %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ participant.user.get_full_name|default:participant.user.username }}</td>
+                                        <td>
+                                            {% if participant.is_attending %}
+                                                <span class="badge bg-success">حاضر</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">غائب</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ participant.attendance_time|default:"-" }}</td>
+                                        <td>{{ participant.exit_time|default:"-" }}</td>
+                                        <td>{{ participant.attendance_duration|default:"-" }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center">لا يوجد مشاركون حتى الآن</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Mark attendance
+        $('#mark-attendance').click(function() {
+            const meetingId = $(this).data('meeting-id');
+            $.ajax({
+                url: `/meetings/${meetingId}/mark-attendance/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        toastr.success(response.message);
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    toastr.error('حدث خطأ أثناء تسجيل الحضور');
+                }
+            });
+        });
+        
+        // Mark exit
+        $('#mark-exit').click(function() {
+            const meetingId = $(this).data('meeting-id');
+            $.ajax({
+                url: `/meetings/${meetingId}/mark-exit/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        toastr.success(response.message);
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function(xhr) {
+                    toastr.error('حدث خطأ أثناء تسجيل المغادرة');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,197 @@
+{% load attendance_filters %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تقرير الحضور الشخصي - {{ course.name }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #fff;
+            color: #333;
+        }
+        .container {
+            max-width: 1140px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .header h1 {
+            margin-bottom: 5px;
+        }
+        .header p {
+            color: #666;
+            margin-top: 0;
+        }
+        .report-info {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .report-info div {
+            flex: 1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: right;
+        }
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .summary-box {
+            flex: 1;
+            margin: 0 10px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            text-align: center;
+            background-color: #f9f9f9;
+        }
+        .summary-box h3 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            font-size: 16px;
+            color: #666;
+        }
+        .summary-box p {
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>تقرير الحضور الشخصي</h1>
+            <p>{{ course.name }}</p>
+        </div>
+
+        <div class="report-info">
+            <div>
+                <p><strong>الطالب:</strong> {{ student.get_full_name|default:student.username }}</p>
+                <p><strong>الفترة:</strong> {{ start_date|date:"Y/m/d" }} - {{ end_date|date:"Y/m/d" }}</p>
+            </div>
+            <div style="text-align: left;">
+                <p><strong>المدرس:</strong> {{ course.teacher.get_full_name|default:course.teacher.username }}</p>
+                <p><strong>تاريخ إنشاء التقرير:</strong> {% now "Y/m/d H:i" %}</p>
+            </div>
+        </div>
+
+        <div class="summary">
+            <div class="summary-box">
+                <h3>إجمالي الجلسات</h3>
+                <p>{{ total_sessions }}</p>
+            </div>
+            <div class="summary-box">
+                <h3>الجلسات التي حضرتها</h3>
+                <p>{{ attended_sessions }}</p>
+            </div>
+            <div class="summary-box">
+                <h3>نسبة الحضور</h3>
+                <p>{{ attendance_rate|floatformat:1 }}%</p>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>التاريخ</th>
+                    <th>المحتوى</th>
+                    <th>الوحدة</th>
+                    <th>الحالة</th>
+                    <th>المدة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in attendance_records %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ record.date }}</td>
+                    <td>
+                        {% if record.video %}
+                            {{ record.video.name }}
+                        {% else %}
+                            جلسة مباشرة
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.module %}
+                            {{ record.module.name }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.is_present %}
+                            حاضر
+                        {% else %}
+                            غائب
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.duration %}
+                            {{ record.duration }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="footer">
+            <p>تم إنشاء هذا التقرير بواسطة نظام إدارة التعلم - {{ course.name }} - {% now "Y/m/d H:i" %}</p>
+        </div>
+
+        <div class="no-print" style="text-align: center; margin-top: 30px;">
+            <button onclick="window.print();" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                طباعة التقرير
+            </button>
+            <button onclick="window.close();" style="padding: 10px 20px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">
+                إغلاق
+            </button>
+        </div>
+    </div>
+</body>
+</html>

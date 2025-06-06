@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{% static 'css/course-view.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <meta name="course-id" content="{{ course.id }}">
+    <script src="{% static 'js/attendance_tracking.js' %}"></script>
     <style>
         :root {
             --primary-color: #6366f1;
@@ -396,11 +397,12 @@
                             {% if current_content.type == 'video' %}
                             <!-- عرض الفيديو -->
                             <div class="video-container">
-                                <video controls class="course-video" data-video-id="{{ current_content.content.id }}">
-                                    <source src="{{ current_content.content.video.url }}" type="video/mp4">
+                                <video id="course-video" class="course-video" controls data-video-id="{{ current_content.content.id }}" data-course-id="{{ course.id }}">
+                                    <source src="{{ current_content.content.file.url }}" type="video/mp4">
                                     متصفحك لا يدعم تشغيل الفيديو.
                                 </video>
                             </div>
+                            {% csrf_token %}
                             
                             {% elif current_content.type == 'note' %}
                             <!-- عرض ملف PDF أو النص -->

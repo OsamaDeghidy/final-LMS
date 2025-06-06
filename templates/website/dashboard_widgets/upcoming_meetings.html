@@ -1,0 +1,52 @@
+{% load static %}
+
+<div class="card shadow-sm h-100">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-calendar-alt me-2"></i> الاجتماعات القادمة
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if upcoming_meetings %}
+            <div class="list-group">
+                {% for meeting in upcoming_meetings %}
+                    <a href="{% url 'meeting_detail' meeting.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ meeting.title }}</h6>
+                            <small>{{ meeting.start_time|date:"Y-m-d" }}</small>
+                        </div>
+                        <p class="mb-1 small text-muted">{{ meeting.start_time|date:"h:i A" }} - {{ meeting.get_meeting_type_display }}</p>
+                        {% if meeting.meeting_type == 'ZOOM' %}
+                            <span class="badge bg-info">
+                                <i class="fas fa-video"></i> زووم
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary">
+                                <i class="fas fa-users"></i> عادي
+                            </span>
+                        {% endif %}
+                        
+                        {% if meeting.is_ongoing %}
+                            <span class="badge bg-success">جاري الآن</span>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+            {% if upcoming_meetings_count > 3 %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'my_meetings' %}?filter=upcoming" class="btn btn-sm btn-outline-primary">
+                        عرض كل الاجتماعات ({{ upcoming_meetings_count }})
+                    </a>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <p class="mb-0">لا توجد اجتماعات قادمة</p>
+                <a href="{% url 'meeting_create' %}" class="btn btn-sm btn-primary mt-3">
+                    <i class="fas fa-plus-circle"></i> إنشاء اجتماع جديد
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>

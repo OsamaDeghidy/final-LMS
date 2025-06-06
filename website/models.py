@@ -114,7 +114,6 @@ class Course(models.Model):
 
 
 
-
 class Enrollment(models.Model):
     STATUS_CHOICES = (
         ('active', 'Active'),
@@ -748,16 +747,32 @@ class Meeting(models.Model):
         ('NORMAL', 'اجتماع عادي'),
     )
     
-    title = models.CharField(max_length=255)
-    description = models.TextField()
-    meeting_type = models.CharField(max_length=10, choices=MEETING_TYPES)
-    start_time = models.DateTimeField()
-    duration = models.DurationField(default=timedelta(minutes=60))
-    school = models.ForeignKey(School, on_delete=models.CASCADE)
-    creator = models.ForeignKey(User, on_delete=models.CASCADE)
-    zoom_link = models.URLField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
+    NOTIFICATION_TYPES = (
+        ('DAY_BEFORE', 'قبل يوم'),
+        ('HOUR_BEFORE', 'قبل ساعة'),
+        ('CANCELLED', 'تم الإلغاء'),
+        ('RESCHEDULED', 'تم إعادة الجدولة'),
+    )
+    
+    title = models.CharField(max_length=255, verbose_name="عنوان الاجتماع")
+    description = models.TextField(verbose_name="وصف الاجتماع")
+    meeting_type = models.CharField(max_length=10, choices=MEETING_TYPES, verbose_name="نوع الاجتماع")
+    start_time = models.DateTimeField(verbose_name="وقت البدء")
+    duration = models.DurationField(default=timedelta(minutes=60), verbose_name="المدة")
+    school = models.ForeignKey(School, on_delete=models.CASCADE, verbose_name="المدرسة")
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_meetings', verbose_name="منشئ الاجتماع")
+    zoom_link = models.URLField(blank=True, null=True, verbose_name="رابط زووم")
+    recording_url = models.URLField(blank=True, null=True, verbose_name="رابط التسجيل")
+    materials = models.FileField(upload_to='meeting_materials/', blank=True, null=True, verbose_name="مواد الاجتماع")
+    is_active = models.BooleanField(default=True, verbose_name="نشط")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الإنشاء")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث")
     notification_task_id = models.CharField(max_length=255, blank=True, null=True)
+    
+    class Meta:
+        verbose_name = "اجتماع"
+        verbose_name_plural = "الاجتماعات"
+        ordering = ['-start_time']
     
     def __str__(self):
         return f"{self.title} - {self.start_time}"
@@ -770,35 +785,228 @@ class Meeting(models.Model):
     def end_time(self):
         return self.start_time + self.duration
     
+    @property
+    def is_past(self):
+        """Check if the meeting is in the past"""
+        return timezone.now() > self.end_time
+    
+    @property
+    def is_ongoing(self):
+        """Check if the meeting is currently ongoing"""
+        now = timezone.now()
+        return self.start_time <= now <= self.end_time
+    
+    @property
+    def attendance_rate(self):
+        """Calculate the attendance rate for this meeting"""
+        total_participants = self.participant_set.count()
+        if total_participants == 0:
+            return 0
+        attended = self.participant_set.filter(is_attending=True).count()
+        return (attended / total_participants) * 100
+    
+    def get_participants(self):
+        """Get all participants for this meeting"""
+        return self.participant_set.all()
+    
+    def add_participant(self, user):
+        """Add a participant to the meeting"""
+        participant, created = Participant.objects.get_or_create(
+            meeting=self,
+            user=user
+        )
+        return participant
+    
+    def setup_notifications(self):
+        """Set up automatic notifications for this meeting"""
+        # Create day before notification
+        day_before = self.start_time - timedelta(days=1)
+        if day_before > timezone.now():
+            Notification.objects.create(
+                meeting=self,
+                notification_type='DAY_BEFORE',
+                scheduled_time=day_before,
+                message=f"تذكير: لديك اجتماع {self.title} غداً في تمام {self.start_time.strftime('%H:%M')}"
+            )
+        
+        # Create hour before notification
+        hour_before = self.start_time - timedelta(hours=1)
+        if hour_before > timezone.now():
+            Notification.objects.create(
+                meeting=self,
+                notification_type='HOUR_BEFORE',
+                scheduled_time=hour_before,
+                message=f"تذكير: لديك اجتماع {self.title} بعد ساعة في تمام {self.start_time.strftime('%H:%M')}"
+            )
+    
     def save(self, *args, **kwargs):
         self.clean()
+        is_new = self.pk is None
         super().save(*args, **kwargs)
-        # Note: setup_notifications method would need to be implemented
-        # self.setup_notifications()
+        
+        if is_new:
+            self.setup_notifications()
 
 
 class Participant(models.Model):
-    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    is_attending = models.BooleanField(default=False)
-    attendance_time = models.DateTimeField(null=True, blank=True)
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, verbose_name="الاجتماع")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="المستخدم")
+    is_attending = models.BooleanField(default=False, verbose_name="حاضر")
+    attendance_time = models.DateTimeField(null=True, blank=True, verbose_name="وقت الحضور")
+    exit_time = models.DateTimeField(null=True, blank=True, verbose_name="وقت المغادرة")
+    attendance_duration = models.DurationField(null=True, blank=True, verbose_name="مدة الحضور")
     
     class Meta:
         unique_together = ('meeting', 'user')
+        verbose_name = "مشارك"
+        verbose_name_plural = "المشاركون"
     
     def __str__(self):
         return f"{self.user} - {self.meeting}"
+    
+    def mark_attendance(self):
+        """Mark attendance for this participant"""
+        if not self.is_attending:
+            self.is_attending = True
+            self.attendance_time = timezone.now()
+            self.save()
+    
+    def mark_exit(self):
+        """Mark exit time for this participant"""
+        if self.is_attending and self.attendance_time and not self.exit_time:
+            self.exit_time = timezone.now()
+            self.attendance_duration = self.exit_time - self.attendance_time
+            self.save()
+    
+    @property
+    def attendance_status(self):
+        """Get attendance status string"""
+        if not self.is_attending:
+            return "غائب"
+        elif self.is_attending and not self.exit_time:
+            return "حاضر"
+        else:
+            return "حضر وغادر"
 
 
 class Notification(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE)
-    message = models.TextField()
-    sent_at = models.DateTimeField(auto_now_add=True)
-    is_read = models.BooleanField(default=False)
+    NOTIFICATION_TYPES = (
+        ('DAY_BEFORE', 'قبل يوم'),
+        ('HOUR_BEFORE', 'قبل ساعة'),
+        ('CANCELLED', 'تم الإلغاء'),
+        ('RESCHEDULED', 'تم إعادة الجدولة'),
+        ('CUSTOM', 'مخصص'),
+    )
+    
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, verbose_name="الاجتماع")
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='CUSTOM', verbose_name="نوع الإشعار")
+    message = models.TextField(verbose_name="الرسالة")
+    recipients = models.ManyToManyField(User, related_name='meeting_notifications', verbose_name="المستلمون")
+    scheduled_time = models.DateTimeField(verbose_name="وقت الجدولة")
+    sent = models.BooleanField(default=False, verbose_name="تم الإرسال")
+    sent_at = models.DateTimeField(null=True, blank=True, verbose_name="وقت الإرسال")
+    is_read = models.BooleanField(default=False, verbose_name="تمت القراءة")
+    
+    class Meta:
+        verbose_name = "إشعار"
+        verbose_name_plural = "الإشعارات"
+        ordering = ['-scheduled_time']
     
     def __str__(self):
-        return f"إشعار لـ {self.user} - {self.meeting}"
+        return f"إشعار {self.get_notification_type_display()} - {self.meeting}"
+    
+    def send(self):
+        """Send the notification to all recipients via email"""
+        if not self.sent:
+            from django.core.mail import send_mail
+            from django.conf import settings
+            from django.template.loader import render_to_string
+            from django.utils.html import strip_tags
+            
+            # Get all recipient emails
+            recipient_emails = [recipient.email for recipient in self.recipients.all() if recipient.email]
+            
+            if not recipient_emails:
+                # No valid recipients, mark as sent but log this
+                self.sent = True
+                self.sent_at = timezone.now()
+                self.save()
+                return False
+                
+            # Prepare email context
+            context = {
+                'meeting': self.meeting,
+                'message': self.message,
+                'notification_type': self.get_notification_type_display(),
+                'meeting_url': f"{settings.BASE_URL}/meetings/{self.meeting.id}/",
+            }
+            
+            # Determine subject based on notification type
+            subject_prefix = "إشعار اجتماع: "
+            if self.notification_type == 'DAY_BEFORE':
+                subject = f"{subject_prefix}تذكير قبل يوم - {self.meeting.title}"
+            elif self.notification_type == 'HOUR_BEFORE':
+                subject = f"{subject_prefix}تذكير قبل ساعة - {self.meeting.title}"
+            elif self.notification_type == 'CANCELLED':
+                subject = f"{subject_prefix}تم إلغاء الاجتماع - {self.meeting.title}"
+            elif self.notification_type == 'RESCHEDULED':
+                subject = f"{subject_prefix}تم إعادة جدولة الاجتماع - {self.meeting.title}"
+            else:
+                subject = f"{subject_prefix}{self.meeting.title}"
+            
+            # Render email template
+            html_message = render_to_string('website/meetings/email/notification_email.html', context)
+            plain_message = strip_tags(html_message)
+            
+            try:
+                # Send email
+                send_mail(
+                    subject=subject,
+                    message=plain_message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=recipient_emails,
+                    html_message=html_message,
+                    fail_silently=False,
+                )
+                
+                # Mark as sent
+                self.sent = True
+                self.sent_at = timezone.now()
+                self.save()
+                return True
+            except Exception as e:
+                # Log the error but don't raise it
+                print(f"Error sending notification email: {e}")
+                return False
+        return False
+    
+    @classmethod
+    def create_for_meeting(cls, meeting, notification_type, message, scheduled_time=None):
+        """Create a notification for all participants of a meeting"""
+        if scheduled_time is None:
+            scheduled_time = timezone.now()
+            
+        notification = cls.objects.create(
+            meeting=meeting,
+            notification_type=notification_type,
+            message=message,
+            scheduled_time=scheduled_time
+        )
+        
+        # Add all participants as recipients
+        participants = meeting.participant_set.all()
+        for participant in participants:
+            notification.recipients.add(participant.user)
+            
+        # Add the creator as a recipient
+        notification.recipients.add(meeting.creator)
+        
+        return notification
+        
+    @classmethod
+    def get_unread_count(cls, user):
+        """Get the count of unread notifications for a user"""
+        return cls.objects.filter(recipients=user, is_read=False).count()
 
 
 class BookCategory(models.Model):

@@ -92,3 +92,15 @@ urlpatterns += urls_enrollment.urlpatterns
 from . import urls_exam
 
 urlpatterns += urls_exam.urlpatterns
+
+# Include attendance URLs
+from . import attendance_urls
+
+urlpatterns += [
+    path('attendance/', include('website.attendance_urls')),
+]
+
+# Include meeting URLs
+from . import meeting_urls
+
+urlpatterns += meeting_urls.urlpatterns

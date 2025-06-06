@@ -91,6 +91,9 @@
                 <a href="{% url 'student_exams_list' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-file-alt text-muted me-2" style="padding-left: 5px;"></i> اختباراتي
                 </a>
+                <a href="{% url 'attendance_dashboard' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-user-clock text-muted me-2" style="padding-left: 5px;"></i> الحضور والغياب
+                </a>
                 <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-heart text-muted me-2" style="padding-left: 5px;"></i> قائمتي المفضلة
                 </a>
@@ -112,6 +115,9 @@
                 </a>
                 <a href="{% url 'teacher_exams' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-file-alt text-muted me-2" style="padding-left: 5px;"></i> اختباراتي
+                </a>
+                <a href="{% url 'attendance_dashboard' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                  <i class="fas fa-user-clock text-muted me-2" style="padding-left: 5px;"></i> الحضور والغياب
                 </a>
                 {% endif %}
                 
@@ -146,6 +152,17 @@
               </div>
             </div>
           </div>
+          
+          <!-- Upcoming Meetings Widget -->
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0 py-3">
+              <h5 class="mb-0 text" style="color: #2a5a7c;"><i class="fas fa-calendar-alt me-2" style="padding-left: 5px;"></i> الاجتماعات القادمة</h5>
+            </div>
+            <div class="card-body p-0">
+              {% include 'website/dashboard_widgets/upcoming_meetings.html' %}
+            </div>
+          </div>
+          
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-0 py-3">
               <h5 class="mb-0 text" style="color: #2a5a7c;"><i class="fas fa-cog me-2"style="padding-left: 5px;"></i> الإعدادات</h5>

@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}إشعارات الاجتماعات{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">إشعارات الاجتماعات</h1>
+            
+            <!-- Notifications List -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">الإشعارات</h4>
+                </div>
+                <div class="card-body">
+                    {% if page_obj %}
+                        <div class="list-group">
+                            {% for notification in page_obj %}
+                                <div class="list-group-item list-group-item-action {% if not notification.is_read %}list-group-item-primary{% endif %}">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">
+                                            {% if not notification.is_read %}
+                                                <span class="badge bg-primary">جديد</span>
+                                            {% endif %}
+                                            {{ notification.meeting.title }}
+                                        </h5>
+                                        <small>{{ notification.scheduled_time|date:"Y-m-d h:i A" }}</small>
+                                    </div>
+                                    <p class="mb-1">{{ notification.message }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="badge {% if notification.notification_type == 'DAY_BEFORE' %}bg-info{% elif notification.notification_type == 'HOUR_BEFORE' %}bg-warning{% elif notification.notification_type == 'CANCELLED' %}bg-danger{% elif notification.notification_type == 'RESCHEDULED' %}bg-success{% else %}bg-secondary{% endif %}">
+                                                {{ notification.get_notification_type_display }}
+                                            </span>
+                                            {% if notification.sent %}
+                                                <span class="badge bg-success">تم الإرسال</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">في انتظار الإرسال</span>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <a href="{% url 'meeting_detail' notification.meeting.pk %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye"></i> عرض الاجتماع
+                                            </a>
+                                            {% if not notification.is_read %}
+                                                <button class="btn btn-sm btn-secondary mark-as-read" data-notification-id="{{ notification.id }}">
+                                                    <i class="fas fa-check"></i> تحديد كمقروء
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            لا توجد إشعارات حالياً.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.paginator.num_pages > 1 %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1" aria-label="First">
+                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Mark notification as read
+        $('.mark-as-read').click(function() {
+            const notificationId = $(this).data('notification-id');
+            const button = $(this);
+            
+            $.ajax({
+                url: '{% url "meeting_notifications" %}',
+                method: 'POST',
+                data: {
+                    'notification_id': notificationId
+                },
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Remove the "new" badge
+                        button.closest('.list-group-item').find('.badge.bg-primary').remove();
+                        
+                        // Remove the "mark as read" button
+                        button.remove();
+                        
+                        // Remove the highlight class
+                        button.closest('.list-group-item').removeClass('list-group-item-primary');
+                        
+                        toastr.success('تم تحديد الإشعار كمقروء');
+                    }
+                },
+                error: function() {
+                    toastr.error('حدث خطأ أثناء تحديث حالة الإشعار');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

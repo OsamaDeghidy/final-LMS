@@ -176,6 +176,24 @@
                                     <i class="fas fa-tachometer-alt me-2"></i> لوحة التحكم
                                 </a>
                             </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'meeting_list' %}">
+                                    <i class="fas fa-calendar-alt me-2"></i> الاجتماعات
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'my_meetings' %}">
+                                    <i class="fas fa-user-clock me-2"></i> اجتماعاتي
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'meeting_notifications' %}">
+                                    <i class="fas fa-bell me-2"></i> إشعارات الاجتماعات
+                                    {% if unread_notification_count > 0 %}
+                                        <span class="badge bg-danger rounded-pill ms-2">{{ unread_notification_count }}</span>
+                                    {% endif %}
+                                </a>
+                            </li>
                             {% if user.profile.status == 'Student' %}
                             <li>
                                 <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#becomeTeacherModal">
