@@ -461,31 +461,6 @@ class Answer(models.Model):
         return self.text
 
 
-class Monitor(models.Model):
-    user=models.OneToOneField(User, on_delete=models.CASCADE,null=True,blank=True)
-    ip=models.CharField(max_length=2000,blank=True,null=True)
-    country=models.CharField(max_length=2000,blank=True,null=True)
-    city=models.CharField(max_length=2000,blank=True,null=True)
-    region=models.CharField(max_length=2000,blank=True,null=True)
-    timeZone=models.CharField(max_length=2000,blank=True,null=True)
-    browser=models.CharField(max_length=2000,blank=True,null=True)
-    browser_version=models.CharField(max_length=2000,blank=True,null=True)
-    operating_system=models.CharField(max_length=2000,blank=True,null=True)
-    device=models.CharField(max_length=2000,blank=True,null=True)
-    language=models.CharField(max_length=2000,blank=True,null=True)
-    screen_resolution=models.CharField(max_length=2000,blank=True,null=True)
-    referrer=models.CharField(max_length=2000,blank=True,null=True)
-    landing_page=models.CharField(max_length=2000,blank=True,null=True)
-    timestamp=models.DateTimeField(default=timezone.now)
-    frequency=models.IntegerField(default=0,null=True,blank=True)
-
-    def __str__(self):
-        user_name = self.user.profile.name if self.user else "No User"
-        return f"{user_name} - {self.ip} - {self.landing_page}"
-
-    # class Meta:
-    #     unique_together = ('user', 'ip', 'landing_page')
-
 
 class Attachment(models.Model):
     file = models.FileField(upload_to='attachments/')

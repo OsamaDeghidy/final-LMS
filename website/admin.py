@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils import timezone
-from .models import (Category, Tags, Course, Module, Video, Comment, SubComment, Notes, Monitor, 
+from .models import (Category, Tags, Course, Module, Video, Comment, SubComment, Notes, 
                     UserProgress, CourseProgress, Quiz, Question, Answer, Enrollment, Certification, 
                     Attachment, Exam, ExamQuestion, ExamAnswer, UserExamAttempt, UserExamAnswer, 
                     Assignment, AssignmentSubmission, Attendance, QuizAttempt, QuizUserAnswer, 
@@ -18,7 +18,7 @@ admin.site.register(Video)
 admin.site.register(Comment)
 admin.site.register(SubComment)
 admin.site.register(Notes)
-admin.site.register(Monitor)
+
 admin.site.register(UserProgress)
 admin.site.register(CourseProgress)
 admin.site.register(Quiz)

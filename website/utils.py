@@ -1,6 +1,6 @@
 from django.db.models import Q, Count, Sum, F, ExpressionWrapper, FloatField
 from django.utils import timezone
-from .models import Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, VideoProgress, Assignment, AssignmentSubmission, UserExamAttempt, ContentProgress
+from .models import Course, Module, Video, Comment, SubComment, Notes, Tags, Quiz, Question, Answer, Enrollment, VideoProgress, Assignment, AssignmentSubmission, UserExamAttempt, ContentProgress
 from user.models import Profile, Student, Organization, Teacher
 
 

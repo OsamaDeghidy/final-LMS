@@ -22,7 +22,7 @@ from django.core.exceptions import ObjectDoesNotExist
 import logging
 from django.db.models import Avg
 
-from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Monitor, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt, Article
+from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt, Article
 from user.models import Profile, Student, Organization, Teacher
 from .utils import searchCourses
 
@@ -1176,22 +1176,6 @@ def course_detail(request, course_id):
         except Profile.DoesNotExist:
             pass
             
-        try:
-            monitor = Monitor.objects.get(user=request.user, landing_page=request.META.get('HTTP_HOST') + request.META.get('PATH_INFO'), ip=request.META.get('REMOTE_ADDR'))
-            monitor.frequency += 1
-            monitor.save()
-        except Monitor.DoesNotExist:
-            pass
-    else:
-        monitor = Monitor()
-        monitor.ip = request.META.get('REMOTE_ADDR')
-        g = 'https://geolocation-db.com/jsonp/' + str(monitor.ip)
-        response = requests.get(g)
-        data = response.content.decode()
-        data = data.split("(")[1].strip(")")
-        location = json.loads(data)
-        monitor.country = location['country_name']
-    
     # Process review submission
     if request.method == 'POST' and request.user.is_authenticated and 'review_rating' in request.POST:
         rating = int(request.POST.get('review_rating'))
