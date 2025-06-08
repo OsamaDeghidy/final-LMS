@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
-from website.models import Meeting, Notification, Profile, School
+from website.models import Meeting, Notification, Profile
 from django.core import mail
 from django.conf import settings
 from website.management.commands.send_meeting_notifications import Command
@@ -13,14 +13,6 @@ class MeetingNotificationTests(TestCase):
     
     def setUp(self):
         """Set up test data"""
-        # Create a school
-        self.school = School.objects.create(
-            name="Test School",
-            address="Test Address",
-            phone="123456789",
-            email="school@test.com"
-        )
-        
         # Create users
         self.user1 = User.objects.create_user(
             username="testuser1",
@@ -56,7 +48,7 @@ class MeetingNotificationTests(TestCase):
             meeting_type="NORMAL",
             start_time=timezone.now() + timedelta(days=2),
             duration=60,
-            school=self.school,
+            # school field removed
             creator=self.user1
         )
         

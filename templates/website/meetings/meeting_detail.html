@@ -1,10 +1,10 @@
-{% extends 'main/base.html' %}
+{% extends 'main/dashboard_base.html' %}
 {% load static %}
 
 {% block title %}{{ meeting.title }}{% endblock %}
 
-{% block content %}
-<div class="container mt-4 mb-5">
+{% block dashboard_content %}
+<div class="container mt-4 mb-5 col-md-8">
     <div class="row">
         <div class="col-12">
             <nav aria-label="breadcrumb">
@@ -41,7 +41,7 @@
                             <p><strong>وقت البدء:</strong> {{ meeting.start_time|date:"h:i A" }}</p>
                             <p><strong>المدة:</strong> {{ meeting.duration }}</p>
                             <p><strong>وقت الانتهاء:</strong> {{ meeting.end_time|date:"Y-m-d h:i A" }}</p>
-                            <p><strong>المدرسة:</strong> {{ meeting.school.name }}</p>
+                            <!-- School field removed -->
                             <p><strong>المنشئ:</strong> {{ meeting.creator.get_full_name|default:meeting.creator.username }}</p>
                             
                             {% if meeting.meeting_type == 'ZOOM' and meeting.zoom_link %}
@@ -197,9 +197,7 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
     $(document).ready(function() {
         // Mark attendance
@@ -253,4 +251,4 @@
         });
     });
 </script>
-{% endblock %}
+{% endblock dashboard_content %}

@@ -1,10 +1,10 @@
-{% extends 'main/base.html' %}
+{% extends 'main/dashboard_base.html' %}
 {% load static %}
 
 {% block title %}اجتماعاتي{% endblock %}
 
-{% block content %}
-<div class="container mt-4 mb-5">
+{% block dashboard_content %}
+<div class="container mt-4 mb-5 col-md-8">
     <div class="row">
         <div class="col-12">
             <h1 class="text-center mb-4">اجتماعاتي</h1>
@@ -134,4 +134,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
+{% endblock dashboard_content %}

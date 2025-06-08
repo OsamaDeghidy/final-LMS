@@ -6,7 +6,7 @@ from .models import (Category, Tags, Course, Module, Video, Comment, SubComment,
                     UserProgress, CourseProgress, Quiz, Question, Answer, Enrollment, Certification, 
                     Attachment, Exam, ExamQuestion, ExamAnswer, UserExamAttempt, UserExamAnswer, 
                     Assignment, AssignmentSubmission, Attendance, QuizAttempt, QuizUserAnswer, 
-                    School, Meeting, Participant, Notification, BookCategory, Book, Article)
+                    Meeting, Participant, Notification, BookCategory, Book, Article)
 
 # Register your models here.
 
@@ -39,7 +39,7 @@ admin.site.register(QuizAttempt)
 admin.site.register(QuizUserAnswer)
 
 # Register new models
-admin.site.register(School)
+# School model removed
 admin.site.register(Meeting)
 admin.site.register(Participant)
 admin.site.register(Notification)

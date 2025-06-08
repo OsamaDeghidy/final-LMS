@@ -15,9 +15,7 @@ def meeting_list(request):
     form = MeetingFilterForm(request.GET)
     meetings = Meeting.objects.all()
     
-    # Filter by school if user has access to specific schools
-    if hasattr(request.user, 'profile') and request.user.profile.school:
-        meetings = meetings.filter(school=request.user.profile.school)
+    # School filtering removed
     
     # Apply filters if form is valid
     if form.is_valid():
@@ -50,10 +48,7 @@ def meeting_detail(request, pk):
     """View for displaying meeting details"""
     meeting = get_object_or_404(Meeting, pk=pk)
     
-    # Check if user has access to this meeting
-    if hasattr(request.user, 'profile') and request.user.profile.school:
-        if meeting.school != request.user.profile.school and not request.user.is_superuser:
-            return HttpResponseForbidden("ليس لديك صلاحية لعرض هذا الاجتماع")
+    # School access check removed
     
     # Get participant status for current user
     user_participant = Participant.objects.filter(meeting=meeting, user=request.user).first()
@@ -61,11 +56,22 @@ def meeting_detail(request, pk):
     # Get all participants
     participants = meeting.participant_set.all().select_related('user')
     
+    # Get user profile if it exists
+    profile = None
+    student = None
+    if hasattr(request.user, 'profile'):
+        profile = request.user.profile
+        # Get student info if available
+        if hasattr(profile, 'student'):
+            student = profile.student
+    
     context = {
         'meeting': meeting,
         'user_participant': user_participant,
         'participants': participants,
         'active_tab': 'meetings',
+        'profile': profile,
+        'student': student,
     }
     return render(request, 'website/meetings/meeting_detail.html', context)
 
@@ -78,9 +84,13 @@ def meeting_create(request):
             meeting = form.save(commit=False)
             meeting.creator = request.user
             
-            # Set school based on user's profile
-            if hasattr(request.user, 'profile') and request.user.profile.school:
-                meeting.school = request.user.profile.school
+            # Set school based on user's profile if available
+            if hasattr(request.user, 'profile'):
+                # Check if the user is a teacher and has an organization
+                if hasattr(request.user.profile, 'teacher') and request.user.profile.teacher:
+                    teacher = request.user.profile.teacher
+                    if hasattr(teacher, 'organization') and teacher.organization:
+                        meeting.school = teacher.organization
             
             meeting.save()
             messages.success(request, "تم إنشاء الاجتماع بنجاح")

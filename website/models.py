@@ -706,16 +706,6 @@ class QuizUserAnswer(models.Model):
         return f"إجابة {self.attempt.user.username} على سؤال {self.question.id}"
 
 
-class School(models.Model):
-    name = models.CharField(max_length=255)
-    address = models.TextField()
-    phone = models.CharField(max_length=20)
-    email = models.EmailField()
-    
-    def __str__(self):
-        return self.name
-
-
 class Meeting(models.Model):
     MEETING_TYPES = (
         ('ZOOM', 'اجتماع عبر زووم'),
@@ -734,7 +724,7 @@ class Meeting(models.Model):
     meeting_type = models.CharField(max_length=10, choices=MEETING_TYPES, verbose_name="نوع الاجتماع")
     start_time = models.DateTimeField(verbose_name="وقت البدء")
     duration = models.DurationField(default=timedelta(minutes=60), verbose_name="المدة")
-    school = models.ForeignKey(School, on_delete=models.CASCADE, verbose_name="المدرسة")
+    # school field removed
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_meetings', verbose_name="منشئ الاجتماع")
     zoom_link = models.URLField(blank=True, null=True, verbose_name="رابط زووم")
     recording_url = models.URLField(blank=True, null=True, verbose_name="رابط التسجيل")

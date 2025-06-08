@@ -1,10 +1,10 @@
-{% extends 'main/base.html' %}
+{% extends 'main/dashboard_base.html' %}
 {% load static %}
 
 {% block title %}الاجتماعات{% endblock %}
 
-{% block content %}
-<div class="container mt-4 mb-5">
+{% block dashboard_content %}
+<div class="container mt-4 mb-5 col-md-8">
     <div class="row">
         <div class="col-12">
             <h1 class="text-center mb-4">الاجتماعات</h1>
@@ -135,9 +135,7 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
     $(document).ready(function() {
         // Toggle zoom link field visibility based on meeting type
@@ -153,4 +151,4 @@
         $('#id_meeting_type').trigger('change');
     });
 </script>
-{% endblock %}
+{% endblock dashboard_content %}
