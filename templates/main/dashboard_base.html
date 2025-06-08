@@ -95,7 +95,7 @@
                   <i class="fas fa-user-clock text-muted me-2" style="padding-left: 5px;"></i> الحضور والغياب
                 </a>
                 <a href="{% url 'meeting_list' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
-                  <i class="fas fa-calendar-alt text-muted me-2" style="padding-left: 5px;"></i> الاجتماعات القادمة
+                  <i class="fas fa-calendar-alt text-muted me-2" style="padding-left: 5px;"></i> اجتماعاتي
                 </a>
                 <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-heart text-muted me-2" style="padding-left: 5px;"></i> قائمتي المفضلة
@@ -122,6 +122,25 @@
                 <a href="{% url 'attendance_dashboard' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-user-clock text-muted me-2" style="padding-left: 5px;"></i> الحضور والغياب
                 </a>
+                
+                <!-- Teacher Meetings Section -->
+                <div class="dropdown">
+                  <a class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect" data-bs-toggle="collapse" href="#meetingsCollapse" role="button" aria-expanded="false" aria-controls="meetingsCollapse">
+                    <i class="fas fa-calendar-alt text-muted me-2" style="padding-left: 5px;"></i>
+                    <span>إدارة الاجتماعات</span>
+                    <i class="fas fa-chevron-down me-auto" style="font-size: 0.8rem;"></i>
+                  </a>
+                  <div class="collapse" id="meetingsCollapse">
+                    <div class="list-group list-group-flush">
+                      <a href="{% url 'meeting_create' %}" class="list-group-item list-group-item-action border-0 py-2 ps-5 hover-effect">
+                        <i class="fas fa-plus-circle text-muted me-2"></i> إنشاء اجتماع جديد
+                      </a>
+                      <a href="{% url 'meeting_list' %}" class="list-group-item list-group-item-action border-0 py-2 ps-5 hover-effect">
+                        <i class="fas fa-list text-muted me-2"></i> قائمة الاجتماعات
+                      </a>
+                    </div>
+                  </div>
+                </div>
                 
                 {% endif %}
                 

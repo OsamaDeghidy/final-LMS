@@ -108,10 +108,20 @@ def meeting_create(request):
     else:
         form = MeetingForm()
     
+    # Get user profile and student data
+    profile = None
+    student = None
+    if hasattr(request.user, 'profile'):
+        profile = request.user.profile
+        if hasattr(profile, 'student'):
+            student = profile.student
+    
     context = {
         'form': form,
         'active_tab': 'meetings',
         'is_create': True,
+        'profile': profile,
+        'student': student,
     }
     return render(request, 'website/meetings/meeting_form.html', context)
 
