@@ -3,11 +3,11 @@ from django.utils import timezone
 from .models import Course, Module, Video, Comment, SubComment, Notes, Tags, Quiz, Question, Answer, Enrollment, VideoProgress, Assignment, AssignmentSubmission, UserExamAttempt, ContentProgress
 from user.models import Profile, Student, Organization, Teacher
 
-# Import course-related utility functions
-from .utils_course import searchCourses, update_enrollment_progress, mark_content_completed, get_completed_content_ids, get_user_course_progress, get_user_enrolled_courses, ensure_course_has_module
-
 
 def searchCourses(request):
+    """
+    Search for courses based on query parameters
+    """
     search_query = ''
 
     if request.GET.get('search_query'):
@@ -223,3 +223,19 @@ def get_user_enrolled_courses(user):
         })
     
     return enrolled_courses
+
+
+def ensure_course_has_module(course):
+    """
+    Ensure that a course has at least one module. Create one if none exists.
+    """
+    if not course.module_set.exists():
+        # Create a default module
+        default_module = Module.objects.create(
+            course=course,
+            name=f"Module 1: Introduction to {course.name}",
+            description="This is the first module of the course.",
+            order=1
+        )
+        return default_module
+    return None

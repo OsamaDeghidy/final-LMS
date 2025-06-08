@@ -62,6 +62,11 @@ urlpatterns = [
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
+# Include course URLs
+from . import urls_course
+
+urlpatterns += urls_course.urlpatterns
+
 # Include assignment URLs directly
 from . import views_assignment
 
@@ -105,9 +110,4 @@ from . import meeting_urls
 
 urlpatterns += meeting_urls.urlpatterns
 
-# Include courses URLs
-from .courses import urls as courses_urls
-
-urlpatterns += [
-    path('courses/', include((courses_urls.urlpatterns, 'courses'), namespace='courses')),
-]
+# Course URLs are included in the main URL patterns above
