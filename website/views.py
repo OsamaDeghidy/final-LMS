@@ -28,7 +28,7 @@ from .utils import searchCourses
 
 # Import course-related views
 from .views_course import (allcourses, course_detail, update_course, delete_course, course, courseviewpage, 
-                           courseviewpagevideo, courseviewpagenote, create_course, create_module, update_module, 
+                           courseviewpagevideo, courseviewpagenote, create_module, update_module, 
                            delete_module, course_modules, quiz_list, view_quiz, create_quiz, update_quiz, 
                            delete_quiz, enroll_course, mark_video_watched, mark_content_viewed, 
                            mark_assignment_completed, delete_pdf, delete_module_pdf, add_to_cart, 

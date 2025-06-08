@@ -164,11 +164,106 @@
               
               <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
-                أضف موديولات للدورة. يمكنك إضافة فيديوهات وملاحظات واختبارات لكل موديول.
+                أضف موديولات للدورة. يمكنك إضافة فيديوهات وملفات PDF وملاحظات واختبارات لكل موديول.
               </div>
               
               <div id="modules-container">
                 <!-- Modules will be added here -->
+                <!-- Module Template (Hidden) -->
+                <template id="module-template">
+                  <div class="card mb-4 module-card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                      <h5 class="mb-0"><i class="fas fa-layer-group text-primary me-2"></i>الموديول</h5>
+                      <button type="button" class="btn btn-sm btn-outline-danger remove-module-btn">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                    <div class="card-body">
+                      <div class="mb-3">
+                        <label class="form-label fw-bold">اسم الموديول</label>
+                        <input type="text" class="form-control" name="module_name[]" required>
+                      </div>
+                      
+                      <!-- Video Upload -->
+                      <div class="mb-3">
+                        <label class="form-label fw-bold">تحميل الفيديوهات</label>
+                        <div class="input-group mb-2">
+                          <input type="file" class="form-control" name="module_videos[]" multiple accept=".mp4,.mov,.avi">
+                        </div>
+                        <small class="text-muted">الصيغ المدعومة: MP4, MOV, AVI</small>
+                      </div>
+                      
+                      <!-- Video Titles -->
+                      <div class="mb-3">
+                        <label class="form-label fw-bold">عناوين الفيديوهات</label>
+                        <div class="video-titles-container">
+                          <div class="input-group mb-2">
+                            <input type="text" class="form-control" name="video_title_0" placeholder="أدخل عنوان الفيديو">
+                            <button type="button" class="btn btn-outline-primary add-title-btn">
+                              <i class="fas fa-plus"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <input type="hidden" name="video_title_count" value="1">
+                        <small class="text-muted">أضف عنواناً لكل فيديو</small>
+                      </div>
+
+                      <!-- Module PDF -->
+                      <div class="mb-3">
+                        <label class="form-label fw-bold">ملفات PDF للموديول</label>
+                        <div class="pdf-files-container">
+                          <div class="input-group mb-2">
+                            <input type="file" class="form-control" name="module_pdf[]" accept=".pdf">
+                            <button type="button" class="btn btn-outline-primary add-pdf-btn">
+                              <i class="fas fa-plus"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <small class="text-muted">يمكنك تحميل ملفات PDF متعددة</small>
+                      </div>
+
+                      <!-- Additional Materials -->
+                      <div class="mb-3">
+                        <label class="form-label fw-bold">مواد إضافية</label>
+                        <div class="materials-container">
+                          <div class="input-group mb-2">
+                            <input type="file" class="form-control" name="additional_materials[]">
+                            <button type="button" class="btn btn-outline-primary add-material-btn">
+                              <i class="fas fa-plus"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <small class="text-muted">قم بتحميل أي مواد إضافية للموديول</small>
+                      </div>
+                      
+                      <!-- Notes -->
+                      <div class="mb-3">
+                        <label class="form-label fw-bold">ملاحظات إضافية</label>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <div></div>
+                          <button type="button" class="btn btn-sm btn-outline-primary add-note-btn">
+                            <i class="fas fa-plus me-1"></i>إضافة ملاحظة
+                          </button>
+                        </div>
+                        <div class="notes-container"></div>
+                      </div>
+                      
+                      <!-- Quiz -->
+                      <div class="mb-3">
+                        <div class="form-check form-switch">
+                          <input class="form-check-input quiz-toggle" type="checkbox" role="switch">
+                          <label class="form-check-label">إضافة اختبار للموديول</label>
+                        </div>
+                        <div class="quiz-section mt-3" style="display: none;">
+                          <div class="questions-container"></div>
+                          <button type="button" class="btn btn-sm btn-outline-primary add-question-btn mt-2">
+                            <i class="fas fa-plus me-1"></i>إضافة سؤال
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
               </div>
               
               <div class="d-flex justify-content-center my-4">

@@ -23,19 +23,7 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
-class PDFAccess(models.Model):
-    """Tracks when a user accesses a PDF"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    pdf_id = models.IntegerField()  # Store the ID of the PDF/Notes
-    accessed_at = models.DateTimeField(auto_now_add=True)
-    read = models.BooleanField(default=True)
-    
-    class Meta:
-        unique_together = ('user', 'pdf_id')
-        verbose_name_plural = 'PDF Accesses'
-    
-    def __str__(self):
-        return f"{self.user.username} - PDF {self.pdf_id}"
+
 
 
 class Category(models.Model):
@@ -138,6 +126,31 @@ class Enrollment(models.Model):
 
     def __str__(self):
         return f"{self.course.name} - {self.student.username}"
+
+
+class ModulePDF(models.Model):
+    """Model to store PDF files associated with course modules"""
+    module = models.ForeignKey('Module', related_name='pdf_files', on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    file = models.FileField(upload_to='module_pdfs/')
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+        verbose_name = 'Module PDF'
+        verbose_name_plural = 'Module PDFs'
+    
+    def __str__(self):
+        return f"{self.module.name} - {self.title}"
+    
+    def delete(self, *args, **kwargs):
+        # Delete the file when the model instance is deleted
+        if self.file:
+            if os.path.isfile(self.file.path):
+                os.remove(self.file.path)
+        super().delete(*args, **kwargs)
 
 
 class Module(models.Model):
@@ -391,7 +404,6 @@ class CourseProgress(models.Model):
         return f"{course_name} - {self.total_progress_percent} - {self.total_number_of_users} - {self.total_number_of_videos}"
 
 
-
 class Quiz(models.Model):
     QUIZ_TYPE_CHOICES = [
         ('video', 'فيديو كويز'),
@@ -423,7 +435,6 @@ class Quiz(models.Model):
             return f"كويز {self.id}"
 
 
-
 class Question(models.Model):
     QUESTION_TYPE_CHOICES = [
         ('multiple_choice', 'اختيار من متعدد'),
@@ -446,7 +457,6 @@ class Question(models.Model):
         return self.text
 
 
-
 class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
     text = models.CharField(max_length=1000)
@@ -461,7 +471,6 @@ class Answer(models.Model):
         return self.text
 
 
-
 class Attachment(models.Model):
     file = models.FileField(upload_to='attachments/')
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -471,7 +480,6 @@ class Attachment(models.Model):
     
     def __str__(self):
         return f"Attachment for {self.content_object}"
-
 
 class Certification(models.Model):
     user = models.ForeignKey(User, related_name='user_certifications', on_delete=models.CASCADE)
@@ -1136,16 +1144,4 @@ class ContentProgress(models.Model):
         return f"{self.user.username} - {self.course.name} - {self.content_type} {self.content_id}"
 
 
-class PDFAccess(models.Model):
-    """Track when users access PDF files"""
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    pdf_id = models.IntegerField()  # Can be Notes ID, Module ID (prefixed), or Course ID (prefixed)
-    read = models.BooleanField(default=False)
-    access_date = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        unique_together = ('user', 'pdf_id')
-        verbose_name_plural = "PDF Access Records"
-    
-    def __str__(self):
-        return f"{self.user.username} - PDF {self.pdf_id} - {self.access_date}"
+

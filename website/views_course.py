@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 def allcourses(request):
     courses, search_query = searchCourses(request)
     context = {'courses': courses, 'search_query': search_query}
-    return render(request, 'website/courses.html', context)
+    return render(request, 'website/courses/allcourses.html', context)
 
 def course_category(request, category_slug):
     # Get the category or return 404 if not found
@@ -114,12 +114,109 @@ def courseviewpage(request, course_id):
 @login_required
 def create_course(request):
     if request.method == 'POST':
-        # Process course creation form
-        # Implementation details omitted for brevity
-        return redirect('course')
-    else:
-        # Display course creation form
-        return render(request, 'website/courses/create_course.html')
+        # Handle form submission
+        try:
+            # Get form data
+            name = request.POST.get('name')
+            description = request.POST.get('description')
+            small_description = request.POST.get('small_description')
+            price = request.POST.get('price', 0)
+            category_id = request.POST.get('category')
+            
+            # Validate required fields
+            if not all([name, description, small_description, category_id]):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'الرجاء ملء جميع الحقول المطلوبة'
+                })
+            
+            # Get or create category
+            category = get_object_or_404(Category, id=category_id)
+            
+            # Get teacher profile
+            teacher = None
+            if hasattr(request.user, 'teacher'):
+                teacher = request.user.teacher
+            else:
+                # Try to get teacher profile if not directly available
+                from user.models import Teacher
+                if Teacher.objects.filter(user=request.user).exists():
+                    teacher = Teacher.objects.get(user=request.user)
+            
+            if not teacher:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'يجب أن تكون معلمًا لإنشاء دورة'
+                })
+            
+            # Create course
+            course = Course.objects.create(
+                name=name,
+                description=description,
+                small_description=small_description,
+                price=price,
+                category=category,
+                teacher=teacher
+            )
+            
+            # Handle tags
+            tags = request.POST.get('tags', '').split(',')
+            for tag_name in tags:
+                tag_name = tag_name.strip()
+                if tag_name:
+                    tag, created = Tags.objects.get_or_create(name=tag_name)
+                    course.tags.add(tag)
+            
+            messages.success(request, 'تم إنشاء الدورة بنجاح')
+            return JsonResponse({
+                'success': True,
+                'message': 'تم إنشاء الدورة بنجاح',
+                'redirect_url': reverse('course_detail', args=[course.id])
+            })
+            
+        except Exception as e:
+            logger.error(f"Error creating course: {e}")
+            messages.error(request, f'حدث خطأ أثناء إنشاء الدورة: {e}')
+            return JsonResponse({
+                'success': False,
+                'message': f'حدث خطأ أثناء إنشاء الدورة: {e}'
+            })
+    
+    # GET request - render form
+    categories = Category.objects.all()
+    
+    # Get user profile and teacher data
+    profile = None
+    teacher = None
+    
+    if hasattr(request.user, 'teacher'):
+        profile = request.user.teacher
+        teacher = request.user.teacher
+    elif hasattr(request.user, 'student'):
+        profile = request.user.student
+    elif hasattr(request.user, 'admin'):
+        profile = request.user.admin
+    
+    # If user is a teacher but profile is not set, try to get it
+    if not profile and request.user.is_authenticated:
+        try:
+            from user.models import Teacher, Student, Admin
+            if Teacher.objects.filter(user=request.user).exists():
+                profile = Teacher.objects.get(user=request.user)
+                teacher = profile
+            elif Student.objects.filter(user=request.user).exists():
+                profile = Student.objects.get(user=request.user)
+            elif Admin.objects.filter(user=request.user).exists():
+                profile = Admin.objects.get(user=request.user)
+        except Exception as e:
+            print(f"Error getting user profile: {e}")
+    
+    return render(request, 'website/courses/create_course.html', {
+        'categories': categories,
+        'profile': profile,
+        'teacher': teacher,
+        'student': profile if hasattr(profile, 'student') else None
+    })
 
 @login_required
 def update_course(request, course_id):
@@ -524,8 +621,8 @@ def create_quiz(request, video_id):
         return render(request, 'website/create_quiz.html', {'video': video})
 
 @login_required
-def update_quiz(request, pk):
-    quiz = get_object_or_404(Quiz, id=pk)
+def update_quiz(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
     course = quiz.course
     
     # Check if user is the course teacher
@@ -541,45 +638,47 @@ def update_quiz(request, pk):
         quiz.save()
         
         # Process existing questions
-        for question in quiz.question_set.all():
-            question_id = question.id
-            question_text = request.POST.get(f'question_{question_id}')
+        existing_questions = request.POST.getlist('existing_question_id[]')
+        for question_id in existing_questions:
+            question = get_object_or_404(Question, id=question_id)
+            question.text = request.POST.get(f'existing_question_{question_id}')
+            question.save()
             
+            # Process answers for this question
+            existing_answers = request.POST.getlist(f'existing_answer_id_{question_id}[]')
+            for answer_id in existing_answers:
+                answer = get_object_or_404(Answer, id=answer_id)
+                answer.text = request.POST.get(f'existing_answer_{answer_id}')
+                answer.is_correct = request.POST.get(f'existing_correct_{question_id}') == str(answer_id)
+                answer.save()
+        
+        # Process new questions
+        new_question_count = int(request.POST.get('new_question_count', 0))
+        for i in range(1, new_question_count + 1):
+            question_text = request.POST.get(f'new_question_{i}')
             if question_text:
-                question.text = question_text
-                question.save()
+                question = Question.objects.create(
+                    quiz=quiz,
+                    text=question_text
+                )
                 
                 # Process answers for this question
-                for answer in question.answer_set.all():
-                    answer_id = answer.id
-                    answer_text = request.POST.get(f'answer_{answer_id}')
-                    is_correct = request.POST.get(f'question_{question_id}_correct') == str(answer_id)
+                for j in range(1, 5):  # Assuming 4 possible answers per question
+                    answer_text = request.POST.get(f'new_question_{i}_answer_{j}')
+                    is_correct = request.POST.get(f'new_question_{i}_correct') == str(j)
                     
                     if answer_text:
-                        answer.text = answer_text
-                        answer.is_correct = is_correct
-                        answer.save()
+                        Answer.objects.create(
+                            question=question,
+                            text=answer_text,
+                            is_correct=is_correct
+                        )
         
         messages.success(request, _('Quiz updated successfully.'))
         return redirect('quiz_list', video_id=quiz.video.id)
     else:
         # Display quiz update form
         return render(request, 'website/update_quiz.html', {'quiz': quiz})
-
-@login_required
-def delete_quiz(request, quiz_id):
-    quiz = get_object_or_404(Quiz, id=quiz_id)
-    video_id = quiz.video.id
-    course = quiz.course
-    
-    # Check if user is the course teacher
-    if request.user != course.teacher.profile.user:
-        messages.error(request, _('You do not have permission to delete this quiz.'))
-        return redirect('course')
-    
-    quiz.delete()
-    messages.success(request, _('Quiz deleted successfully.'))
-    return redirect('quiz_list', video_id=video_id)
 
 @login_required
 @require_POST
@@ -649,7 +748,21 @@ def submit_quiz(request):
             'message': str(e)
         }, status=500)
 
-# Course enrollment
+@login_required
+def delete_quiz(request, quiz_id):
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+    video_id = quiz.video.id
+    course = quiz.course
+    
+    # Check if user is the course teacher
+    if request.user != course.teacher.profile.user:
+        messages.error(request, _('You do not have permission to delete this quiz.'))
+        return redirect('course')
+    
+    quiz.delete()
+    messages.success(request, _('Quiz deleted successfully.'))
+    return redirect('quiz_list', video_id=video_id)
+
 @login_required
 def enroll_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
@@ -662,27 +775,16 @@ def enroll_course(request, course_id):
     # Check if course is free or if user has purchased it
     if course.price == 0 or CartItem.objects.filter(cart__user=request.user, course=course, purchased=True).exists():
         # Create enrollment
-        enrollment = Enrollment.objects.create(
+        Enrollment.objects.create(
             course=course,
-            student=request.user,
-            enrollment_date=timezone.now(),
-            status='active',
-            progress=0
+            student=request.user
         )
-        
         messages.success(request, _('Successfully enrolled in the course.'))
         return redirect('courseviewpage', course_id=course_id)
     else:
-        # Add to cart if not free
-        cart, created = Cart.objects.get_or_create(user=request.user)
-        cart_item, created = CartItem.objects.get_or_create(cart=cart, course=course)
-        
-        if created:
-            messages.success(request, _('Course added to cart.'))
-        else:
-            messages.info(request, _('Course is already in your cart.'))
-        
-        return redirect('view_cart')
+        messages.error(request, _('You need to purchase this course before enrolling.'))
+        return redirect('course_detail', course_id=course_id)
+
 
 # File management
 @login_required

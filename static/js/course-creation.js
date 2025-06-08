@@ -71,168 +71,109 @@ function addModule() {
   const moduleId = `module_${moduleCount}`;
   questionCounts[moduleId] = 0;
   
-  const moduleHtml = `
-    <div class="card mb-4 module-card" id="${moduleId}">
-      <div class="card-header bg-light d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="fas fa-layer-group text-primary me-2"></i>الموديول ${moduleCount}</h5>
-        <button type="button" class="btn btn-sm btn-outline-danger remove-module-btn">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-      <div class="card-body">
-        <!-- Module Info -->
-        <div class="mb-3">
-          <label class="form-label fw-bold">اسم الموديول</label>
-          <input type="text" class="form-control" name="module_name_${moduleId}" placeholder="أدخل اسم الموديول" required>
-        </div>
-        
-        <!-- Videos -->
-        <div class="mb-3">
-          <label class="form-label fw-bold">تحميل الفيديوهات</label>
-          <input type="file" class="form-control" name="module_videos_${moduleId}" accept="video/*" multiple>
-          <small class="text-muted">الصيغ المدعومة: MP4, MOV, AVI</small>
-        </div>
-        
-        <!-- Notes -->
-        <div class="mb-3">
-          <label class="form-label fw-bold">ملاحظات إضافية</label>
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <div></div>
-            <button type="button" class="btn btn-sm btn-outline-primary add-note-btn">
-              <i class="fas fa-plus me-1"></i>إضافة ملاحظة
-            </button>
-          </div>
-          <div class="notes-container">
-            <div class="input-group mb-2">
-              <textarea class="form-control" name="module_notes_${moduleId}_0" rows="2" placeholder="أدخل ملاحظة"></textarea>
-              <button type="button" class="btn btn-outline-danger remove-note-btn">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Video Names -->
-        <div class="mb-3">
-          <label class="form-label fw-bold">عناوين الفيديوهات</label>
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <div></div>
-            <button type="button" class="btn btn-sm btn-outline-primary add-video-name-btn">
-              <i class="fas fa-plus me-1"></i>إضافة عنوان
-            </button>
-          </div>
-          <div class="video-names-container">
-            <div class="input-group mb-2">
-              <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
-              <input type="text" class="form-control" name="video_name_${moduleId}_0" placeholder="أدخل عنوان الفيديو">
-              <button type="button" class="btn btn-outline-danger remove-video-name-btn">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Quiz Section -->
-        <div class="card mb-3 border-primary">
-          <div class="card-header bg-light">
-            <div class="form-check form-switch">
-              <input class="form-check-input quiz-toggle" type="checkbox" id="has_quiz_${moduleId}" name="has_quiz_${moduleId}">
-              <label class="form-check-label fw-bold" for="has_quiz_${moduleId}">إضافة اختبار للموديول</label>
-            </div>
-          </div>
-          <div class="quiz-section card-body" style="display: none;">
-            <div class="mb-3">
-              <label class="form-label fw-bold">عنوان الاختبار</label>
-              <input type="text" class="form-control" name="quiz_title_${moduleId}" placeholder="أدخل عنوان الاختبار">
-            </div>
-            <div class="mb-3">
-              <label class="form-label fw-bold">وصف الاختبار</label>
-              <textarea class="form-control" name="quiz_description_${moduleId}" rows="2" placeholder="وصف مختصر للاختبار"></textarea>
-            </div>
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label class="form-label fw-bold">درجة النجاح (%)</label>
-                <input type="number" class="form-control" name="quiz_pass_mark_${moduleId}" min="0" max="100" value="50">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-bold">مدة الاختبار (دقائق)</label>
-                <input type="number" class="form-control" name="quiz_time_limit_${moduleId}" min="1" value="10">
-              </div>
-            </div>
-            
-            <div class="questions-container">
-              <!-- Questions will be added here -->
-            </div>
-            
-            <button type="button" class="btn btn-primary w-100 mt-3 add-question-btn">
-              <i class="fas fa-plus me-1"></i>إضافة سؤال جديد
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  // Clone the module template
+  const template = document.getElementById('module-template');
+  const moduleElement = template.content.cloneNode(true).firstElementChild;
+  moduleElement.id = moduleId;
   
-  document.getElementById('modules-container').insertAdjacentHTML('beforeend', moduleHtml);
+  // Update module number
+  const moduleTitle = moduleElement.querySelector('.card-header h5');
+  moduleTitle.innerHTML = `<i class="fas fa-layer-group text-primary me-2"></i>الموديول ${moduleCount}`;
   
-  // Get the newly added module
-  const moduleElement = document.getElementById(moduleId);
+  // Update PDF input names
+  const pdfInputs = moduleElement.querySelectorAll('.pdf-files-container input[type="file"]');
+  pdfInputs.forEach((input, index) => {
+    input.name = `module_${moduleCount}_pdf[]`;
+  });
   
-  // Add event listeners to the module's buttons
+  // Update additional materials input names
+  const materialInputs = moduleElement.querySelectorAll('.materials-container input[type="file"]');
+  materialInputs.forEach((input, index) => {
+    input.name = `module_${moduleCount}_materials[]`;
+  });
+  
+  // Update video name input
+  const videoNameInputs = moduleElement.querySelectorAll('.video-titles-container input[type="text"]');
+  videoNameInputs.forEach((input, index) => {
+    input.name = `module_${moduleCount}_video_title_${index}`;
+  });
+  
+  // Update quiz toggle ID and label
+  const quizToggle = moduleElement.querySelector('.quiz-toggle');
+  if (quizToggle) {
+    quizToggle.id = `quiz_toggle_${moduleId}`;
+    const quizLabel = moduleElement.querySelector('.form-check-label');
+    if (quizLabel) {
+      quizLabel.setAttribute('for', `quiz_toggle_${moduleId}`);
+    }
+  }
+  
+  // Add the module to the container
+  const modulesContainer = document.getElementById('modules-container');
+  modulesContainer.appendChild(moduleElement);
+  
+  // Setup event listeners
   setupModuleEventListeners(moduleElement, moduleId);
 }
 
 function setupModuleEventListeners(moduleElement, moduleId) {
   // Remove module button
   const removeModuleBtn = moduleElement.querySelector('.remove-module-btn');
-  removeModuleBtn.addEventListener('click', function() {
-    const moduleIdAttr = this.getAttribute('data-module-id');
-    if (moduleIdAttr) {
-      removeModule('existing_module_' + moduleIdAttr);
-    } else {
+  if (removeModuleBtn) {
+    removeModuleBtn.addEventListener('click', function() {
       removeModule(moduleId);
-    }
-  });
+    });
+  }
   
-  // Quiz toggle
-  const quizToggle = moduleElement.querySelector('.quiz-toggle');
-  quizToggle.addEventListener('change', function() {
-    toggleQuiz(moduleElement, this.checked);
+  // Add PDF
+  const addPdfBtn = moduleElement.querySelector('.add-pdf-btn');
+  if (addPdfBtn) {
+    addPdfBtn.addEventListener('click', () => addPdf(moduleElement, moduleId));
+  }
+  
+  // Remove PDF buttons
+  const removePdfBtns = moduleElement.querySelectorAll('.remove-pdf-btn');
+  removePdfBtns.forEach(btn => {
+    btn.addEventListener('click', () => btn.closest('.input-group').remove());
   });
   
   // Add note button
   const addNoteBtn = moduleElement.querySelector('.add-note-btn');
-  addNoteBtn.addEventListener('click', function() {
-    addNote(moduleElement, moduleId);
-  });
+  if (addNoteBtn) {
+    addNoteBtn.addEventListener('click', () => addNote(moduleElement, moduleId));
+  }
   
   // Remove note buttons
   const removeNoteBtns = moduleElement.querySelectorAll('.remove-note-btn');
   removeNoteBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
-      removeNote(this);
-    });
+    btn.addEventListener('click', () => removeNote(btn));
   });
   
   // Add video name button
-  const addVideoNameBtn = moduleElement.querySelector('.add-video-name-btn');
-  addVideoNameBtn.addEventListener('click', function() {
-    addVideoName(moduleElement, moduleId);
-  });
+  const addVideoNameBtn = moduleElement.querySelector('.add-title-btn');
+  if (addVideoNameBtn) {
+    addVideoNameBtn.addEventListener('click', () => addVideoName(moduleElement, moduleId));
+  }
   
   // Remove video name buttons
   const removeVideoNameBtns = moduleElement.querySelectorAll('.remove-video-name-btn');
   removeVideoNameBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
-      removeVideoName(this);
-    });
+    btn.addEventListener('click', () => removeVideoName(btn));
   });
+  
+
+
+  // Add material button
+  const addMaterialBtn = moduleElement.querySelector('.add-material-btn');
+  if (addMaterialBtn) {
+    addMaterialBtn.addEventListener('click', () => addMaterial(moduleElement, moduleId));
+  }
   
   // Add question button
   const addQuestionBtn = moduleElement.querySelector('.add-question-btn');
-  addQuestionBtn.addEventListener('click', function() {
-    addQuestion(moduleElement, moduleId);
-  });
+  if (addQuestionBtn) {
+    addQuestionBtn.addEventListener('click', () => addQuestion(moduleElement, moduleId));
+  }
 }
 
 function removeModule(moduleId) {
@@ -283,20 +224,31 @@ function addNote(moduleElement, moduleId) {
   const notesContainer = moduleElement.querySelector('.notes-container');
   const noteCount = notesContainer.children.length;
   
-  const noteHtml = `
-    <div class="input-group mb-2">
-      <textarea class="form-control" name="module_notes_${moduleId}_${noteCount}" rows="2" placeholder="أدخل ملاحظة"></textarea>
-      <button type="button" class="btn btn-outline-danger remove-note-btn">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-  `;
+  // Create elements using DOM manipulation
+  const inputGroup = document.createElement('div');
+  inputGroup.className = 'input-group mb-2';
   
-  notesContainer.insertAdjacentHTML('beforeend', noteHtml);
+  const textarea = document.createElement('textarea');
+  textarea.className = 'form-control';
+  textarea.name = `module_notes_${moduleId}_${noteCount}`;
+  textarea.rows = 2;
+  textarea.placeholder = 'أدخل ملاحظة';
+  
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn btn-outline-danger remove-note-btn';
+  
+  const icon = document.createElement('i');
+  icon.className = 'fas fa-times';
+  
+  // Assemble the elements
+  removeBtn.appendChild(icon);
+  inputGroup.appendChild(textarea);
+  inputGroup.appendChild(removeBtn);
+  notesContainer.appendChild(inputGroup);
   
   // Add event listener to the new remove button
-  const newRemoveBtn = notesContainer.lastElementChild.querySelector('.remove-note-btn');
-  newRemoveBtn.addEventListener('click', function() {
+  removeBtn.addEventListener('click', function() {
     removeNote(this);
   });
 }
@@ -309,21 +261,39 @@ function addVideoName(moduleElement, moduleId) {
   const namesContainer = moduleElement.querySelector('.video-names-container');
   const nameCount = namesContainer.children.length;
   
-  const nameHtml = `
-    <div class="input-group mb-2">
-      <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
-      <input type="text" class="form-control" name="video_name_${moduleId}_${nameCount}" placeholder="أدخل عنوان الفيديو">
-      <button type="button" class="btn btn-outline-danger remove-video-name-btn">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-  `;
+  // Create elements using DOM manipulation
+  const inputGroup = document.createElement('div');
+  inputGroup.className = 'input-group mb-2';
   
-  namesContainer.insertAdjacentHTML('beforeend', nameHtml);
+  const span = document.createElement('span');
+  span.className = 'input-group-text bg-light';
+  
+  const icon = document.createElement('i');
+  icon.className = 'fas fa-video text-primary';
+  
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'form-control';
+  input.name = `video_name_${moduleId}_${nameCount}`;
+  input.placeholder = 'أدخل عنوان الفيديو';
+  
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn btn-outline-danger remove-video-name-btn';
+  
+  const removeIcon = document.createElement('i');
+  removeIcon.className = 'fas fa-times';
+  
+  // Assemble the elements
+  span.appendChild(icon);
+  removeBtn.appendChild(removeIcon);
+  inputGroup.appendChild(span);
+  inputGroup.appendChild(input);
+  inputGroup.appendChild(removeBtn);
+  namesContainer.appendChild(inputGroup);
   
   // Add event listener to the new remove button
-  const newRemoveBtn = namesContainer.lastElementChild.querySelector('.remove-video-name-btn');
-  newRemoveBtn.addEventListener('click', function() {
+  removeBtn.addEventListener('click', function() {
     removeVideoName(this);
   });
 }
@@ -339,50 +309,104 @@ function addQuestion(moduleElement, moduleId) {
   const questionIndex = questionCounts[moduleId];
   const questionId = `question_${moduleId}_${questionIndex}`;
   
-  const questionHtml = `
-    <div class="card mb-3 question-card" id="${questionId}">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h6 class="mb-0">سؤال #${questionIndex}</h6>
-          <button type="button" class="btn btn-sm btn-outline-danger remove-question-btn" data-question-id="${questionId}">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        
-        <div class="mb-3">
-          <input type="text" class="form-control" name="question_text_${moduleId}_${questionIndex}" placeholder="نص السؤال" required>
-        </div>
-        
-        <div class="mb-3">
-          <select class="form-select question-type-select" name="question_type_${moduleId}_${questionIndex}">
-            <option value="multiple_choice">اختيار من متعدد</option>
-            <option value="true_false">صح أو خطأ</option>
-            <option value="short_answer">إجابة قصيرة</option>
-          </select>
-        </div>
-        
-        <div class="answers-container">
-          <!-- Answers will be added here based on question type -->
-        </div>
-        
-        <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-answer-btn">
-          <i class="fas fa-plus me-1"></i>إضافة إجابة
-        </button>
-      </div>
-    </div>
-  `;
+  // Create the question card using DOM manipulation
+  const questionCard = document.createElement('div');
+  questionCard.className = 'card mb-3 question-card';
+  questionCard.id = questionId;
   
+  const cardBody = document.createElement('div');
+  cardBody.className = 'card-body';
+  
+  // Header with question number and remove button
+  const headerDiv = document.createElement('div');
+  headerDiv.className = 'd-flex justify-content-between align-items-center mb-3';
+  
+  const questionTitle = document.createElement('h6');
+  questionTitle.className = 'mb-0';
+  questionTitle.textContent = `سؤال #${questionIndex}`;
+  
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn btn-sm btn-outline-danger remove-question-btn';
+  removeBtn.setAttribute('data-question-id', questionId);
+  
+  const removeIcon = document.createElement('i');
+  removeIcon.className = 'fas fa-times';
+  removeBtn.appendChild(removeIcon);
+  
+  headerDiv.appendChild(questionTitle);
+  headerDiv.appendChild(removeBtn);
+  
+  // Question text input
+  const questionTextDiv = document.createElement('div');
+  questionTextDiv.className = 'mb-3';
+  
+  const questionInput = document.createElement('input');
+  questionInput.type = 'text';
+  questionInput.className = 'form-control';
+  questionInput.name = `question_text_${moduleId}_${questionIndex}`;
+  questionInput.placeholder = 'نص السؤال';
+  questionInput.required = true;
+  
+  questionTextDiv.appendChild(questionInput);
+  
+  // Question type select
+  const selectDiv = document.createElement('div');
+  selectDiv.className = 'mb-3';
+  
+  const selectElement = document.createElement('select');
+  selectElement.className = 'form-select question-type-select';
+  selectElement.name = `question_type_${moduleId}_${questionIndex}`;
+  
+  const optionMultiple = document.createElement('option');
+  optionMultiple.value = 'multiple_choice';
+  optionMultiple.textContent = 'اختيار من متعدد';
+  
+  const optionTrueFalse = document.createElement('option');
+  optionTrueFalse.value = 'true_false';
+  optionTrueFalse.textContent = 'صح أو خطأ';
+  
+  const optionShortAnswer = document.createElement('option');
+  optionShortAnswer.value = 'short_answer';
+  optionShortAnswer.textContent = 'إجابة قصيرة';
+  
+  selectElement.appendChild(optionMultiple);
+  selectElement.appendChild(optionTrueFalse);
+  selectElement.appendChild(optionShortAnswer);
+  selectDiv.appendChild(selectElement);
+  
+  // Answers container
+  const answersContainer = document.createElement('div');
+  answersContainer.className = 'answers-container';
+  
+  // Add answer button
+  const addAnswerBtn = document.createElement('button');
+  addAnswerBtn.type = 'button';
+  addAnswerBtn.className = 'btn btn-sm btn-outline-primary mt-2 add-answer-btn';
+  
+  const addIcon = document.createElement('i');
+  addIcon.className = 'fas fa-plus me-1';
+  
+  addAnswerBtn.appendChild(addIcon);
+  addAnswerBtn.appendChild(document.createTextNode('إضافة إجابة'));
+  
+  // Assemble all elements
+  cardBody.appendChild(headerDiv);
+  cardBody.appendChild(questionTextDiv);
+  cardBody.appendChild(selectDiv);
+  cardBody.appendChild(answersContainer);
+  cardBody.appendChild(addAnswerBtn);
+  questionCard.appendChild(cardBody);
+  
+  // Add to the questions container
   const questionsContainer = moduleElement.querySelector('.questions-container');
-  questionsContainer.insertAdjacentHTML('beforeend', questionHtml);
-  
-  // Get the newly added question
-  const questionElement = document.getElementById(questionId);
+  questionsContainer.appendChild(questionCard);
   
   // Add event listeners to the question's buttons
-  setupQuestionEventListeners(questionElement, moduleElement, moduleId, questionId);
+  setupQuestionEventListeners(questionCard, moduleElement, moduleId, questionId);
   
   // Initialize with multiple choice answers by default
-  updateAnswerFields(questionElement, 'multiple_choice', moduleId, questionIndex);
+  updateAnswerFields(questionCard, 'multiple_choice', moduleId, questionIndex);
 }
 
 function setupQuestionEventListeners(questionElement, moduleElement, moduleId, questionId) {
@@ -448,36 +472,86 @@ function updateAnswerFields(questionElement, questionType, moduleId, questionInd
   
   if (questionType === 'multiple_choice') {
     // Add default multiple choice answers
-    const answer1Html = `
-      <div class="answer-item mb-2">
-        <div class="input-group">
-          <div class="input-group-text">
-            <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${questionIndex}" value="0" checked>
-          </div>
-          <input type="text" class="form-control" name="answer_text_${moduleId}_${questionIndex}_0" placeholder="الإجابة الأولى" required>
-          <button type="button" class="btn btn-outline-danger remove-answer-btn">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-    `;
+    // First answer
+    const answer1Item = document.createElement('div');
+    answer1Item.className = 'answer-item mb-2';
     
-    const answer2Html = `
-      <div class="answer-item mb-2">
-        <div class="input-group">
-          <div class="input-group-text">
-            <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${questionIndex}" value="1">
-          </div>
-          <input type="text" class="form-control" name="answer_text_${moduleId}_${questionIndex}_1" placeholder="الإجابة الثانية" required>
-          <button type="button" class="btn btn-outline-danger remove-answer-btn">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-    `;
+    const inputGroup1 = document.createElement('div');
+    inputGroup1.className = 'input-group';
     
-    answersContainer.insertAdjacentHTML('beforeend', answer1Html);
-    answersContainer.insertAdjacentHTML('beforeend', answer2Html);
+    const inputGroupText1 = document.createElement('div');
+    inputGroupText1.className = 'input-group-text';
+    
+    const radioInput1 = document.createElement('input');
+    radioInput1.className = 'form-check-input mt-0';
+    radioInput1.type = 'radio';
+    radioInput1.name = `correct_answer_${moduleId}_${questionIndex}`;
+    radioInput1.value = '0';
+    radioInput1.checked = true;
+    
+    const textInput1 = document.createElement('input');
+    textInput1.type = 'text';
+    textInput1.className = 'form-control';
+    textInput1.name = `answer_text_${moduleId}_${questionIndex}_0`;
+    textInput1.placeholder = 'الإجابة الأولى';
+    textInput1.required = true;
+    
+    const removeBtn1 = document.createElement('button');
+    removeBtn1.type = 'button';
+    removeBtn1.className = 'btn btn-outline-danger remove-answer-btn';
+    
+    const removeIcon1 = document.createElement('i');
+    removeIcon1.className = 'fas fa-times';
+    
+    // Assemble first answer
+    removeBtn1.appendChild(removeIcon1);
+    inputGroupText1.appendChild(radioInput1);
+    inputGroup1.appendChild(inputGroupText1);
+    inputGroup1.appendChild(textInput1);
+    inputGroup1.appendChild(removeBtn1);
+    answer1Item.appendChild(inputGroup1);
+    
+    // Second answer
+    const answer2Item = document.createElement('div');
+    answer2Item.className = 'answer-item mb-2';
+    
+    const inputGroup2 = document.createElement('div');
+    inputGroup2.className = 'input-group';
+    
+    const inputGroupText2 = document.createElement('div');
+    inputGroupText2.className = 'input-group-text';
+    
+    const radioInput2 = document.createElement('input');
+    radioInput2.className = 'form-check-input mt-0';
+    radioInput2.type = 'radio';
+    radioInput2.name = `correct_answer_${moduleId}_${questionIndex}`;
+    radioInput2.value = '1';
+    
+    const textInput2 = document.createElement('input');
+    textInput2.type = 'text';
+    textInput2.className = 'form-control';
+    textInput2.name = `answer_text_${moduleId}_${questionIndex}_1`;
+    textInput2.placeholder = 'الإجابة الثانية';
+    textInput2.required = true;
+    
+    const removeBtn2 = document.createElement('button');
+    removeBtn2.type = 'button';
+    removeBtn2.className = 'btn btn-outline-danger remove-answer-btn';
+    
+    const removeIcon2 = document.createElement('i');
+    removeIcon2.className = 'fas fa-times';
+    
+    // Assemble second answer
+    removeBtn2.appendChild(removeIcon2);
+    inputGroupText2.appendChild(radioInput2);
+    inputGroup2.appendChild(inputGroupText2);
+    inputGroup2.appendChild(textInput2);
+    inputGroup2.appendChild(removeBtn2);
+    answer2Item.appendChild(inputGroup2);
+    
+    // Add to container
+    answersContainer.appendChild(answer1Item);
+    answersContainer.appendChild(answer2Item);
     addAnswerBtn.style.display = 'block';
     
     // Add event listeners to the remove buttons
@@ -489,43 +563,90 @@ function updateAnswerFields(questionElement, questionType, moduleId, questionInd
     });
     
   } else if (questionType === 'true_false') {
-    // Add true/false options
-    const trueAnswerHtml = `
-      <div class="answer-item mb-2">
-        <div class="input-group">
-          <div class="input-group-text">
-            <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${questionIndex}" value="0" checked>
-          </div>
-          <input type="text" class="form-control" name="answer_text_${moduleId}_${questionIndex}_0" value="صح" readonly>
-        </div>
-      </div>
-    `;
+    // Add true/false options using DOM manipulation
+    // True answer
+    const trueAnswerItem = document.createElement('div');
+    trueAnswerItem.className = 'answer-item mb-2';
     
-    const falseAnswerHtml = `
-      <div class="answer-item mb-2">
-        <div class="input-group">
-          <div class="input-group-text">
-            <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${questionIndex}" value="1">
-          </div>
-          <input type="text" class="form-control" name="answer_text_${moduleId}_${questionIndex}_1" value="خطأ" readonly>
-        </div>
-      </div>
-    `;
+    const trueInputGroup = document.createElement('div');
+    trueInputGroup.className = 'input-group';
     
-    answersContainer.insertAdjacentHTML('beforeend', trueAnswerHtml);
-    answersContainer.insertAdjacentHTML('beforeend', falseAnswerHtml);
+    const trueInputGroupText = document.createElement('div');
+    trueInputGroupText.className = 'input-group-text';
+    
+    const trueRadioInput = document.createElement('input');
+    trueRadioInput.className = 'form-check-input mt-0';
+    trueRadioInput.type = 'radio';
+    trueRadioInput.name = `correct_answer_${moduleId}_${questionIndex}`;
+    trueRadioInput.value = '0';
+    trueRadioInput.checked = true;
+    
+    const trueTextInput = document.createElement('input');
+    trueTextInput.type = 'text';
+    trueTextInput.className = 'form-control';
+    trueTextInput.name = `answer_text_${moduleId}_${questionIndex}_0`;
+    trueTextInput.value = 'صح';
+    trueTextInput.readOnly = true;
+    
+    // Assemble true answer
+    trueInputGroupText.appendChild(trueRadioInput);
+    trueInputGroup.appendChild(trueInputGroupText);
+    trueInputGroup.appendChild(trueTextInput);
+    trueAnswerItem.appendChild(trueInputGroup);
+    
+    // False answer
+    const falseAnswerItem = document.createElement('div');
+    falseAnswerItem.className = 'answer-item mb-2';
+    
+    const falseInputGroup = document.createElement('div');
+    falseInputGroup.className = 'input-group';
+    
+    const falseInputGroupText = document.createElement('div');
+    falseInputGroupText.className = 'input-group-text';
+    
+    const falseRadioInput = document.createElement('input');
+    falseRadioInput.className = 'form-check-input mt-0';
+    falseRadioInput.type = 'radio';
+    falseRadioInput.name = `correct_answer_${moduleId}_${questionIndex}`;
+    falseRadioInput.value = '1';
+    
+    const falseTextInput = document.createElement('input');
+    falseTextInput.type = 'text';
+    falseTextInput.className = 'form-control';
+    falseTextInput.name = `answer_text_${moduleId}_${questionIndex}_1`;
+    falseTextInput.value = 'خطأ';
+    falseTextInput.readOnly = true;
+    
+    // Assemble false answer
+    falseInputGroupText.appendChild(falseRadioInput);
+    falseInputGroup.appendChild(falseInputGroupText);
+    falseInputGroup.appendChild(falseTextInput);
+    falseAnswerItem.appendChild(falseInputGroup);
+    
+    // Add to container
+    answersContainer.appendChild(trueAnswerItem);
+    answersContainer.appendChild(falseAnswerItem);
     addAnswerBtn.style.display = 'none';
     
   } else if (questionType === 'short_answer') {
-    // Add short answer field
-    const shortAnswerHtml = `
-      <div class="mb-3">
-        <label class="form-label">الإجابة الصحيحة</label>
-        <input type="text" class="form-control" name="answer_short_${moduleId}_${questionIndex}" placeholder="أدخل الإجابة الصحيحة" required>
-      </div>
-    `;
+    // Add short answer field using DOM manipulation
+    const shortAnswerDiv = document.createElement('div');
+    shortAnswerDiv.className = 'mb-3';
     
-    answersContainer.insertAdjacentHTML('beforeend', shortAnswerHtml);
+    const label = document.createElement('label');
+    label.className = 'form-label';
+    label.textContent = 'الإجابة الصحيحة';
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-control';
+    input.name = `answer_short_${moduleId}_${questionIndex}`;
+    input.placeholder = 'أدخل الإجابة الصحيحة';
+    input.required = true;
+    
+    shortAnswerDiv.appendChild(label);
+    shortAnswerDiv.appendChild(input);
+    answersContainer.appendChild(shortAnswerDiv);
     addAnswerBtn.style.display = 'none';
   }
 }
@@ -536,29 +657,51 @@ function addAnswer(questionElement, moduleId, questionIndex) {
   
   // Limit to 5 answers
   if (answerCount >= 5) {
-    alert('الحد الأقصى للإجابات هو 5');
+    alert('لا يمكن إضافة أكثر من 5 إجابات');
     return;
   }
   
-  const answerHtml = `
-    <div class="answer-item mb-2">
-      <div class="input-group">
-        <div class="input-group-text">
-          <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${questionIndex}" value="${answerCount}">
-        </div>
-        <input type="text" class="form-control" name="answer_text_${moduleId}_${questionIndex}_${answerCount}" placeholder="الإجابة ${answerCount + 1}" required>
-        <button type="button" class="btn btn-outline-danger remove-answer-btn">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-    </div>
-  `;
+  // Create elements using DOM manipulation
+  const answerItem = document.createElement('div');
+  answerItem.className = 'answer-item mb-2';
   
-  answersContainer.insertAdjacentHTML('beforeend', answerHtml);
+  const inputGroup = document.createElement('div');
+  inputGroup.className = 'input-group';
+  
+  const inputGroupText = document.createElement('div');
+  inputGroupText.className = 'input-group-text';
+  
+  const radioInput = document.createElement('input');
+  radioInput.className = 'form-check-input mt-0';
+  radioInput.type = 'radio';
+  radioInput.name = `correct_answer_${moduleId}_${questionIndex}`;
+  radioInput.value = answerCount.toString();
+  
+  const textInput = document.createElement('input');
+  textInput.type = 'text';
+  textInput.className = 'form-control';
+  textInput.name = `answer_text_${moduleId}_${questionIndex}_${answerCount}`;
+  textInput.placeholder = 'أدخل الإجابة';
+  textInput.required = true;
+  
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn btn-outline-danger remove-answer-btn';
+  
+  const removeIcon = document.createElement('i');
+  removeIcon.className = 'fas fa-times';
+  
+  // Assemble the elements
+  removeBtn.appendChild(removeIcon);
+  inputGroupText.appendChild(radioInput);
+  inputGroup.appendChild(inputGroupText);
+  inputGroup.appendChild(textInput);
+  inputGroup.appendChild(removeBtn);
+  answerItem.appendChild(inputGroup);
+  answersContainer.appendChild(answerItem);
   
   // Add event listener to the new remove button
-  const newRemoveBtn = answersContainer.lastElementChild.querySelector('.remove-answer-btn');
-  newRemoveBtn.addEventListener('click', function() {
+  removeBtn.addEventListener('click', function() {
     removeAnswer(this, answersContainer);
   });
 }
@@ -588,16 +731,90 @@ function removeAnswer(button, answersContainer) {
 
 // Submit the course form
 function submitCourse() {
-  if (validateForm()) {
-    document.getElementById('course-form').submit();
+  if (!validateForm()) {
+    return;
   }
-}
 
-function validateForm() {
-  // Validate required fields
-  const requiredFields = document.querySelectorAll('[required]');
+  const formData = new FormData(document.getElementById('course-form'));
+  const submitBtn = document.getElementById('submit-course-btn');
+  const originalText = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  
+  // Create spinner icon using DOM manipulation
+  const spinnerIcon = document.createElement('i');
+  spinnerIcon.className = 'fas fa-spinner fa-spin me-2';
+  
+  // Clear button and add spinner + text
+  submitBtn.innerHTML = '';
+  submitBtn.appendChild(spinnerIcon);
+  submitBtn.appendChild(document.createTextNode(' جاري الحفظ...'));
+
+  // Variable to track validation
   let isValid = true;
   
+  // Process modules
+  const modules = document.querySelectorAll('.module-section');
+  modules.forEach((module, index) => {
+    const pdfContainer = module.querySelector('.pdf-container');
+    const pdfInputs = pdfContainer.querySelectorAll('input[type="file"]');
+    const pdfTitles = pdfContainer.querySelectorAll('input[type="text"]');
+
+    // Update the count of PDFs for this module
+    const pdfCount = pdfInputs.length;
+    formData.set(`module_${index + 1}_pdf_count`, pdfCount.toString());
+
+    // Check that each PDF has a title
+    pdfInputs.forEach((input, i) => {
+      if (input.files.length > 0 && !pdfTitles[i].value.trim()) {
+        showAlert('danger', 'يجب إضافة عنوان لكل ملف PDF');
+        isValid = false;
+      }
+    });
+  });
+
+  if (!isValid) {
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+    return;
+  }
+
+  // Submit via fetch
+  fetch(form.action, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showAlert('success', data.message);
+      setTimeout(() => {
+        if (data.redirect_url) {
+          window.location.href = data.redirect_url;
+        }
+      }, 2000);
+    } else {
+      showAlert('danger', data.message);
+      submitBtn.innerHTML = originalText;
+      submitBtn.disabled = false;
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showAlert('danger', 'حدث خطأ في الشبكة');
+    submitBtn.innerHTML = originalText;
+    submitBtn.disabled = false;
+  });
+}
+
+const validateForm = function() {
+  const form = document.getElementById('course-form');
+  const requiredFields = form.querySelectorAll('[required]');
+  
+  let isValid = true;
   requiredFields.forEach(field => {
     if (!field.value) {
       field.classList.add('is-invalid');
@@ -608,18 +825,77 @@ function validateForm() {
   });
   
   if (!isValid) {
-    alert('يرجى ملء جميع الحقول المطلوبة');
+    showAlert('danger', 'يرجى ملء جميع الحقول المطلوبة');
     return false;
   }
   
-  // Check if at least one module is added
-  if (document.querySelectorAll('.module-card').length === 0) {
-    alert('يرجى إضافة موديول واحد على الأقل');
+  // Validate modules
+  const modules = document.querySelectorAll('.module-card');
+  if (modules.length === 0) {
+    showAlert('danger', 'يجب إضافة موديول واحد على الأقل');
     return false;
   }
   
-  return true;
-}
+  // Validate each module has either video or PDF content
+  let hasContentError = false;
+  modules.forEach(module => {
+    const videos = module.querySelector('input[name^="module_videos_"]').files;
+    const pdfs = module.querySelector('input[name^="module_pdfs_"]').files;
+    
+    if (videos.length === 0 && pdfs.length === 0) {
+      hasContentError = true;
+    }
+  });
+  
+  if (hasContentError) {
+    showAlert('danger', 'يجب إضافة فيديو أو ملف PDF على الأقل لكل موديول');
+    return false;
+  }
+  
+  // Add validation for quiz questions if needed
+  const quizToggles = document.querySelectorAll('.quiz-toggle:checked');
+  quizToggles.forEach(toggle => {
+    const moduleElement = toggle.closest('.module-card');
+    const questions = moduleElement.querySelectorAll('.question-card');
+    
+    if (questions.length === 0) {
+      showAlert('danger', 'يجب إضافة سؤال واحد على الأقل للاختبار');
+      isValid = false;
+    }
+  });
+  
+  return isValid;
+};
+
+// Function to show Bootstrap alerts
+const showAlert = function(type, message) {
+  // Remove existing alerts
+  const existingAlerts = document.querySelectorAll('.alert-custom');
+  existingAlerts.forEach(alert => alert.remove());
+  
+  // Create new alert
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show alert-custom`;
+  alertDiv.style.position = 'fixed';
+  alertDiv.style.top = '20px';
+  alertDiv.style.right = '20px';
+  alertDiv.style.zIndex = '9999';
+  alertDiv.style.minWidth = '300px';
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  // Add to body
+  document.body.appendChild(alertDiv);
+  
+  // Auto remove after 5 seconds
+  setTimeout(() => {
+    if (alertDiv.parentNode) {
+      alertDiv.remove();
+    }
+  }, 5000);
+};
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
@@ -659,7 +935,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Add a function to update question numbering
-function updateQuestionNumbering(questionsContainer) {
+const updateQuestionNumbering = function(questionsContainer) {
   const visibleQuestions = Array.from(questionsContainer.querySelectorAll('.question-card'))
     .filter(q => q.style.display !== 'none');
   
@@ -669,10 +945,10 @@ function updateQuestionNumbering(questionsContainer) {
       questionHeader.textContent = `سؤال #${index + 1}`;
     }
   });
-}
+};
 
 // Function to initialize event listeners for existing modules
-function initExistingModules() {
+const initExistingModules = function() {
   // Setup event listeners for existing modules
   const existingModules = document.querySelectorAll('.module-card[id^="existing_module_"]');
   
@@ -763,4 +1039,78 @@ function initExistingModules() {
       });
     });
   });
+};
+
+// PDF functions
+function addPdf(moduleElement, moduleId) {
+  const pdfContainer = moduleElement.querySelector('.pdf-files-container');
+  const moduleNumber = moduleElement.id.replace('module_', '');
+  
+  const inputGroup = document.createElement('div');
+  inputGroup.className = 'input-group mb-2';
+  
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.className = 'form-control';
+  fileInput.name = `module_${moduleNumber}_pdf[]`;
+  fileInput.accept = '.pdf';
+  
+  const removeButton = document.createElement('button');
+  removeButton.type = 'button';
+  removeButton.className = 'btn btn-outline-danger remove-pdf-btn';
+  removeButton.innerHTML = '<i class="fas fa-times"></i>';
+  
+  inputGroup.appendChild(fileInput);
+  inputGroup.appendChild(removeButton);
+  pdfContainer.appendChild(inputGroup);
+  
+  // Add event listener to the new remove button
+  removeButton.addEventListener('click', () => inputGroup.remove());
 }
+
+// Additional materials functions
+function addMaterial(moduleElement, moduleId) {
+  const materialsContainer = moduleElement.querySelector('.materials-container');
+  const moduleNumber = moduleElement.id.replace('module_', '');
+  
+  const inputGroup = document.createElement('div');
+  inputGroup.className = 'input-group mb-2';
+  
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.className = 'form-control';
+  fileInput.name = `module_${moduleNumber}_materials[]`;
+  
+  const removeButton = document.createElement('button');
+  removeButton.type = 'button';
+  removeButton.className = 'btn btn-outline-danger';
+  removeButton.innerHTML = '<i class="fas fa-times"></i>';
+  removeButton.onclick = function() {
+    inputGroup.remove();
+  };
+  
+  inputGroup.appendChild(fileInput);
+  inputGroup.appendChild(removeButton);
+  materialsContainer.appendChild(inputGroup);
+}
+
+// Export functions
+module.exports = {
+  addModule,
+  removeModule,
+  addNote,
+  removeNote,
+  addVideoName,
+  removeVideoName,
+  addQuestion,
+  removeQuestion,
+  addAnswer,
+  removeAnswer,
+  submitCourse,
+  validateForm,
+  showAlert,
+  updateQuestionNumbering,
+  initExistingModules,
+  addPdf,
+  addMaterial
+};

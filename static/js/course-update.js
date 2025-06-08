@@ -1,5 +1,41 @@
 // Course Update Delete Functionality
+// Function to handle PDF file removal
+function handlePdfRemoval(pdfId) {
+  if (confirm('هل أنت متأكد من حذف هذا الملف؟')) {
+    fetch(`/courses/remove-pdf/${pdfId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Remove the PDF element from the UI
+        const pdfElement = document.querySelector(`[data-pdf-id="${pdfId}"]`).closest('.list-group-item');
+        pdfElement.remove();
+        showAlert('success', data.message);
+      } else {
+        showAlert('danger', data.message || 'حدث خطأ أثناء حذف الملف');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showAlert('danger', 'حدث خطأ في الشبكة');
+    });
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  // Add event listeners for PDF removal buttons
+  document.querySelectorAll('.remove-pdf-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const pdfId = this.getAttribute('data-pdf-id');
+      handlePdfRemoval(pdfId);
+    });
+  });
+
     // Initialize event handlers
     initializeDeleteHandlers();
     initializeQuizToggles();
