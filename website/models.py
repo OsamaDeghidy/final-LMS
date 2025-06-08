@@ -1125,16 +1125,27 @@ class ContentProgress(models.Model):
     content_type = models.CharField(max_length=20, choices=CONTENT_TYPES)
     content_id = models.CharField(max_length=100)  # Store as string to handle different ID types
     completed = models.BooleanField(default=False)
-    completion_date = models.DateTimeField(auto_now_add=True)
+    completion_date = models.DateTimeField(auto_now=True)
     last_accessed = models.DateTimeField(auto_now=True)
     
     class Meta:
         unique_together = ['user', 'course', 'content_type', 'content_id']
-        indexes = [
-            models.Index(fields=['user', 'course']),
-            models.Index(fields=['content_type', 'content_id']),
-        ]
+        verbose_name_plural = "Content Progress"
     
     def __str__(self):
-        return f"{self.user.username} - {self.content_type} {self.content_id} in {self.course.name}"
+        return f"{self.user.username} - {self.course.name} - {self.content_type} {self.content_id}"
 
+
+class PDFAccess(models.Model):
+    """Track when users access PDF files"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    pdf_id = models.IntegerField()  # Can be Notes ID, Module ID (prefixed), or Course ID (prefixed)
+    read = models.BooleanField(default=False)
+    access_date = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('user', 'pdf_id')
+        verbose_name_plural = "PDF Access Records"
+    
+    def __str__(self):
+        return f"{self.user.username} - PDF {self.pdf_id} - {self.access_date}"

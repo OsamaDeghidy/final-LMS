@@ -104,3 +104,10 @@ urlpatterns += [
 from . import meeting_urls
 
 urlpatterns += meeting_urls.urlpatterns
+
+# Include courses URLs
+from .courses import urls as courses_urls
+
+urlpatterns += [
+    path('courses/', include((courses_urls.urlpatterns, 'courses'), namespace='courses')),
+]
