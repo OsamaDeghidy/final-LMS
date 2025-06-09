@@ -50,7 +50,7 @@
           </div>
 
           <div class="d-flex flex-wrap gap-2 mt-2" style="overflow: visible;">
-            {% if profile.status == 'Teacher' %}
+            {% if profile.status == 'Teacher' or profile.status == 'Admin' %}
               <a href="{% url 'create_course' %}" class="btn btn-light btn-sm rounded-pill px-3">
                 <i class="fas fa-plus me-1"></i> إنشاء دورة جديدة
               </a>
@@ -80,8 +80,11 @@
                   <i class="fas fa-user text-muted me-2" style="padding-left: 5px;"></i> ملفي الشخصي
                 </a>
                 
-                <!-- Student-specific links -->
-                {% if profile.status == 'Student' %}
+                <!-- Student and Admin links -->
+                {% if profile.status == 'Student' or profile.status == 'Admin' %}
+                <div class="card-header bg-white border-0 py-3">
+                  <h5 class="mb-0 text" style="color: #2a5a7c;"><i class="fas fa-user-tie me-2"style="padding-left: 5px;"></i>الطلاب</h5>
+                </div>
                 <a href="{% url 'my_courses' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-book text-muted me-2" style="padding-left: 5px;"></i> الدورات الملتحق بها
                 </a>
@@ -105,8 +108,11 @@
                 </a>
                 {% endif %}
                 
-                <!-- Teacher-specific links -->
-                {% if profile.status == 'Teacher' %}
+                <!-- Teacher and Admin links -->
+                {% if profile.status == 'Teacher' or profile.status == 'Admin' %}
+                <div class="card-header bg-white border-0 py-3">
+                  <h5 class="mb-0 text" style="color: #2a5a7c;"><i class="fas fa-user-tie me-2"style="padding-left: 5px;"></i> المدرب والدورات</h5>
+                </div>
                 <a href="{% url 'teacher_courses' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-chalkboard-teacher text-muted me-2" style="padding-left: 5px;"></i> دوراتي
                 </a>

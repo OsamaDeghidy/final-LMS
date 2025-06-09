@@ -206,20 +206,33 @@ def update_profile(request):
     
 
 def profile_detail(request, profile_id):
-    
     profile = get_object_or_404(Profile, id=profile_id)
+    context = {'profile': profile}
     
-    if profile.status == 'Organization':
-        organization = get_object_or_404(Organization, profile=profile)
-        context = {'organization': organization,'profile': profile}
-    
-    elif profile.status == 'Teacher':
-        teacher = get_object_or_404(Teacher, profile=profile)
-        context = {'teacher': teacher,'profile': profile}
-    
-    else:
-        student = get_object_or_404(Student, profile=profile)
-        context = {'student': student,'profile': profile}
-    return render(request, 'user/user_details.html', context)    
+    try:
+        if profile.status == 'Organization':
+            organization = Organization.objects.filter(profile=profile).first()
+            if organization:
+                context['organization'] = organization
+        
+        elif profile.status == 'Teacher':
+            teacher = Teacher.objects.filter(profile=profile).first()
+            if teacher:
+                context['teacher'] = teacher
+        
+        elif profile.status == 'Student':
+            student = Student.objects.filter(profile=profile).first()
+            if student:
+                context['student'] = student
+        
+        # For Admin status or if no specific role is set
+        return render(request, 'user/user_details.html', context)
+        
+    except Exception as e:
+        # Log the error and still show the profile with basic information
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error loading profile details for {profile_id}: {str(e)}")
+        return render(request, 'user/user_details.html', context)
 
 
