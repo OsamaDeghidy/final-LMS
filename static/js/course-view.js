@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // تعيين عرض شريط التقدم
     const progressBar = document.querySelector('.progress-fill');
     
+    // إعداد أزرار تحديد ملفات PDF كمقروءة
+    setupPdfMarkingButtons();
+    
     // فتح وغلق أقسام المحتوى
     window.toggleModule = function(moduleId) {
         const moduleContent = document.getElementById(moduleId);

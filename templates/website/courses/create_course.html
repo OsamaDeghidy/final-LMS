@@ -208,34 +208,45 @@
                         <small class="text-muted">أضف عنواناً لكل فيديو</small>
                       </div>
 
-                      <!-- Module PDF -->
-                      <div class="mb-3">
-                        <label class="form-label fw-bold">ملفات PDF للموديول</label>
-                        <div class="pdf-files-container">
-                          <div class="input-group mb-2">
-                            <input type="file" class="form-control" name="module_pdf[]" accept=".pdf">
-                            <button type="button" class="btn btn-outline-primary add-pdf-btn">
-                              <i class="fas fa-plus"></i>
-                            </button>
+                      <!-- Module PDFs Section -->
+                      <div class="card mb-3 border-info">
+                        <div class="card-header bg-light">
+                          <h6 class="mb-0"><i class="fas fa-file-pdf text-danger me-2"></i>ملفات PDF للموديول</h6>
+                        </div>
+                        <div class="card-body">
+                          <div class="row">
+                            <!-- Module PDF -->
+                            <div class="col-md-6 mb-3">
+                              <label class="form-label fw-bold">ملفات PDF للموديول</label>
+                              <div class="pdf-files-container">
+                                <div class="input-group mb-2">
+                                  <input type="file" class="form-control" name="module_pdf[]" accept=".pdf">
+                                  <button type="button" class="btn btn-outline-primary add-pdf-btn">
+                                    <i class="fas fa-plus"></i>
+                                  </button>
+                                </div>
+                              </div>
+                              <small class="text-muted">يمكنك تحميل ملفات PDF متعددة</small>
+                            </div>
+
+                            <!-- Additional Materials -->
+                            <div class="col-md-6 mb-3">
+                              <label class="form-label fw-bold">مواد إضافية</label>
+                              <div class="materials-container">
+                                <div class="input-group mb-2">
+                                  <input type="file" class="form-control" name="additional_materials[]">
+                                  <button type="button" class="btn btn-outline-primary add-material-btn">
+                                    <i class="fas fa-plus"></i>
+                                  </button>
+                                </div>
+                              </div>
+                              <small class="text-muted">قم بتحميل أي مواد إضافية للموديول</small>
+                            </div>
+                            
                           </div>
                         </div>
-                        <small class="text-muted">يمكنك تحميل ملفات PDF متعددة</small>
                       </div>
 
-                      <!-- Additional Materials -->
-                      <div class="mb-3">
-                        <label class="form-label fw-bold">مواد إضافية</label>
-                        <div class="materials-container">
-                          <div class="input-group mb-2">
-                            <input type="file" class="form-control" name="additional_materials[]">
-                            <button type="button" class="btn btn-outline-primary add-material-btn">
-                              <i class="fas fa-plus"></i>
-                            </button>
-                          </div>
-                        </div>
-                        <small class="text-muted">قم بتحميل أي مواد إضافية للموديول</small>
-                      </div>
-                      
                       <!-- Notes -->
                       <div class="mb-3">
                         <label class="form-label fw-bold">ملاحظات إضافية</label>
@@ -251,14 +262,14 @@
                       <!-- Quiz -->
                       <div class="mb-3">
                         <div class="form-check form-switch">
-                          <input class="form-check-input quiz-toggle" type="checkbox" role="switch">
-                          <label class="form-check-label">إضافة اختبار للموديول</label>
+                          <input class="form-check-input quiz-toggle" type="checkbox" role="switch" id="quiz_toggle_template">
+                          <label class="form-check-label" for="quiz_toggle_template">إضافة اختبار للموديول</label>
                         </div>
                         <div class="quiz-section mt-3" style="display: none;">
                           <div class="questions-container"></div>
-                          <button type="button" class="btn btn-sm btn-outline-primary add-question-btn mt-2">
+                          <!-- <button type="button" class="btn btn-sm btn-outline-primary add-question-btn mt-2" data-module-id="">
                             <i class="fas fa-plus me-1"></i>إضافة سؤال
-                          </button>
+                          </button> -->
                         </div>
                       </div>
                     </div>

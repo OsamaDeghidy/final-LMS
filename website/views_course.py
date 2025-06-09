@@ -94,8 +94,29 @@ def courseviewpage(request, course_id):
     completed_assignments = get_completed_content_ids(request.user, course, 'assignment')
     completed_quizzes = get_completed_content_ids(request.user, course, 'quiz')
     
-    # For now, initialize completed_pdfs as an empty list since PDF completion tracking is not implemented
-    completed_pdfs = []
+    # Get completed PDF files (now properly tracking them)
+    completed_pdfs = get_completed_content_ids(request.user, course, 'pdf')
+    
+    # Check if specific content is requested via URL parameters
+    content_type = request.GET.get('content_type')
+    content_id = request.GET.get('content_id')
+    
+    current_content = None
+    next_content = None
+    prev_content = None
+    
+    if content_type == 'module_pdf' and content_id:
+        # Get the module with the PDF file
+        try:
+            module = Module.objects.get(id=content_id, course=course)
+            if module.module_pdf:
+                # Create content object for the module PDF
+                current_content = {
+                    'type': 'module_pdf',
+                    'content': module,
+                }
+        except Module.DoesNotExist:
+            messages.error(request, _('Module not found.'))
     
     context = {
         'course': course,
@@ -105,7 +126,10 @@ def courseviewpage(request, course_id):
         'completed_notes': completed_notes,
         'completed_assignments': completed_assignments,
         'completed_quizzes': completed_quizzes,
-        'completed_pdfs': completed_pdfs,  # Add empty list for PDF completion
+        'completed_pdfs': completed_pdfs,  # Now properly tracking PDF completion
+        'current_content': current_content,
+        'next_content': next_content,
+        'prev_content': prev_content,
     }
     
     return render(request, 'website/courses/courseviewpage.html', context)
@@ -122,6 +146,7 @@ def create_course(request):
             small_description = request.POST.get('small_description')
             price = request.POST.get('price', 0)
             category_id = request.POST.get('category')
+            level = request.POST.get('level', 'beginner')  # Default to beginner if not provided
             
             # Validate required fields
             if not all([name, description, small_description, category_id]):
@@ -135,18 +160,36 @@ def create_course(request):
             
             # Get teacher profile
             teacher = None
-            if hasattr(request.user, 'teacher'):
-                teacher = request.user.teacher
-            else:
-                # Try to get teacher profile if not directly available
-                from user.models import Teacher
-                if Teacher.objects.filter(user=request.user).exists():
-                    teacher = Teacher.objects.get(user=request.user)
+            try:
+                # Get the user's profile
+                profile = request.user.profile
+                # Get the teacher object through the profile
+                if hasattr(profile, 'teacher'):
+                    teacher = profile.teacher
+                else:
+                    # Try to get teacher object if it exists but not linked
+                    from user.models import Teacher
+                    teacher = Teacher.objects.filter(profile=profile).first()
+            except Exception as e:
+                print(f"Error getting teacher profile: {e}")
+                teacher = None
             
             if not teacher:
+                # Check if user has a profile
+                if not hasattr(request.user, 'profile'):
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'لم يتم العثور على ملفك الشخصي. يرجى إكمال ملفك الشخصي أولاً.'
+                    })
+                # Check if profile is a teacher
+                if request.user.profile.status != 'Teacher':
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'يجب أن تكون معلمًا لإنشاء دورة. يرجى التقديم كمعلم أولاً.'
+                    })
                 return JsonResponse({
                     'success': False,
-                    'message': 'يجب أن تكون معلمًا لإنشاء دورة'
+                    'message': 'حدث خطأ في العثور على ملف المعلم الخاص بك. يرجى المحاولة مرة أخرى أو التواصل مع الدعم الفني.'
                 })
             
             # Create course
@@ -156,7 +199,8 @@ def create_course(request):
                 small_description=small_description,
                 price=price,
                 category=category,
-                teacher=teacher
+                teacher=teacher,
+                level=level
             )
             
             # Handle tags
@@ -166,6 +210,82 @@ def create_course(request):
                 if tag_name:
                     tag, created = Tags.objects.get_or_create(name=tag_name)
                     course.tags.add(tag)
+            
+            # Handle modules
+            module_count = 0
+            # Find the maximum module index from the form data
+            for key in request.POST.keys():
+                if key.startswith('module_') and key.endswith('_title'):
+                    module_count += 1
+            
+            logger.info(f"Found {module_count} modules to process")
+            
+            for i in range(1, module_count + 1):
+                module_title = request.POST.get(f'module_{i}_title')
+                if not module_title:
+                    continue
+                    
+                logger.info(f"Creating module {i}: {module_title}")
+                module = Module.objects.create(
+                    course=course,
+                    name=module_title,
+                    number=i
+                )
+                
+                # Process PDFs for this module
+                pdf_count = int(request.POST.get(f'module_{i}_pdf_count', 0))
+                for pdf_idx in range(1, pdf_count + 1):
+                    pdf_file = request.FILES.get(f'module_{i}_pdf_{pdf_idx}')
+                    if pdf_file and pdf_file.name.lower().endswith('.pdf'):
+                        module.module_pdf = pdf_file
+                        module.save()
+                        logger.info(f"Added PDF {pdf_file.name} to module {module_title}")
+                
+                # Process quiz for this module
+                has_quiz = request.POST.get(f'module_{i}_has_quiz') == '1'
+                if has_quiz:
+                    question_count = int(request.POST.get(f'module_{i}_question_count', 0))
+                    logger.info(f"Module {i} has quiz with {question_count} questions")
+                    
+                    for q in range(1, question_count + 1):
+                        question_type = request.POST.get(f'module_{i}_question_{q}_type')
+                        question_text = request.POST.get(f'module_{i}_question_{q}_text')
+                        
+                        if not question_text:
+                            continue
+                            
+                        logger.info(f"Creating question {q} of type {question_type}")
+                        question = Question.objects.create(
+                            module=module,
+                            question_type=question_type,
+                            text=question_text,
+                            order=q
+                        )
+                        
+                        if question_type == 'multiple_choice':
+                            answer_count = int(request.POST.get(f'module_{i}_question_{q}_answer_count', 0))
+                            correct_answer = int(request.POST.get(f'module_{i}_question_{q}_correct_answer', 1))
+                            
+                            for a in range(1, answer_count + 1):
+                                answer_text = request.POST.get(f'module_{i}_question_{q}_answer_{a}')
+                                if answer_text:
+                                    is_correct = (a == correct_answer)
+                                    Answer.objects.create(
+                                        question=question,
+                                        text=answer_text,
+                                        is_correct=is_correct
+                                    )
+                                    logger.info(f"Added answer: {answer_text} (correct: {is_correct})")
+                        
+                        elif question_type in ['true_false', 'short_answer']:
+                            correct_answer = request.POST.get(f'module_{i}_question_{q}_correct_answer', '')
+                            if correct_answer:
+                                Answer.objects.create(
+                                    question=question,
+                                    text=correct_answer,
+                                    is_correct=True
+                                )
+                                logger.info(f"Added {question_type} answer: {correct_answer}")
             
             messages.success(request, 'تم إنشاء الدورة بنجاح')
             return JsonResponse({
@@ -189,25 +309,18 @@ def create_course(request):
     profile = None
     teacher = None
     
-    if hasattr(request.user, 'teacher'):
-        profile = request.user.teacher
-        teacher = request.user.teacher
-    elif hasattr(request.user, 'student'):
-        profile = request.user.student
-    elif hasattr(request.user, 'admin'):
-        profile = request.user.admin
-    
-    # If user is a teacher but profile is not set, try to get it
-    if not profile and request.user.is_authenticated:
+    if request.user.is_authenticated:
         try:
-            from user.models import Teacher, Student, Admin
-            if Teacher.objects.filter(user=request.user).exists():
-                profile = Teacher.objects.get(user=request.user)
-                teacher = profile
-            elif Student.objects.filter(user=request.user).exists():
-                profile = Student.objects.get(user=request.user)
-            elif Admin.objects.filter(user=request.user).exists():
-                profile = Admin.objects.get(user=request.user)
+            # Get the user's profile
+            profile = request.user.profile
+            
+            # If user is a teacher, get the teacher object
+            if hasattr(profile, 'teacher'):
+                teacher = profile.teacher
+            # If user is a student, get the student object
+            elif hasattr(profile, 'student'):
+                profile = profile.student
+                
         except Exception as e:
             print(f"Error getting user profile: {e}")
     
@@ -461,12 +574,40 @@ def mark_content_viewed(request, content_type, content_id):
     elif content_type == 'quiz':
         quiz = get_object_or_404(Quiz, id=content_id)
         course = quiz.course
+    elif content_type == 'pdf':
+        # Handle different PDF types (module PDF, course PDF, etc)
+        if content_id.startswith('module_pdf_'):
+            module_id = content_id.replace('module_pdf_', '')
+            module = get_object_or_404(Module, id=module_id)
+            course = module.course
+        elif content_id.startswith('course_syllabus_'):
+            course_id = content_id.replace('course_syllabus_', '')
+            course = get_object_or_404(Course, id=course_id)
+        elif content_id.startswith('course_materials_'):
+            course_id = content_id.replace('course_materials_', '')
+            course = get_object_or_404(Course, id=course_id)
+        else:
+            # Try to handle as a module PDF directly
+            try:
+                module = get_object_or_404(Module, id=content_id)
+                course = module.course
+            except:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': _('Invalid PDF content ID')
+                }, status=400)
     else:
         return JsonResponse({
             'status': 'error',
             'message': _('Invalid content type')
         }, status=400)
     
+    if not course:
+        return JsonResponse({
+            'status': 'error',
+            'message': _('Could not determine course for this content')
+        }, status=400)
+        
     # Mark content as completed
     progress = mark_content_completed(request.user, course, content_type, content_id)
     
