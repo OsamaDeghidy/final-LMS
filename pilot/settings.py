@@ -83,7 +83,7 @@ MIDDLEWARE = [
     # 'website.middleware.UserActivityMiddleware',
     'axes.middleware.AxesMiddleware',
     'pilot.middleware.AdminMiddleware',
-    #'allauth.account.middleware.AccountMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'silk.middleware.SilkyMiddleware',
 ]
 

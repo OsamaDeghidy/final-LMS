@@ -14,6 +14,7 @@ class Profile(models.Model):
     email = models.CharField(max_length=2000, blank=True, null=True)
     phone = models.CharField(max_length=2000, blank=True, null=True)
     status_choices = (
+        ('Admin', 'Admin'),
         ('Student', 'Student'),
         ('Teacher', 'Teacher'),
         ('Organization', 'Organization')
@@ -32,6 +33,9 @@ class Profile(models.Model):
 
     def __str__(self):
         return str(self.name)
+
+    def is_admin(self):
+        return self.status == 'Admin' or self.user.is_superuser
 
 
 class Organization(models.Model):
@@ -179,3 +183,58 @@ class TeacherApplication(models.Model):
                 logger.error(f"Error rejecting application {self.id}: {str(e)}", exc_info=True)
                 return False
         return False
+
+
+@receiver(post_save, sender=User)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    """
+    Signal handler to create or update user profile when a User is saved.
+    Automatically creates an admin profile for superusers.
+    """
+    if created:
+        if instance.is_superuser:
+            Profile.objects.create(
+                user=instance,
+                name=instance.get_full_name() or instance.username,
+                email=instance.email,
+                status='Admin'
+            )
+        else:
+            # Create a regular profile for non-superusers
+            Profile.objects.create(
+                user=instance,
+                name=instance.get_full_name() or instance.username,
+                email=instance.email
+            )
+    else:
+        # Update the profile if user is updated to superuser
+        if instance.is_superuser:
+            if hasattr(instance, 'profile'):
+                instance.profile.status = 'Admin'
+                instance.profile.save(update_fields=['status'])
+            else:
+                Profile.objects.create(
+                    user=instance,
+                    name=instance.get_full_name() or instance.username,
+                    email=instance.email,
+                    status='Admin'
+                )
+
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    """
+    Signal handler to update profile when user details change
+    """
+    if hasattr(instance, 'profile'):
+        instance.profile.email = instance.email
+        instance.profile.name = instance.get_full_name() or instance.username
+        instance.profile.save(update_fields=['email', 'name'])
+    elif instance.is_superuser:
+        # If this is a superuser without a profile, create one
+        Profile.objects.create(
+            user=instance,
+            name=instance.get_full_name() or instance.username,
+            email=instance.email,
+            status='Admin'
+        )
