@@ -133,6 +133,7 @@ class ModulePDF(models.Model):
     module = models.ForeignKey('Module', related_name='pdf_files', on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     file = models.FileField(upload_to='module_pdfs/')
+    pdf_file = models.FileField(upload_to='module_pdfs/', null=True, blank=True)  # Added for backward compatibility
     order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -150,7 +151,78 @@ class ModulePDF(models.Model):
         if self.file:
             if os.path.isfile(self.file.path):
                 os.remove(self.file.path)
+        if self.pdf_file and self.pdf_file != self.file:
+            if os.path.isfile(self.pdf_file.path):
+                os.remove(self.pdf_file.path)
         super().delete(*args, **kwargs)
+
+
+class ModuleVideo(models.Model):
+    """Model to store video files associated with course modules"""
+    module = models.ForeignKey('Module', related_name='video_files', on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    video_file = models.FileField(upload_to='module_videos/')
+    order = models.IntegerField(default=0)
+    duration = models.IntegerField(default=0)  # Duration in seconds
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+        verbose_name = 'Module Video'
+        verbose_name_plural = 'Module Videos'
+    
+    def __str__(self):
+        return f"{self.module.name} - {self.title}"
+    
+    def delete(self, *args, **kwargs):
+        # Delete the file when the model instance is deleted
+        if self.video_file:
+            if os.path.isfile(self.video_file.path):
+                os.remove(self.video_file.path)
+        super().delete(*args, **kwargs)
+
+
+class ModuleMaterial(models.Model):
+    """Model to store additional material files associated with course modules"""
+    module = models.ForeignKey('Module', related_name='material_files', on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    file = models.FileField(upload_to='module_materials/')
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+        verbose_name = 'Module Material'
+        verbose_name_plural = 'Module Materials'
+    
+    def __str__(self):
+        return f"{self.module.name} - {self.title}"
+    
+    def delete(self, *args, **kwargs):
+        # Delete the file when the model instance is deleted
+        if self.file:
+            if os.path.isfile(self.file.path):
+                os.remove(self.file.path)
+        super().delete(*args, **kwargs)
+
+
+class ModuleNote(models.Model):
+    """Model to store text notes associated with course modules"""
+    module = models.ForeignKey('Module', related_name='module_notes', on_delete=models.CASCADE)
+    text = models.TextField()
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'created_at']
+        verbose_name = 'Module Note'
+        verbose_name_plural = 'Module Notes'
+    
+    def __str__(self):
+        return f"{self.module.name} - Note {self.order}"
 
 
 class Module(models.Model):
@@ -330,6 +402,7 @@ class SubComment(models.Model):
 
 class Notes(models.Model):
     user=models.ForeignKey(User, on_delete=models.CASCADE,null=True,blank=True)
+    title = models.CharField(max_length=255, null=True, blank=True)
     description=RichTextField(null=True, blank=True) 
     number=models.IntegerField(blank=True,null=True, default=0) 
     video = models.ForeignKey(Video, null=True, blank=True, on_delete=models.CASCADE)

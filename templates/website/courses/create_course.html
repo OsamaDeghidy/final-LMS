@@ -8,7 +8,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <link rel="stylesheet" href="{% static 'css/course-creation.css' %}">
 <script src="{% static 'js/course-image-upload.js' %}"></script>
-<script src="{% static 'js/course-creation.js' %}"></script>
+<script src="{% static 'js/course-creation-part1.js' %}"></script>
+<script src="{% static 'js/course-creation-part2.js' %}"></script>
 {% endblock %}
 
 {% block dashboard_content %}
@@ -20,6 +21,8 @@
             <i class="fas fa-plus-circle me-2"></i> إنشاء دورة جديدة
           </h2>
         </div>
+        <!-- Add alerts container -->
+        <div id="alerts-container" class="mt-2"></div>
         <div class="card-body p-4">
           <form id="course-form" method="post" enctype="multipart/form-data" class="needs-validation" accept-charset="utf-8" novalidate>
             {% csrf_token %}
@@ -52,14 +55,16 @@
                   <span class="input-group-text bg-light"><i class="fas fa-book text-primary"></i></span>
                   <input type="text" class="form-control" name="name" required placeholder="أدخل عنوان الدورة">
                 </div>
+                <div class="invalid-feedback">يرجى إدخال عنوان للدورة</div>
               </div>
               
               <div class="mb-3">
                 <label class="form-label fw-bold">وصف مختصر</label>
                 <div class="input-group">
                   <span class="input-group-text bg-light"><i class="fas fa-align-left text-primary"></i></span>
-                  <input type="text" class="form-control" name="small_description" placeholder="ملخص يظهر في بطاقة الدورة">
+                  <input type="text" class="form-control" name="small_description" required placeholder="ملخص يظهر في بطاقة الدورة">
                 </div>
+                <div class="invalid-feedback">يرجى إدخال وصف مختصر للدورة</div>
               </div>
               
               <div class="row mb-3">
@@ -112,8 +117,9 @@
               </div>
               
               <div class="mb-3">
-                <label class="form-label fw-bold">الوصف التفصيلي</label>
-                <textarea class="form-control" name="description" rows="5" required placeholder="اشرح محتوى الدورة بشكل تفصيلي..."></textarea>
+                <label class="form-label fw-bold">الوصف الكامل</label>
+                <textarea class="form-control" name="description" rows="5" required placeholder="وصف تفصيلي للدورة"></textarea>
+                <div class="invalid-feedback">يرجى إدخال وصف كامل للدورة</div>
               </div>
               
               <div class="mb-3">
@@ -123,15 +129,16 @@
               </div>
               
               <div class="row mb-3">
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">فئة الدورة</label>
-                  <select class="form-select" name="category">
-                    <option value="">-- اختر الفئة --</option>
-                    {% for cat in categories %}
-                      <option value="{{ cat.id }}">{{ cat.name }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
+                <div class="mb-3">
+                <label class="form-label fw-bold">التصنيف</label>
+                <select class="form-select" name="category" required>
+                  <option value="">-- اختر التصنيف --</option>
+                  {% for category in categories %}
+                  <option value="{{ category.id }}">{{ category.name }}</option>
+                  {% endfor %}
+                </select>
+                <div class="invalid-feedback">يرجى اختيار تصنيف للدورة</div>
+              </div>
                <!--  <div class="col-md-6">
                   <label class="form-label fw-bold">المؤسسة</label>
                   <select class="form-select" name="organization">
@@ -267,9 +274,9 @@
                         </div>
                         <div class="quiz-section mt-3" style="display: none;">
                           <div class="questions-container"></div>
-                          <!-- <button type="button" class="btn btn-sm btn-outline-primary add-question-btn mt-2" data-module-id="">
+                          <button type="button" class="btn btn-sm btn-outline-primary add-question-btn mt-2" data-module-id="">
                             <i class="fas fa-plus me-1"></i>إضافة سؤال
-                          </button> -->
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -300,6 +307,19 @@
               <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 راجع معلومات الدورة قبل الحفظ. تأكد من إضافة جميع المعلومات المطلوبة.
+              </div>
+              
+              <div class="course-summary mb-4">
+                <h5 class="text-primary mb-3">ملخص الدورة</h5>
+                <div class="card">
+                  <div class="card-body">
+                    <p><strong>عنوان الدورة:</strong> <span id="summary-title"></span></p>
+                    <p><strong>الوصف المختصر:</strong> <span id="summary-small-desc"></span></p>
+                    <p><strong>السعر:</strong> <span id="summary-price"></span></p>
+                    <p><strong>المستوى:</strong> <span id="summary-level"></span></p>
+                    <p><strong>عدد الموديولات:</strong> <span id="summary-modules"></span></p>
+                  </div>
+                </div>
               </div>
               
               <div class="d-flex justify-content-between mt-4">

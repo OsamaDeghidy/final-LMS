@@ -121,3 +121,27 @@
     top: 15px;
   }
 }
+
+/* Add alerts container for notifications */
+#alerts-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    max-width: 400px;
+  }
+  .selected-file-name {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.9rem;
+    color: #0d6efd;
+  }
+  .answer-item {
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .answer-item.correct {
+    background-color: rgba(25, 135, 84, 0.1);
+    border-left: 3px solid #198754;
+  }
