@@ -1,34 +1,35 @@
 from datetime import datetime, timedelta
-from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.conf import settings
 from django.utils.translation import gettext as _
-from django.http import HttpResponseForbidden, HttpResponseRedirect
-from django.contrib.admin.views.decorators import staff_member_required
-from django.urls import reverse
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from django.contrib import messages
-from .models import Course, Video, Module, Notes, Comment, Enrollment
 from django.contrib.auth.models import User
 from django.utils import timezone
 import json
 from django.views.decorators.csrf import csrf_exempt
-from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
 import logging
 from django.db.models import Avg
 
-from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt, Article
+from .models import (
+    Category, Course, Module, Tags, Quiz, Question, Answer, Enrollment, 
+    CourseReview, ReviewReply, UserProgress, ModuleProgress, CourseProgress,
+    Assignment, AssignmentSubmission, UserExamAttempt, UserExamAnswer, 
+    Exam, ExamQuestion, ExamAnswer, Attendance, QuizAttempt, QuizUserAnswer,
+    Meeting, Participant, Notification, BookCategory, Review, Book, Article,
+    Cart, CartItem, ContentProgress, Certification, Attachment
+)
 from user.models import Profile, Student, Organization, Teacher
 from .utils import searchCourses
 
 # Import course-related views
-from .views_course import (allcourses, course_detail, update_course, delete_course, course, courseviewpage, 
-                           courseviewpagevideo, courseviewpagenote, create_module, update_module, 
+from .views_course import (
+    allcourses, course_detail, update_course, delete_course, course, courseviewpage, 
+    courseviewpagevideo, courseviewpagenote, create_module, update_module, 
                            delete_module, course_modules, quiz_list, view_quiz, create_quiz, update_quiz, 
                            delete_quiz, enroll_course, mark_video_watched, mark_content_viewed, 
                            mark_assignment_completed, delete_pdf, delete_module_pdf, add_to_cart, 

@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.db.models import Count, Q
 from django.http import HttpResponseForbidden
 
-from .models import Course, Enrollment, VideoProgress, Module, Video
+from .models import Course, Enrollment, Module, UserProgress, ModuleProgress
 from user.models import Profile, Student, Teacher
 
 @login_required

@@ -13,7 +13,11 @@ import json
 import logging
 from django.db.models import Avg
 
-from .models import Category, Course, Module, Video, Comment, SubComment, Notes, Tags, Quiz, Question, Answer, Enrollment, Review, VideoProgress, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt, ContentProgress, Article
+from .models import (
+    Category, Course, Module, Tags, Quiz, Question, Answer, Enrollment, 
+    Review, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt, 
+    ContentProgress, Article, UserProgress, ModuleProgress, CourseProgress
+)
 from user.models import Profile, Student, Organization, Teacher
 from .utils_course import searchCourses, update_enrollment_progress, mark_content_completed, get_completed_content_ids, get_user_course_progress, get_user_enrolled_courses, ensure_course_has_module
 

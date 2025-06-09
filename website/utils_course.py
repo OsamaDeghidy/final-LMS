@@ -1,6 +1,10 @@
 from django.db.models import Q, Count, Sum, F, ExpressionWrapper, FloatField
 from django.utils import timezone
-from .models import Course, Module, Video, Comment, SubComment, Notes, Tags, Quiz, Question, Answer, Enrollment, VideoProgress, Assignment, AssignmentSubmission, UserExamAttempt, ContentProgress
+from .models import (
+    Course, Module, Tags, Quiz, Question, Answer, Enrollment, 
+    Assignment, AssignmentSubmission, UserExamAttempt, ContentProgress,
+    UserProgress, ModuleProgress, CourseProgress, ContentType
+)
 from user.models import Profile, Student, Organization, Teacher
 
 
@@ -29,130 +33,90 @@ def searchCourses(request):
 def update_enrollment_progress(enrollment):
     """
     Updates the progress of a student's enrollment in a course
-    Uses the new ContentProgress model for accurate tracking
+    Uses the ContentProgress model for tracking completion of course materials
     """
-    course = enrollment.course
-    student = enrollment.student
-    
-    print(f"[DEBUG] Updating progress for {student.username} in course {course.name}")
-    
-    # Count total content items in the course
-    total_videos = Video.objects.filter(module__course=course).count()
-    total_notes = Notes.objects.filter(module__course=course).count()
-    
-    # Count module PDFs and additional materials
-    modules_with_pdf = Module.objects.filter(course=course, module_pdf__isnull=False).count()
-    modules_with_additional = Module.objects.filter(course=course, additional_materials__isnull=False).count()
-    total_notes += modules_with_pdf + modules_with_additional
-    
-    total_quizzes = Quiz.objects.filter(course=course).count()
-    total_assignments = Assignment.objects.filter(course=course).count()
-    
-    total_content_items = total_videos + total_notes + total_quizzes + total_assignments
-    
-    print(f"[DEBUG] Content counts - Videos: {total_videos}, Notes: {total_notes}, Quizzes: {total_quizzes}, Assignments: {total_assignments}")
-    print(f"[DEBUG] Total content items: {total_content_items}")
-    
-    if total_content_items == 0:
-        enrollment.progress = 100.0
-        enrollment.status = 'completed'
-        enrollment.save(update_fields=['progress', 'status'])
-        return 100.0
-    
-    # Count completed items using ContentProgress
-    completed_count = ContentProgress.objects.filter(
-        user=student,
-        course=course,
-        completed=True
-    ).count()
-    
-    print(f"[DEBUG] Completed items from ContentProgress: {completed_count}")
-    
-    # If no entries in ContentProgress, try to migrate from old systems
-    if completed_count == 0:
-        print("[DEBUG] No ContentProgress entries found, migrating from old systems...")
+    try:
+        course = enrollment.course
+        student = enrollment.student
         
-        # Migrate video progress
-        completed_videos = VideoProgress.objects.filter(
-            student=student,
-            video__module__course=course,
-            watched=True
-        )
-        for video_progress in completed_videos:
-            ContentProgress.objects.get_or_create(
-                user=student,
-                course=course,
-                content_type='video',
-                content_id=str(video_progress.video.id),
-                defaults={'completed': True}
-            )
+        print(f"[DEBUG] Updating progress for {student.username} in course {course.name}")
         
-        # Migrate quiz progress
-        try:
-            completed_quiz_attempts = UserExamAttempt.objects.filter(
-                user=student,
-                exam__course=course,
-                passed=True
-            )
-            for attempt in completed_quiz_attempts:
-                ContentProgress.objects.get_or_create(
-                    user=student,
-                    course=course,
-                    content_type='quiz',
-                    content_id=str(attempt.exam.id),
-                    defaults={'completed': True}
-                )
-        except Exception as e:
-            print(f"[DEBUG] Error migrating quiz progress: {e}")
+        # Count total content items in the course
+        total_notes = Notes.objects.filter(module__course=course).count()
         
-        # Migrate assignment progress
-        try:
-            completed_assignment_submissions = AssignmentSubmission.objects.filter(
-                user=student,
-                assignment__course=course,
-                status__in=['submitted', 'graded']
-            )
-            for submission in completed_assignment_submissions:
-                ContentProgress.objects.get_or_create(
-                    user=student,
-                    course=course,
-                    content_type='assignment',
-                    content_id=str(submission.assignment.id),
-                    defaults={'completed': True}
-                )
-        except Exception as e:
-            print(f"[DEBUG] Error migrating assignment progress: {e}")
+        # Count module PDFs and additional materials
+        modules_with_pdf = Module.objects.filter(course=course, module_pdf__isnull=False).count()
+        modules_with_additional = Module.objects.filter(course=course, additional_materials__isnull=False).count()
+        total_notes += modules_with_pdf + modules_with_additional
         
-        # Recount after migration
+        total_quizzes = Quiz.objects.filter(module__course=course).count()
+        total_assignments = Assignment.objects.filter(module__course=course).count()
+        
+        total_content_items = total_notes + total_quizzes + total_assignments
+        
+        print(f"[DEBUG] Content counts - Notes: {total_notes}, Quizzes: {total_quizzes}, "
+              f"Assignments: {total_assignments}")
+        print(f"[DEBUG] Total content items: {total_content_items}")
+        
+        if total_content_items == 0:
+            enrollment.progress = 0.0  # Set to 0 when no content
+            enrollment.status = 'in_progress'
+            enrollment.save(update_fields=['progress', 'status'])
+            return 0.0
+        
+        # Get all content item IDs for this course
+        note_ids = list(Notes.objects.filter(module__course=course).values_list('id', flat=True))
+        quiz_ids = list(Quiz.objects.filter(module__course=course).values_list('id', flat=True))
+        assignment_ids = list(Assignment.objects.filter(module__course=course).values_list('id', flat=True))
+        
+        # Count completed items using ContentProgress
         completed_count = ContentProgress.objects.filter(
             user=student,
-            course=course,
-            completed=True
+            completed=True,
+            content_id__in=note_ids + quiz_ids + assignment_ids
         ).count()
-        print(f"[DEBUG] Completed items after migration: {completed_count}")
-    
-    # Calculate progress percentage
-    if total_content_items > 0:
-        progress = round((completed_count / total_content_items) * 100, 1)
-        enrollment.progress = min(progress, 100.0)  # Cap at 100%
-    else:
-        enrollment.progress = 100.0
-    
-    print(f"[DEBUG] Calculated progress: {enrollment.progress}%")
-    
-    # Update enrollment
-    enrollment.last_accessed = timezone.now()
-    
-    # Mark as completed if 90% or higher
-    if enrollment.progress >= 90 or enrollment.status == 'completed':
-        enrollment.status = 'completed'
-        if enrollment.progress < 100:
-            enrollment.progress = 100.0  # Round up to 100% when completed
-    
-    enrollment.save(update_fields=['progress', 'last_accessed', 'status'])
-    print(f"[DEBUG] Final progress saved: {enrollment.progress}%")
-    
-    return enrollment.progress
+        
+        print(f"[DEBUG] Completed items from ContentProgress: {completed_count}")
+        
+        # Calculate progress percentage
+        progress = (completed_count / total_content_items * 100) if total_content_items > 0 else 0
+        progress = round(progress, 2)
+        
+        # Update enrollment status based on progress
+        if progress >= 100:
+            status = 'completed'
+        elif progress > 0:
+            status = 'in_progress'
+        else:
+            status = 'not_started'
+        
+        # Save the updated progress and status
+        enrollment.progress = progress
+        enrollment.status = status
+        enrollment.last_accessed = timezone.now()
+        
+        # Mark as completed if 90% or higher
+        if progress >= 90 or status == 'completed':
+            enrollment.status = 'completed'
+            if progress < 100:
+                enrollment.progress = 100.0  # Round up to 100% when completed
+        
+        enrollment.save(update_fields=['progress', 'status', 'last_accessed'])
+        print(f"[DEBUG] Final progress saved: {enrollment.progress}%")
+        
+        # Update course progress if needed
+        try:
+            update_course_progress(student, course)
+        except Exception as e:
+            print(f"[ERROR] Error updating course progress: {e}")
+        
+        return enrollment.progress
+        
+    except Exception as e:
+        print(f"[ERROR] Error in update_enrollment_progress: {e}")
+        import traceback
+        traceback.print_exc()
+        return 0.0
 
 
 def mark_content_completed(user, course, content_type, content_id):

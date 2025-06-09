@@ -2,31 +2,31 @@ from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils import timezone
-from .models import (Category, Tags, Course, Module, Video, Comment, SubComment, Notes, 
-                    UserProgress, CourseProgress, Quiz, Question, Answer, Enrollment, Certification, 
-                    Attachment, Exam, ExamQuestion, ExamAnswer, UserExamAttempt, UserExamAnswer, 
-                    Assignment, AssignmentSubmission, Attendance, QuizAttempt, QuizUserAnswer, 
-                    Meeting, Participant, Notification, BookCategory, Book, Article)
+from .models import (
+    Category, Tags, Course, Module, Enrollment, CourseReview, ReviewReply,
+    UserProgress, ModuleProgress, CourseProgress, Quiz, Question, Answer,
+    Attachment, Certification, Exam, ExamQuestion, ExamAnswer, UserExamAttempt,
+    UserExamAnswer, Assignment, AssignmentSubmission, Attendance, QuizAttempt,
+    QuizUserAnswer, Meeting, Participant, Notification, BookCategory, Review,
+    Book, Article, Cart, CartItem, ContentProgress
+)
 
-# Register your models here.
-
+# Register your models here
 admin.site.register(Category)
 admin.site.register(Tags)
 admin.site.register(Course)
+admin.site.register(Enrollment)
 admin.site.register(Module)
-admin.site.register(Video)
-admin.site.register(Comment)
-admin.site.register(SubComment)
-admin.site.register(Notes)
-
+admin.site.register(CourseReview)
+admin.site.register(ReviewReply)
 admin.site.register(UserProgress)
+admin.site.register(ModuleProgress)
 admin.site.register(CourseProgress)
 admin.site.register(Quiz)
 admin.site.register(Question)
 admin.site.register(Answer)
-admin.site.register(Enrollment)
-admin.site.register(Certification)
 admin.site.register(Attachment)
+admin.site.register(Certification)
 admin.site.register(Exam)
 admin.site.register(ExamQuestion)
 admin.site.register(ExamAnswer)
@@ -37,14 +37,15 @@ admin.site.register(AssignmentSubmission)
 admin.site.register(Attendance)
 admin.site.register(QuizAttempt)
 admin.site.register(QuizUserAnswer)
-
-# Register new models
-# School model removed
 admin.site.register(Meeting)
 admin.site.register(Participant)
 admin.site.register(Notification)
 admin.site.register(BookCategory)
+admin.site.register(Review)
 admin.site.register(Book)
+admin.site.register(Cart)
+admin.site.register(CartItem)
+admin.site.register(ContentProgress)
 
 # Teacher Application Admin
 class TeacherApplicationAdmin(admin.ModelAdmin):

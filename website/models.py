@@ -23,9 +23,6 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
-
-
-
 class Category(models.Model):
     name = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
@@ -84,18 +81,6 @@ class Course(models.Model):
     
     def save(self, *args, **kwargs):
         # First save the course if it's a new instance
-        is_new = not self.pk  # Check if this is a new course
-        if is_new:  # If this is a new course (not yet saved)
-            # For new courses, just save without calculating videos
-            super().save(*args, **kwargs)
-            return  # Exit early for new courses
-        
-        # For existing courses, update video counts and time
-        self.total_video = Video.objects.filter(course=self).count()
-        time = sum([video.duration for video in Video.objects.filter(course=self)])
-        self.vidoes_time = str(timedelta(seconds=time))
-        
-        # Save with the updated values
         super().save(*args, **kwargs)
     def __str__(self):
         return self.name
@@ -128,353 +113,234 @@ class Enrollment(models.Model):
         return f"{self.course.name} - {self.student.username}"
 
 
-class ModulePDF(models.Model):
-    """Model to store PDF files associated with course modules"""
-    module = models.ForeignKey('Module', related_name='pdf_files', on_delete=models.CASCADE)
-    title = models.CharField(max_length=255)
-    file = models.FileField(upload_to='module_pdfs/')
-    pdf_file = models.FileField(upload_to='module_pdfs/', null=True, blank=True)  # Added for backward compatibility
-    order = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['order', 'created_at']
-        verbose_name = 'Module PDF'
-        verbose_name_plural = 'Module PDFs'
-    
-    def __str__(self):
-        return f"{self.module.name} - {self.title}"
-    
-    def delete(self, *args, **kwargs):
-        # Delete the file when the model instance is deleted
-        if self.file:
-            if os.path.isfile(self.file.path):
-                os.remove(self.file.path)
-        if self.pdf_file and self.pdf_file != self.file:
-            if os.path.isfile(self.pdf_file.path):
-                os.remove(self.pdf_file.path)
-        super().delete(*args, **kwargs)
-
-
-class ModuleVideo(models.Model):
-    """Model to store video files associated with course modules"""
-    module = models.ForeignKey('Module', related_name='video_files', on_delete=models.CASCADE)
-    title = models.CharField(max_length=255)
-    video_file = models.FileField(upload_to='module_videos/')
-    order = models.IntegerField(default=0)
-    duration = models.IntegerField(default=0)  # Duration in seconds
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['order', 'created_at']
-        verbose_name = 'Module Video'
-        verbose_name_plural = 'Module Videos'
-    
-    def __str__(self):
-        return f"{self.module.name} - {self.title}"
-    
-    def delete(self, *args, **kwargs):
-        # Delete the file when the model instance is deleted
-        if self.video_file:
-            if os.path.isfile(self.video_file.path):
-                os.remove(self.video_file.path)
-        super().delete(*args, **kwargs)
-
-
-class ModuleMaterial(models.Model):
-    """Model to store additional material files associated with course modules"""
-    module = models.ForeignKey('Module', related_name='material_files', on_delete=models.CASCADE)
-    title = models.CharField(max_length=255)
-    file = models.FileField(upload_to='module_materials/')
-    order = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['order', 'created_at']
-        verbose_name = 'Module Material'
-        verbose_name_plural = 'Module Materials'
-    
-    def __str__(self):
-        return f"{self.module.name} - {self.title}"
-    
-    def delete(self, *args, **kwargs):
-        # Delete the file when the model instance is deleted
-        if self.file:
-            if os.path.isfile(self.file.path):
-                os.remove(self.file.path)
-        super().delete(*args, **kwargs)
-
-
-class ModuleNote(models.Model):
-    """Model to store text notes associated with course modules"""
-    module = models.ForeignKey('Module', related_name='module_notes', on_delete=models.CASCADE)
-    text = models.TextField()
-    order = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['order', 'created_at']
-        verbose_name = 'Module Note'
-        verbose_name_plural = 'Module Notes'
-    
-    def __str__(self):
-        return f"{self.module.name} - Note {self.order}"
-
-
 class Module(models.Model):
     name = models.CharField(max_length=2000, blank=True, null=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, blank=True, null=True)
-    number = models.IntegerField(null=True, blank=True)    
+    number = models.IntegerField(null=True, blank=True)
     description = RichTextField(null=True, blank=True)
-    total_video = models.IntegerField(null=True, blank=True, default=0)
-    total_notes = models.IntegerField(null=True, blank=True, default=0)
-    duration = models.CharField(max_length=2000, blank=True, null=True)
-    # Add PDF fields to Module
-    module_pdf = models.FileField(upload_to='module_pdfs/', null=True, blank=True, help_text='Upload module PDF materials')
-    additional_materials = models.FileField(upload_to='module_materials/', null=True, blank=True, help_text='Upload additional materials')
-
-    def get_ordered_content(self):
-        """
-        Returns a list of all content (videos and quizzes) in the module in the correct order.
-        Each item is a dictionary with a 'type' field ('video' or 'quiz') and the object.
-        """
-        content = []
-        
-        # Add videos
-        for video in self.video_set.all().order_by('number'):
-            content.append({
-                'type': 'video',
-                'id': video.id,
-                'name': video.name,
-                'duration': video.duration,
-                'object': video
-            })
-            
-            # Add quizzes for this video
-            for quiz in video.quiz_set.all():
-                content.append({
-                    'type': 'quiz',
-                    'id': quiz.id,
-                    'title': quiz.title,
-                    'video': video,
-                    'questions_count': quiz.questions.count(),
-                    'object': quiz
-                })
-        
-        # Add module-level quizzes
-        for quiz in self.module_quizzes.all():
-            content.append({
-                'type': 'quiz',
-                'id': quiz.id,
-                'title': quiz.title,
-                'video': None,
-                'questions_count': quiz.questions.count(),
-                'object': quiz
-            })
-            
-        return content
-
-    def save(self, *args, **kwargs):
-        # Save the instance first to ensure it has a primary key
-        super().save(*args, **kwargs)
-        
-        # Update video count after saving
-        self.total_video = Video.objects.filter(module=self).count()
-        
-        # Calculate total duration from videos
-        total_seconds = sum([video.duration for video in Video.objects.filter(module=self) if video.duration])
-        self.duration = str(timedelta(seconds=total_seconds)) if total_seconds else "0:00:00"
-        
-        # Update course module count if needed
-        if self.course:
-            self.course.total_module = Module.objects.filter(course=self.course).count()
-            self.course.save()
-
-    def __str__(self):
-        return self.name + " - " + self.course.name
-
-
-class Video(models.Model):
-    name = models.CharField(max_length=2000, null=True, blank=True)
-    number=models.IntegerField(blank=True,null=True, default=0)
-    course=models.ForeignKey(Course,on_delete=models.SET_NULL,blank=True,null=True)
-    module = models.ForeignKey(Module, on_delete=models.CASCADE, blank=True, null=True)
-    video = models.FileField(null=True, blank=True)
-    duration = models.IntegerField(default=0)
-    
-    def save(self, *args, **kwargs):
-        # First save the course if it's a new instance
-        is_new = not self.pk  # Check if this is a new course
-        super().save(*args, **kwargs)
-        if is_new:
-            # Update the course's video count
-            if self.course:
-                videos = Video.objects.filter(course=self.course).count()
-                self.course.total_video = videos
-                self.course.save()
-
-    def __str__(self):
-        return self.name + " - " + self.module.name + " - " + self.course.name
-
-
-class VideoProgress(models.Model):
-    """Tracks a student's progress through a video"""
-    student = models.ForeignKey(User, on_delete=models.CASCADE)
-    video = models.ForeignKey(Video, on_delete=models.CASCADE)
-    watched = models.BooleanField(default=False)  # Whether the video has been watched
-    watch_time = models.IntegerField(default=0)  # Seconds watched
-    last_position = models.IntegerField(default=0)  # Last position in the video in seconds
-    completed_at = models.DateTimeField(null=True, blank=True)  # When the video was completed
-    last_watched = models.DateTimeField(auto_now=True)  # When the video was last watched
+    # Each module has exactly one video
+    video = models.FileField(upload_to='module_videos/', null=True, blank=True)
+    video_duration = models.IntegerField(default=0)
+    # Each module has exactly one PDF
+    pdf = models.FileField(upload_to='module_pdfs/', null=True, blank=True)
+    # Each module has exactly one note
+    note = RichTextField(null=True, blank=True)
+    # Quiz will be linked via foreign key from Quiz model
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        unique_together = ('student', 'video')
-        
-    def __str__(self):
-        return f"{self.student.username} - {self.video.name} - {'Completed' if self.watched else 'In Progress'}"
-        
-    def mark_as_watched(self):
-        """Mark the video as watched"""
-        if not self.watched:
-            self.watched = True
-            self.completed_at = timezone.now()
-            self.save(update_fields=['watched', 'completed_at'])
-            
-            # Update enrollment progress
-            enrollment = Enrollment.objects.filter(
-                student=self.student, 
-                course=self.video.course
-            ).first()
-            
-            if enrollment:
-                # Calculate progress
-                total_videos = Video.objects.filter(module__course=self.video.course).count()
-                completed_videos = VideoProgress.objects.filter(
-                    student=self.student,
-                    video__module__course=self.video.course,
-                    watched=True
-                ).count()
-                
-                if total_videos > 0:
-                    progress = (completed_videos / total_videos) * 100
-                    enrollment.progress = progress
-                    enrollment.save(update_fields=['progress'])
-                    
-                    # Check if course is completed
-                    if progress >= 100:
-                        enrollment.status = 'completed'
-                        enrollment.save(update_fields=['status'])
-
-
-class Comment(models.Model):
-    user=models.ForeignKey(User, on_delete=models.CASCADE,null=True,blank=True)
-    description=RichTextField(null=True, blank=True)
-    video = models.ForeignKey(Video, null=True, blank=True, on_delete=models.CASCADE)
-    course = models.ForeignKey(Course, null=True, blank=True, on_delete=models.CASCADE)
-    def save(self, *args, **kwargs):
-        if self.video and self.course:
-            raise ValueError("Comment can only be linked to a video or a Course, not both.")
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        video_name = self.video.name if self.video else "No Video"
-        course_name = self.course.name if self.course else "No Course"
-        #desc = self.description if self.description else ""
-        user_name = self.user.profile.name
-        return f"{user_name} - {video_name} - {course_name}"
-
-
-class SubComment(models.Model):
-    user=models.ForeignKey(User, on_delete=models.CASCADE,null=True,blank=True)
-    comment=models.ForeignKey(Comment, on_delete=models.CASCADE,null=True,blank=True)
-    description=RichTextField(null=True, blank=True)
-    def __str__(self):
-        video_name = self.comment.video.name if self.comment.video else "No Video"
-        course_name = self.comment.course.name if self.comment.course else "No Course"
-        #desc = self.description if self.description else ""
-        user_name = self.user.profile.name
-        return f"{user_name} - {video_name} - {course_name}"
-
-
-class Notes(models.Model):
-    user=models.ForeignKey(User, on_delete=models.CASCADE,null=True,blank=True)
-    title = models.CharField(max_length=255, null=True, blank=True)
-    description=RichTextField(null=True, blank=True) 
-    number=models.IntegerField(blank=True,null=True, default=0) 
-    video = models.ForeignKey(Video, null=True, blank=True, on_delete=models.CASCADE)
-    module = models.ForeignKey(Module, null=True, blank=True, on_delete=models.CASCADE)
-    course = models.ForeignKey(Course, null=True, blank=True, on_delete=models.CASCADE)
-    file = models.FileField(upload_to='notes_files/', null=True, blank=True, help_text='Upload PDF or other document files')
+        ordering = ['number']
+        verbose_name = 'Module'
+        verbose_name_plural = 'Modules'
     
     def save(self, *args, **kwargs):
-        foreign_key_count = sum([bool(getattr(self, f)) for f in ['video', 'module', 'course']])
-        if foreign_key_count > 1:
-            raise ValueError("Comment can only be linked to one of video, module, or Course.")
-        super().save(*args, **kwargs) 
+        # If this is a new module or the video file has been updated
+        if not self.pk or 'video' in [f.name for f in self._meta.get_fields() if f.name == 'video']:
+            if self.video:
+                try:
+                    # Get video duration using moviepy
+                    clip = VideoFileClip(self.video.path)
+                    self.video_duration = int(clip.duration)
+                    clip.close()
+                except Exception as e:
+                    print(f"Error processing video: {e}")
+                    self.video_duration = 0
+        
+        # If this is a new module, set the module number
+        if not self.pk:
+            # Get the highest module number for this course and add 1
+            last_module = Module.objects.filter(course=self.course).order_by('-number').first()
+            self.number = last_module.number + 1 if last_module else 1
+            
+        super().save(*args, **kwargs)
+        
+        # Update course duration after saving module
+        if self.course:
+            self.course.save()
+            
+    def delete(self, *args, **kwargs):
+        # Delete associated files
+        if self.video:
+            if os.path.isfile(self.video.path):
+                os.remove(self.video.path)
+        if self.pdf:
+            if os.path.isfile(self.pdf.path):
+                os.remove(self.pdf.path)
+        super().delete(*args, **kwargs)
 
+
+class CourseReview(models.Model):
+    RATING_CHOICES = [
+        (1, '1 - Poor'),
+        (2, '2 - Fair'),
+        (3, '3 - Good'),
+        (4, '4 - Very Good'),
+        (5, '5 - Excellent'),
+    ]
+    
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    rating = models.IntegerField(choices=RATING_CHOICES, validators=[MinValueValidator(1), MaxValueValidator(5)])
+    review_text = RichTextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['course', 'user']
+        ordering = ['-created_at']
+        verbose_name = 'Course Review'
+        verbose_name_plural = 'Course Reviews'
+    
     def __str__(self):
-        video_name = self.video.name if self.video else "No Video"
-        module_name = self.module.name if self.module else "No Module"
-        course_name = self.course.name if self.course else "No Course"
-        #desc = self.description if self.description else ""
-        user_name = self.user.profile.name
-        return f"{user_name} - {video_name} - {module_name} - {course_name}"
+        return f"{self.user.username}'s review of {self.course.name} - {self.rating} stars"
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Update course average rating
+        course = self.course
+        avg_rating = CourseReview.objects.filter(course=course).aggregate(Avg('rating'))['rating__avg']
+        course.rating = round(avg_rating, 1) if avg_rating else 0
+        course.save()
+
+
+class ReviewReply(models.Model):
+    review = models.ForeignKey(CourseReview, on_delete=models.CASCADE, related_name='replies')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    reply_text = RichTextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Review Reply'
+        verbose_name_plural = 'Review Replies'
+    
+    def __str__(self):
+        return f"Reply by {self.user.username} to {self.review.user.username}'s review"
 
 
 class UserProgress(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, blank=True, null=True)
-    number_of_videos_watched = models.IntegerField(default=0)
-    total_number_of_videos = models.IntegerField(default=0)
-    last_video_watched = models.ForeignKey(
-        Video,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name="last video watched",
-    )
-    progress_percent = models.FloatField(default=0)
+    """Tracks user's overall progress in a course"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='course_progress')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='user_progress')
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+    last_accessed = models.DateTimeField(auto_now=True)
+    is_completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    overall_progress = models.FloatField(default=0)  # 0-100%
 
-    def save(self, *args, **kwargs):
-        if self.total_number_of_videos == 0:
-            self.progress_percent = 0
-        else:
-            self.progress_percent = (
-                self.number_of_videos_watched / self.total_number_of_videos
-            ) * 100
-        super().save(*args, **kwargs)   
+    class Meta:
+        unique_together = ('user', 'course')
+        verbose_name_plural = 'User Progress'
+
+    def update_progress(self):
+        """Update overall progress based on module completion"""
+        total_modules = self.course.module_set.count()
+        if total_modules == 0:
+            self.overall_progress = 0
+            return
+
+        completed_modules = ModuleProgress.objects.filter(
+            user=self.user,
+            module__course=self.course,
+            is_completed=True
+        ).count()
+        
+        self.overall_progress = (completed_modules / total_modules) * 100
+        self.is_completed = self.overall_progress >= 100
+        if self.is_completed and not self.completed_at:
+            self.completed_at = timezone.now()
+        self.save()
 
     def __str__(self):
-        user_name = self.user.profile.name if self.user else "No User"
+        return f"{self.user.username} - {self.course.name} ({self.overall_progress}%)"
+
+
+class ModuleProgress(models.Model):
+    """Tracks user's progress within a specific module"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='module_progress')
+    module = models.ForeignKey('Module', on_delete=models.CASCADE, related_name='user_progress')
+    started_at = models.DateTimeField(auto_now_add=True)
+    last_accessed = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    is_completed = models.BooleanField(default=False)
+    video_watched = models.BooleanField(default=False)
+    pdf_viewed = models.BooleanField(default=False)
+    notes_read = models.BooleanField(default=False)
+    quiz_completed = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('user', 'module')
+        verbose_name_plural = 'Module Progress'
+
+    def save(self, *args, **kwargs):
+        # Check if all required components are completed
+        required_components = [self.video_watched, self.pdf_viewed, self.notes_read, self.quiz_completed]
+        self.is_completed = all(required_components)
+        
+        if self.is_completed and not self.completed_at:
+            self.completed_at = timezone.now()
+        
+        super().save(*args, **kwargs)
+        
+        # Update parent UserProgress
+        try:
+            user_progress = UserProgress.objects.get(
+                user=self.user,
+                course=self.module.course
+            )
+            user_progress.update_progress()
+        except UserProgress.DoesNotExist:
+            pass
+
+    def __str__(self):
+        status = "Completed" if self.is_completed else "In Progress"
+        return f"{self.user.username} - {self.module.name} ({status})"
 
 
 class CourseProgress(models.Model):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, blank=True, null=True)
-    total_number_of_videos = models.IntegerField(default=0)
-    # ... (rest of the code remains the same)
-    total_number_of_users = models.IntegerField(default=0)
-    total_progress_percent = models.FloatField(default=0)
+    """Aggregated statistics for a course"""
+    course = models.OneToOneField(Course, on_delete=models.CASCADE, related_name='progress_stats')
+    total_enrollments = models.PositiveIntegerField(default=0)
+    active_learners = models.PositiveIntegerField(default=0)
+    completion_rate = models.FloatField(default=0)  # 0-100%
+    average_progress = models.FloatField(default=0)  # 0-100%
+    last_updated = models.DateTimeField(auto_now=True)
 
-    def calculate_progress_percent(self):
-        if self.total_number_of_users == 0:
-            self.total_progress_percent = 0
-        else:
-            self.total_progress_percent = (self.number_of_videos_watched / (self.total_number_of_videos * self.total_number_of_users)) * 100
+    def update_statistics(self):
+        """Update all statistics for the course"""
+        from django.db.models import Avg, Count, F, Q
+        
+        # Get all user progress for this course
+        progress_data = UserProgress.objects.filter(course=self.course).aggregate(
+            total=Count('id'),
+            active=Count('id', filter=Q(is_completed=False)),
+            avg_progress=Avg('overall_progress')
+        )
+        
+        self.total_enrollments = progress_data['total'] or 0
+        self.active_learners = progress_data['active'] or 0
+        self.average_progress = progress_data['avg_progress'] or 0
+        
+        # Calculate completion rate
+        completed = UserProgress.objects.filter(
+            course=self.course,
+            is_completed=True
+        ).count()
+        
+        self.completion_rate = (completed / self.total_enrollments * 100) if self.total_enrollments > 0 else 0
+        self.save()
 
-    def save(self, *args, **kwargs):
-        self.total_number_of_users = self.course.enroller_user.count()
-        self.total_number_of_videos = self.course.video_set.count()
-        self.number_of_videos_watched = sum([userprogress.number_of_videos_watched for userprogress in UserProgress.objects.filter(course=self.course)])
-        self.calculate_progress_percent()
-        super().save(*args, **kwargs)
+    @classmethod
+    def update_for_course(cls, course):
+        """Update statistics for a specific course"""
+        progress, created = cls.objects.get_or_create(course=course)
+        progress.update_statistics()
+        return progress
 
     def __str__(self):
-        course_name = self.course.name if self.course else "No Course"
-        return f"{course_name} - {self.total_progress_percent} - {self.total_number_of_users} - {self.total_number_of_videos}"
+        return f"Stats for {self.course.name} - {self.completion_rate}% completion"
 
 
 class Quiz(models.Model):
@@ -486,7 +352,6 @@ class Quiz(models.Model):
     
     title = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
-    video = models.ForeignKey(Video, on_delete=models.CASCADE, null=True, blank=True)
     module = models.ForeignKey(Module, on_delete=models.CASCADE, null=True, blank=True, related_name='module_quizzes')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True, related_name='course_quizzes')
     quiz_type = models.CharField(max_length=20, choices=QUIZ_TYPE_CHOICES, default='video')
@@ -727,7 +592,6 @@ class Attendance(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendance_records')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='attendance_records')
     module = models.ForeignKey(Module, on_delete=models.CASCADE, null=True, blank=True, related_name='attendance_records')
-    video = models.ForeignKey(Video, on_delete=models.CASCADE, null=True, blank=True, related_name='attendance_records')
     date = models.DateField(default=timezone.now)
     time_in = models.DateTimeField(default=timezone.now)
     time_out = models.DateTimeField(null=True, blank=True)
@@ -736,7 +600,7 @@ class Attendance(models.Model):
     notes = models.TextField(null=True, blank=True)
     
     class Meta:
-        unique_together = ['user', 'course', 'date', 'video']
+        unique_together = ['user', 'course', 'date', 'module']
     
     def __str__(self):
         return f"{self.user.username} - {self.course.name} - {self.date}"
@@ -1063,7 +927,7 @@ class BookCategory(models.Model):
 
 
 class Review(models.Model):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='reviews')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='course_reviews')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     comment = models.TextField(blank=True, null=True)
@@ -1073,6 +937,8 @@ class Review(models.Model):
     class Meta:
         unique_together = ('course', 'user')
         ordering = ['-created_at']
+        verbose_name = 'Course Review (Legacy)'
+        verbose_name_plural = 'Course Reviews (Legacy)'
     
     def __str__(self):
         return f"{self.user.username}'s review for {self.course.name}"
@@ -1195,10 +1061,9 @@ class CartItem(models.Model):
 class ContentProgress(models.Model):
     """Track user progress on different types of content"""
     CONTENT_TYPES = [
-        ('video', 'Video'),
         ('note', 'Note/PDF'),
         ('quiz', 'Quiz'),
-        ('assignment', 'Assignment'),
+        ('assignment', 'Assignment')
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE)

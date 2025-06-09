@@ -6,7 +6,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.db.models import Count, Avg, F, Q, Sum
 from django.contrib import messages
-from .models import Course, User, Attendance, Module, Video
+from .models import Course, User, Attendance, Module
 import json
 from datetime import datetime
 from django.contrib.auth.models import User
