@@ -185,16 +185,10 @@ def create_course(request):
                         'success': False,
                         'message': 'لم يتم العثور على ملفك الشخصي. يرجى إكمال ملفك الشخصي أولاً.'
                     })
-                # Check if profile is a teacher
-                if request.user.profile.status != 'Teacher':
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'يجب أن تكون معلمًا لإنشاء دورة. يرجى التقديم كمعلم أولاً.'
-                    })
-                return JsonResponse({
-                    'success': False,
-                    'message': 'حدث خطأ في العثور على ملف المعلم الخاص بك. يرجى المحاولة مرة أخرى أو التواصل مع الدعم الفني.'
-                })
+            # Check if profile is a teacher
+            if request.user.profile.status != 'Teacher':
+                messages.error(request, _('You must be a teacher to create a course. Please apply as a teacher first.'))
+                return redirect('create_course')
             
             # Create course
             course = Course.objects.create(
@@ -202,94 +196,69 @@ def create_course(request):
                 description=description,
                 small_description=small_description,
                 price=price,
-                category=category,
-                teacher=teacher,
-                level=level
+                category_id=category_id,
+                level=level,
+                teacher=teacher
             )
             
-            # Handle tags
-            tags = request.POST.get('tags', '').split(',')
-            for tag_name in tags:
-                tag_name = tag_name.strip()
-                if tag_name:
-                    tag, created = Tags.objects.get_or_create(name=tag_name)
-                    course.tags.add(tag)
-            
-            # Handle modules
-            module_count = 0
-            # Find the maximum module index from the form data
-            for key in request.POST.keys():
-                if key.startswith('module_') and key.endswith('_title'):
-                    module_count += 1
-            
-            logger.info(f"Found {module_count} modules to process")
-            
+            # Process modules
+            module_count = int(request.POST.get('module_count', 0))
             for i in range(1, module_count + 1):
                 module_title = request.POST.get(f'module_{i}_title')
-                if not module_title:
+                module_description = request.POST.get(f'module_{i}_description')
+                
+                if not module_title or not module_description:
                     continue
-                    
-                logger.info(f"Creating module {i}: {module_title}")
+                
+                # Get required files and content
+                video_file = request.FILES.get(f'module_{i}_video')
+                pdf_file = request.FILES.get(f'module_{i}_pdf')
+                note_text = request.POST.get(f'module_{i}_note')
+                question_text = request.POST.get(f'module_{i}_quiz_question')
+                
+                # Validate required content
+                if not video_file or not pdf_file or not note_text or not question_text:
+                    messages.error(request, _(f'Module {i} is missing required content (video, PDF, note, or quiz).'))
+                    continue
+                
+                # Create module
                 module = Module.objects.create(
                     course=course,
                     name=module_title,
-                    number=i
+                    description=module_description,
+                    video=video_file,
+                    pdf=pdf_file,
+                    note=note_text
                 )
                 
-                # Process PDFs for this module
-                pdf_count = int(request.POST.get(f'module_{i}_pdf_count', 0))
-                for pdf_idx in range(1, pdf_count + 1):
-                    pdf_file = request.FILES.get(f'module_{i}_pdf_{pdf_idx}')
-                    if pdf_file and pdf_file.name.lower().endswith('.pdf'):
-                        module.module_pdf = pdf_file
-                        module.save()
-                        logger.info(f"Added PDF {pdf_file.name} to module {module_title}")
+                # Create quiz
+                quiz = Quiz.objects.create(
+                    module=module,
+                    title=f"Quiz for {module_title}",
+                    description="Module quiz",
+                    passing_score=70
+                )
                 
-                # Process quiz for this module
-                has_quiz = request.POST.get(f'module_{i}_has_quiz') == '1'
-                if has_quiz:
-                    question_count = int(request.POST.get(f'module_{i}_question_count', 0))
-                    logger.info(f"Module {i} has quiz with {question_count} questions")
+                # Create question
+                question = Question.objects.create(
+                    quiz=quiz,
+                    text=question_text
+                )
+                
+                # Process answers
+                answer_count = int(request.POST.get(f'module_{i}_quiz_answer_count', 0))
+                for a in range(1, answer_count + 1):
+                    answer_text = request.POST.get(f'module_{i}_quiz_answer_{a}_text')
+                    is_correct = request.POST.get(f'module_{i}_quiz_correct') == str(a)
                     
-                    for q in range(1, question_count + 1):
-                        question_type = request.POST.get(f'module_{i}_question_{q}_type')
-                        question_text = request.POST.get(f'module_{i}_question_{q}_text')
-                        
-                        if not question_text:
-                            continue
-                            
-                        logger.info(f"Creating question {q} of type {question_type}")
-                        question = Question.objects.create(
-                            module=module,
-                            question_type=question_type,
-                            text=question_text,
-                            order=q
+                    if answer_text:
+                        Answer.objects.create(
+                            question=question,
+                            text=answer_text,
+                            is_correct=is_correct
                         )
-                        
-                        if question_type == 'multiple_choice':
-                            answer_count = int(request.POST.get(f'module_{i}_question_{q}_answer_count', 0))
-                            correct_answer = int(request.POST.get(f'module_{i}_question_{q}_correct_answer', 1))
-                            
-                            for a in range(1, answer_count + 1):
-                                answer_text = request.POST.get(f'module_{i}_question_{q}_answer_{a}')
-                                if answer_text:
-                                    is_correct = (a == correct_answer)
-                                    Answer.objects.create(
-                                        question=question,
-                                        text=answer_text,
-                                        is_correct=is_correct
-                                    )
-                                    logger.info(f"Added answer: {answer_text} (correct: {is_correct})")
-                        
-                        elif question_type in ['true_false', 'short_answer']:
-                            correct_answer = request.POST.get(f'module_{i}_question_{q}_correct_answer', '')
-                            if correct_answer:
-                                Answer.objects.create(
-                                    question=question,
-                                    text=correct_answer,
-                                    is_correct=True
-                                )
-                                logger.info(f"Added {question_type} answer: {correct_answer}")
+                
+                logger.info(f"Created module {module_title} with video, PDF, note, and quiz")
             
             messages.success(request, 'تم إنشاء الدورة بنجاح')
             return JsonResponse({

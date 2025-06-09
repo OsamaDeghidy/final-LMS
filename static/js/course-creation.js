@@ -1,7 +1,6 @@
 // Global variables
 let currentStep = 0;
 let moduleCount = 0;
-let questionCounts = {};
 
 // Navigation functions
 function goToNextStep() {
@@ -113,7 +112,6 @@ function addModule() {
   }
   moduleCount++;
   const moduleId = `module_${moduleCount}`;
-  questionCounts[moduleId] = 0;
 
   const template = document.getElementById('module-template');
   if (!template) {
@@ -1006,48 +1004,9 @@ function submitCourse() {
       console.log('Module has no quiz:', moduleId);
     }
   });
-
-  if (!isValid) {
-    submitBtn.innerHTML = originalText;
-    submitBtn.disabled = false;
-    showAlert('danger', 'يوجد أخطاء في النموذج. يرجى مراجعة البيانات المدخلة.');
-    return;
-  }
-
-  // Get the form element
-  const form = document.getElementById('course-form');
-  
-  // Submit via fetch
-  fetch(form.action, {
-    method: 'POST',
-    body: formData,
-    headers: {
-      'X-Requested-With': 'XMLHttpRequest',
-      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      showAlert('success', data.message);
-      setTimeout(() => {
-        if (data.redirect_url) {
-          window.location.href = data.redirect_url;
-        }
-      }, 2000);
-    } else {
-      showAlert('danger', data.message);
-      submitBtn.innerHTML = originalText;
-      submitBtn.disabled = false;
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    showAlert('danger', 'حدث خطأ في الشبكة');
-    submitBtn.innerHTML = originalText;
-    submitBtn.disabled = false;
-  });
 }
+
+// ...
 
 function validateForm() {
   // Simple validation for required fields
@@ -1192,177 +1151,70 @@ function validateForm() {
   return isValid;
 };
 
-// Function to show Bootstrap alerts
-function showAlert(type, message) {
-  // Check if alerts container exists, if not create it
-  let alertsContainer = document.getElementById('alerts-container');
-  if (!alertsContainer) {
-    alertsContainer = document.createElement('div');
-    alertsContainer.id = 'alerts-container';
-    alertsContainer.className = 'position-fixed top-0 end-0 p-3';
-    alertsContainer.style.zIndex = '1050';
-    document.body.appendChild(alertsContainer);
-  }
-  
-  const alertDiv = document.createElement('div');
-  alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-  alertDiv.role = 'alert';
-  alertDiv.innerHTML = `
-    ${message}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  `;
-  
-  alertsContainer.appendChild(alertDiv);
-  
-  // Auto-dismiss after 5 seconds
-  setTimeout(() => {
-    alertDiv.classList.remove('show');
-    setTimeout(() => {
-      alertDiv.remove();
-    }, 300);
-  }, 5000);
-};
+// ...
 
-// Initialize the page
-document.addEventListener('DOMContentLoaded', function() {
-  // Add event listener to the "Add Module" button
-  const addModuleBtn = document.getElementById('add-module-btn');
-  if (addModuleBtn) {
-    addModuleBtn.addEventListener('click', addModule);
+function setupModuleEventListeners(moduleElement, moduleId) {
+  // Remove module button
+  const removeModuleBtn = moduleElement.querySelector('.remove-module-btn');
+  if (removeModuleBtn) {
+    removeModuleBtn.addEventListener('click', () => removeModule(moduleId));
   }
   
-  // Add event listener to the submit button
-  const submitBtn = document.getElementById('submit-course-btn');
-  if (submitBtn) {
-    submitBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      submitCourse();
-    });
-  }
-
-  // Initialize existing modules
-  initExistingModules();
-  
-  // Initialize PDF delete checkboxes
-  const pdfDeleteCheckboxes = document.querySelectorAll('input[name^="delete_"]');
-  pdfDeleteCheckboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-      // If checkbox is checked, add a visual indication
-      const parentElement = this.closest('.d-flex');
-      if (parentElement) {
-        if (this.checked) {
-          parentElement.classList.add('bg-danger', 'bg-opacity-10');
+  // Add answer button
+  const addAnswerBtn = moduleElement.querySelector('.add-answer-btn');
+  if (addAnswerBtn) {
+    addAnswerBtn.addEventListener('click', function() {
+      const answersContainer = moduleElement.querySelector('.answers-container');
+      const answerCount = answersContainer.children.length;
+      
+      const newAnswer = document.createElement('div');
+      newAnswer.className = 'answer-group mb-2';
+      newAnswer.innerHTML = `
+        <div class="input-group">
+          <div class="input-group-text">
+            <input type="radio" name="module_quiz_correct[]" value="${answerCount}" required>
+          </div>
+          <input type="text" class="form-control" name="module_quiz_answer[]" required placeholder="الإجابة">
+          <button type="button" class="btn btn-outline-danger remove-answer-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+      
+      answersContainer.appendChild(newAnswer);
+      
+      // Add event listener to the new remove button
+      const removeBtn = newAnswer.querySelector('.remove-answer-btn');
+      removeBtn.addEventListener('click', function() {
+        if (answersContainer.children.length > 2) { // Keep at least 2 answers
+          newAnswer.remove();
+          // Update radio values
+          const answers = answersContainer.querySelectorAll('.answer-group');
+          answers.forEach((answer, index) => {
+            answer.querySelector('input[type="radio"]').value = index;
+          });
         } else {
-          parentElement.classList.remove('bg-danger', 'bg-opacity-10');
+          showAlert('warning', 'يجب أن يحتوي السؤال على إجابتين على الأقل');
         }
-      }
+      });
     });
-  });
-});
-
-// Add a function to update question numbering
-const updateQuestionNumbering = function(questionsContainer) {
-  const visibleQuestions = Array.from(questionsContainer.querySelectorAll('.question-card'))
-    .filter(q => q.style.display !== 'none');
+  }
   
-  visibleQuestions.forEach((question, index) => {
-    const questionHeader = question.querySelector('h6');
-    if (questionHeader) {
-      questionHeader.textContent = `سؤال #${index + 1}`;
-    }
-  });
-};
-
-// Function to initialize event listeners for existing modules
-const initExistingModules = function() {
-  // Setup event listeners for existing modules
-  const existingModules = document.querySelectorAll('.module-card[id^="existing_module_"]');
-  
-  existingModules.forEach(moduleElement => {
-    const moduleId = moduleElement.id;
-    
-    // Setup module event listeners
-    setupModuleEventListeners(moduleElement, moduleId);
-    
-    // Setup quiz toggle
-    const quizToggle = moduleElement.querySelector('.quiz-toggle');
-    if (quizToggle) {
-      quizToggle.addEventListener('change', function() {
-        toggleQuiz(moduleElement, this.checked);
-      });
-      
-      // Initialize quiz section visibility
-      const quizSection = moduleElement.querySelector('.quiz-section');
-      if (quizSection) {
-        quizSection.style.display = quizToggle.checked ? 'block' : 'none';
-      }
-    }
-    
-    // Setup add note button
-    const addNoteBtn = moduleElement.querySelector('.add-note-btn');
-    if (addNoteBtn) {
-      addNoteBtn.addEventListener('click', function() {
-        const moduleIdAttr = this.getAttribute('data-module-id');
-        addNote(moduleElement, moduleIdAttr || moduleId);
-      });
-    }
-    
-    // Setup remove note buttons
-    const removeNoteBtns = moduleElement.querySelectorAll('.remove-note-btn');
-    removeNoteBtns.forEach(btn => {
-      btn.addEventListener('click', function() {
-        removeNote(this);
-      });
-    });
-    
-    // Setup add video name button
-    const addVideoNameBtn = moduleElement.querySelector('.add-video-name-btn');
-    if (addVideoNameBtn) {
-      addVideoNameBtn.addEventListener('click', function() {
-        const moduleIdAttr = this.getAttribute('data-module-id');
-        addVideoName(moduleElement, moduleIdAttr || moduleId);
-      });
-    }
-    
-    // Setup remove video name buttons
-    const removeVideoNameBtns = moduleElement.querySelectorAll('.remove-video-name-btn');
-    removeVideoNameBtns.forEach(btn => {
-      btn.addEventListener('click', function() {
-        removeVideoName(this);
-      });
-    });
-    
-    // Setup add question button
-    const addQuestionBtn = moduleElement.querySelector('.add-question-btn');
-    if (addQuestionBtn) {
-      addQuestionBtn.addEventListener('click', function() {
-        const moduleIdAttr = this.getAttribute('data-module-id');
-        addQuestion(moduleElement, moduleIdAttr || moduleId);
-      });
-    }
-    
-    // Setup existing questions
-    const existingQuestions = moduleElement.querySelectorAll('.question-card');
-    existingQuestions.forEach(questionElement => {
-      const questionId = questionElement.id.replace('existing_question_', '');
-      setupQuestionEventListeners(questionElement, moduleElement, moduleId, questionId);
-      
-      // Setup add answer button
-      const addAnswerBtn = questionElement.querySelector('.add-answer-btn');
-      if (addAnswerBtn) {
-        addAnswerBtn.addEventListener('click', function() {
-          addAnswer(questionElement, moduleId, questionId);
+  // Remove answer buttons for existing answers
+  const removeAnswerBtns = moduleElement.querySelectorAll('.remove-answer-btn');
+  removeAnswerBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const answersContainer = this.closest('.answers-container');
+      if (answersContainer.children.length > 2) { // Keep at least 2 answers
+        this.closest('.answer-group').remove();
+        // Update radio values
+        const answers = answersContainer.querySelectorAll('.answer-group');
+        answers.forEach((answer, index) => {
+          answer.querySelector('input[type="radio"]').value = index;
         });
+      } else {
+        showAlert('warning', 'يجب أن يحتوي السؤال على إجابتين على الأقل');
       }
-      
-      // Setup remove answer buttons
-      const removeAnswerBtns = questionElement.querySelectorAll('.remove-answer-btn');
-      removeAnswerBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-          const answersContainer = questionElement.querySelector('.answers-container');
-          removeAnswer(this, answersContainer);
-        });
-      });
     });
   });
 };
