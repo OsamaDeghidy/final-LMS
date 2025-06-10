@@ -421,12 +421,230 @@ def update_course(request, course_id):
         return redirect('course')
     
     if request.method == 'POST':
-        # Process course update form
-        # Implementation details omitted for brevity
-        return redirect('course')
-    else:
-        # Display course update form
-        return render(request, 'website/courses/update_course.html', {'course': course})
+        try:
+            # Get basic course data
+            name = request.POST.get('name')
+            description = request.POST.get('description')
+            small_description = request.POST.get('small_description')
+            price = request.POST.get('price', 0)
+            category_id = request.POST.get('category')
+            level = request.POST.get('level', 'beginner')
+            
+            # Validate required fields
+            if not all([name, description, small_description, category_id]):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'الرجاء ملء جميع الحقول المطلوبة'
+                })
+            
+            # Get category
+            category = get_object_or_404(Category, id=category_id)
+            
+            # Update course basic info
+            course.name = name
+            course.description = description
+            course.small_description = small_description
+            course.price = price
+            course.category = category
+            course.level = level
+            
+            # Handle course image if provided
+            if 'course_image' in request.FILES:
+                course.image = request.FILES['course_image']
+            
+            course.save()
+            
+            # Process modules from JSON data
+            module_data = json.loads(request.POST.get('modules', '[]'))
+            
+            # Track existing modules to identify which ones to delete
+            existing_module_ids = set(Module.objects.filter(course=course).values_list('id', flat=True))
+            updated_module_ids = set()
+            
+            for module in module_data:
+                module_id = module.get('id')
+                
+                # Check if this is an existing module or a new one
+                if module_id and module_id.isdigit() and Module.objects.filter(id=module_id, course=course).exists():
+                    # Update existing module
+                    existing_module = Module.objects.get(id=module_id)
+                    existing_module.name = module.get('name')
+                    existing_module.description = module.get('description')
+                    existing_module.number = module.get('number')
+                    existing_module.save()
+                    
+                    updated_module_ids.add(int(module_id))
+                    
+                    # Handle video update if provided
+                    video_key = f'module_{module_id}_video'
+                    if video_key in request.FILES:
+                        existing_module.video = request.FILES[video_key]
+                        existing_module.save()
+                    
+                    # Handle PDF update if provided
+                    pdf_key = f'module_{module_id}_pdf'
+                    if pdf_key in request.FILES:
+                        existing_module.pdf = request.FILES[pdf_key]
+                        existing_module.save()
+                    
+                    # Handle quiz update
+                    if module.get('has_quiz'):
+                        # Get or create quiz
+                        quiz, created = Quiz.objects.get_or_create(
+                            module=existing_module,
+                            defaults={
+                                'title': f'اختبار {existing_module.name}',
+                                'description': '',
+                                'time_limit': 30,
+                                'pass_mark': 50
+                            }
+                        )
+                        
+                        # Update quiz data
+                        quiz_title = request.POST.get(f'quiz_title_{module_id}', f'اختبار {existing_module.name}')
+                        quiz_description = request.POST.get(f'quiz_description_{module_id}', '')
+                        quiz_time_limit = request.POST.get(f'quiz_time_limit_{module_id}', 30)
+                        quiz_pass_mark = request.POST.get(f'quiz_pass_mark_{module_id}', 50)
+                        
+                        quiz.title = quiz_title
+                        quiz.description = quiz_description
+                        quiz.time_limit = quiz_time_limit
+                        quiz.pass_mark = quiz_pass_mark
+                        quiz.save()
+                    else:
+                        # Delete quiz if it exists but is no longer needed
+                        Quiz.objects.filter(module=existing_module).delete()
+                        
+                else:
+                    # Create new module
+                    module_id_key = module.get('id')
+                    if not module_id_key or not isinstance(module_id_key, str):
+                        continue
+                        
+                    new_module = Module.objects.create(
+                        course=course,
+                        name=module.get('name'),
+                        description=module.get('description', ''),
+                        number=module.get('number', 1)
+                    )
+                    
+                    # Save module video with proper file handling
+                    video_key = f'module_{module_id_key}_video'
+                    video_title_key = f'video_title_{module_id_key}'
+                    
+                    if video_key in request.FILES:
+                        video_file = request.FILES[video_key]
+                        video_title = request.POST.get(video_title_key, f"Video - {new_module.name}")
+                        
+                        # Ensure the file is actually a video
+                        if video_file.content_type.startswith('video/') or any(video_file.name.lower().endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.wmv', '.flv']):
+                            # Create video object
+                            video = Video.objects.create(
+                                module=new_module,
+                                name=video_title,
+                                file=video_file
+                            )
+                    
+                    # Handle PDF files
+                    pdf_key = f'module_{module_id_key}_pdf'
+                    if pdf_key in request.FILES:
+                        pdf_file = request.FILES[pdf_key]
+                        pdf_title = request.POST.get(f'pdf_title_{module_id_key}', f"PDF - {new_module.name}")
+                        
+                        # Create PDF object
+                        pdf = PDF.objects.create(
+                            module=new_module,
+                            title=pdf_title,
+                            file=pdf_file
+                        )
+                    
+                    # Handle quiz if enabled
+                    if module.get('has_quiz'):
+                        quiz_title = request.POST.get(f'quiz_title_new_{module_id_key}', f'اختبار {new_module.name}')
+                        quiz_description = request.POST.get(f'quiz_description_new_{module_id_key}', '')
+                        quiz_time_limit = request.POST.get(f'quiz_time_limit_new_{module_id_key}', 30)
+                        quiz_pass_mark = request.POST.get(f'quiz_pass_mark_new_{module_id_key}', 50)
+                        
+                        # Create quiz
+                        quiz = Quiz.objects.create(
+                            module=new_module,
+                            title=quiz_title,
+                            description=quiz_description,
+                            time_limit=quiz_time_limit,
+                            pass_mark=quiz_pass_mark
+                        )
+                        
+                        # Process questions
+                        for i in range(10):  # Assuming max 10 questions per quiz
+                            question_text_key = f'question_text_new_{module_id_key}_{i}'
+                            if question_text_key not in request.POST:
+                                continue
+                                
+                            question_text = request.POST.get(question_text_key)
+                            question_type = request.POST.get(f'question_type_new_{module_id_key}_{i}', 'multiple_choice')
+                            
+                            # Create question
+                            question = Question.objects.create(
+                                quiz=quiz,
+                                text=question_text,
+                                question_type=question_type
+                            )
+                            
+                            # Process answers
+                            for j in range(10):  # Assuming max 10 answers per question
+                                answer_text_key = f'answer_text_new_{module_id_key}_{i}_{j}'
+                                if answer_text_key not in request.POST:
+                                    continue
+                                    
+                                answer_text = request.POST.get(answer_text_key)
+                                is_correct = request.POST.get(f'correct_answer_new_{module_id_key}_{i}') == str(j)
+                                
+                                # Create answer
+                                Answer.objects.create(
+                                    question=question,
+                                    text=answer_text,
+                                    is_correct=is_correct
+                                )
+            
+            # Delete modules that were not updated or created
+            modules_to_delete = existing_module_ids - updated_module_ids
+            Module.objects.filter(id__in=modules_to_delete).delete()
+            
+            # Process tags
+            tags_string = request.POST.get('tags', '')
+            if tags_string:
+                tags = [tag.strip() for tag in tags_string.split(',') if tag.strip()]
+                course.tags.clear()
+                for tag in tags:
+                    tag_obj, created = Tag.objects.get_or_create(name=tag)
+                    course.tags.add(tag_obj)
+            
+            # Return success response
+            return JsonResponse({
+                'success': True,
+                'message': 'تم تحديث الدورة بنجاح',
+                'redirect_url': reverse('course_detail', args=[course.id])
+            })
+            
+        except Exception as e:
+            print(f"Error updating course: {e}")
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
+    
+    # GET request - display the update form
+    categories = Category.objects.all()
+    
+    # Prepare tags string
+    tags_string = ', '.join([tag.name for tag in course.tags.all()])
+    
+    context = {
+        'course': course,
+        'categories': categories,
+        'tags_string': tags_string
+    }
+    return render(request, 'website/courses/update_course.html', context)
 
 @login_required
 def delete_course(request):

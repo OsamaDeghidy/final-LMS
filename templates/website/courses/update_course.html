@@ -38,6 +38,8 @@
           
           <form id="course-form" method="post" enctype="multipart/form-data" class="needs-validation" action="{% url 'update_course' course.id %}" novalidate>
             {% csrf_token %}
+            <!-- Hidden input for modules data -->
+            <input type="hidden" name="modules" id="modules_data" value="">
             
             <!-- Step Progress Bar -->
             <div id="stepper" class="d-flex justify-content-between mb-5">

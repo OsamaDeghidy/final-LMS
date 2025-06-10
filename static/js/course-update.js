@@ -949,164 +949,168 @@ function addNewVideoName(moduleId) {
 
 // Submit the course form
 function submitCourse() {
-    if (validateForm()) {
-        // Check if any PDF is marked for deletion and handle file inputs accordingly
-        const pdfTypes = ['syllabus_pdf', 'materials_pdf'];
-        pdfTypes.forEach(pdfType => {
-            const deleteInput = document.getElementById('delete_' + pdfType);
-            const fileInput = document.querySelector(`input[name="${pdfType}"]`);
-            
-            // If marked for deletion and no new file is selected, ensure we keep the delete flag
-            if (deleteInput && deleteInput.value === '1' && fileInput && fileInput.files.length === 0) {
-                // The delete flag is already set, no need to do anything
-                console.log(`${pdfType} marked for deletion`);
-            } 
-            // If a new file is selected, make sure the delete flag is reset
-            else if (fileInput && fileInput.files.length > 0 && deleteInput) {
-                deleteInput.value = '0';
-                console.log(`New ${pdfType} selected, resetting delete flag`);
-            }
-        });
-        
-        // Process module data before submission
-        const moduleCards = document.querySelectorAll('.module-card');
-        moduleCards.forEach(moduleCard => {
-            // Handle module deletion flags
-            const moduleId = moduleCard.id.replace('module_', '');
-            const deleteModuleInput = document.getElementById(`delete_module_${moduleId}`);
-            
-            if (deleteModuleInput && deleteModuleInput.value === '1') {
-                console.log(`Module ${moduleId} marked for deletion`);
-            }
-            
-            // Handle quiz sections
-            const quizToggle = moduleCard.querySelector('.quiz-toggle');
-            const quizSection = moduleCard.querySelector('.quiz-section');
-            
-            if (quizToggle && quizSection) {
-                // Important: Always make quiz sections visible during form submission
-                // This ensures all form fields are included in the submission
-                // The server will check the toggle value to determine if the quiz should be saved
-                quizSection.style.display = 'block';
-                console.log(`Ensuring quiz section for module ${moduleId} is visible for form submission`);
-                
-                // Make sure the has_quiz field is properly set based on the toggle
-                if (!quizToggle.checked) {
-                    console.log(`Quiz toggle for module ${moduleId} is not checked`);
-                }
-                
-                // Ensure quiz data is properly included for new modules
-                if (moduleId.startsWith('new_')) {
-                    // Make sure the quiz toggle value is properly set
-                    const quizToggleInput = document.createElement('input');
-                    quizToggleInput.type = 'hidden';
-                    quizToggleInput.name = `has_quiz_${moduleId}`;
-                    quizToggleInput.value = quizToggle.checked ? '1' : '0';
-                    moduleCard.appendChild(quizToggleInput);
-                    
-                    // Add quiz title and description if not already present
-                    const quizTitleInput = quizSection.querySelector(`input[name="quiz_title_${moduleId}"]`);
-                    if (!quizTitleInput && quizToggle.checked) {
-                        const defaultTitle = `اختبار ${moduleCard.querySelector('.module-title').value || 'الموديول'}`;
-                        const titleInput = document.createElement('input');
-                        titleInput.type = 'hidden';
-                        titleInput.name = `quiz_title_${moduleId}`;
-                        titleInput.value = defaultTitle;
-                        moduleCard.appendChild(titleInput);
-                    }
-                }
-            }
-            
-            // Ensure all question data is properly included
-            const questionsContainer = moduleCard.querySelector('.questions-container');
-            if (questionsContainer) {
-                const questions = questionsContainer.querySelectorAll('.question-card');
-                questions.forEach((question, index) => {
-                    // Make sure question index is properly set
-                    const questionIndexInput = question.querySelector('input[name^="question_index"]');
-                    if (!questionIndexInput) {
-                        const indexInput = document.createElement('input');
-                        indexInput.type = 'hidden';
-                        indexInput.name = `question_index_${moduleId}_${index}`;
-                        indexInput.value = index;
-                        question.appendChild(indexInput);
-                    }
-                });
-            }
-        });
-        
-        // Ensure all form data is included by checking required fields
-        const form = document.getElementById('course-form');
-        const requiredFields = form.querySelectorAll('[required]');
-        let missingFields = false;
-        
-        requiredFields.forEach(field => {
-            if (!field.value.trim()) {
-                console.error(`Required field missing: ${field.name}`);
-                field.classList.add('is-invalid');
-                missingFields = true;
-            }
-        });
-        
-        if (missingFields) {
-            alert('يرجى ملء جميع الحقول المطلوبة');
-            return false;
-        }
-        
-        // Use FormData to ensure proper file upload
-        const formData = new FormData(form);
-        
-        // Add a flag to indicate this is a form submission
-        formData.append('is_form_submit', 'true');
-        
-        // Debug: Log all form data being submitted
-        console.log('Submitting form with the following data:');
-        for (let [key, value] of formData.entries()) {
-            if (typeof value !== 'object') { // Don't log file objects
-                console.log(`${key}: ${value}`);
-            } else {
-                console.log(`${key}: [File object]`);
-            }
-        }
-        
-        // Show loading indicator
-        const submitBtn = document.getElementById('submit-course-btn');
-        const originalBtnText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> جاري الحفظ...`;
-        
-        // Submit the form using fetch API to handle file uploads properly
-        fetch(form.action || window.location.href, {
-            method: 'POST',
-            body: formData,
-            // Don't set Content-Type header - browser will set it with boundary for multipart/form-data
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Server responded with status: ${response.status}`);
-            }
-            return response.text();
-        })
-        .then(html => {
-            // Check if response contains success message
-            if (html.includes('success') || html.includes('تم تحديث')) {
-                // Redirect to course list or show success message
-                window.location.href = '/dashboard/courses/';
-            } else {
-                // If it's a form with errors, replace the page content
-                document.open();
-                document.write(html);
-                document.close();
-            }
-        })
-        .catch(error => {
-            console.error('Error submitting form:', error);
-            alert('حدث خطأ أثناء حفظ الدورة. يرجى المحاولة مرة أخرى.');
-            // Restore button state
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalBtnText;
-        });
+    // Validate form first
+    if (!validateForm()) {
+        return false;
     }
+    
+    // Check if any PDF is marked for deletion and handle file inputs accordingly
+    const pdfTypes = ['syllabus_pdf', 'materials_pdf'];
+    pdfTypes.forEach(pdfType => {
+        const deleteInput = document.getElementById('delete_' + pdfType);
+        const fileInput = document.querySelector(`input[name="${pdfType}"]`);
+        
+        // If marked for deletion and no new file is selected, ensure we keep the delete flag
+        if (deleteInput && deleteInput.value === '1' && fileInput && fileInput.files.length === 0) {
+            // The delete flag is already set, no need to do anything
+            console.log(`${pdfType} marked for deletion`);
+        } 
+        // If a new file is selected, make sure the delete flag is reset
+        else if (fileInput && fileInput.files.length > 0 && deleteInput) {
+            deleteInput.value = '0';
+            console.log(`New ${pdfType} selected, resetting delete flag`);
+        }
+    });
+    
+    // Collect module data
+    const modules = [];
+    document.querySelectorAll('.module-card').forEach((moduleCard, index) => {
+        // Skip modules marked for deletion
+        const moduleId = moduleCard.id.replace('module_', '');
+        const deleteFlag = document.getElementById(`delete_module_${moduleId}`);
+        
+        if (deleteFlag && deleteFlag.value === '1') {
+            console.log(`Module ${moduleId} marked for deletion, skipping`);
+            return; // Skip this module as it's marked for deletion
+        }
+        
+        // Determine if this is an existing module or new one
+        const isExisting = moduleId.match(/^\d+$/) !== null;
+        const quizToggleId = isExisting ? `has_quiz_existing_${moduleId}` : `has_quiz_new_${moduleId}`;
+        const quizToggle = document.getElementById(quizToggleId);
+        
+        // Get module data
+        const moduleData = {
+            id: moduleId,
+            name: document.querySelector(`#module_${moduleId} [name="module_name_${moduleId}"]`).value,
+            description: document.querySelector(`#module_${moduleId} [name="module_description_${moduleId}"]`).value || '',
+            number: index + 1,
+            has_quiz: quizToggle ? quizToggle.checked : false
+        };
+        
+        modules.push(moduleData);
+    });
+    
+    // Add modules data as JSON to the form
+    const modulesInput = document.getElementById('modules_data');
+    if (!modulesInput) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'modules';
+        input.id = 'modules_data';
+        input.value = JSON.stringify(modules);
+        document.getElementById('course-form').appendChild(input);
+    } else {
+        modulesInput.value = JSON.stringify(modules);
+    }
+    
+    // Process module data before submission
+    const moduleCards = document.querySelectorAll('.module-card');
+    moduleCards.forEach(moduleCard => {
+        // Handle module deletion flags
+        const moduleId = moduleCard.id.replace('module_', '');
+        const deleteModuleInput = document.getElementById(`delete_module_${moduleId}`);
+        
+        if (deleteModuleInput && deleteModuleInput.value === '1') {
+            console.log(`Module ${moduleId} marked for deletion`);
+        }
+        
+        // Handle quiz sections
+        const isExisting = moduleId.match(/^\d+$/) !== null;
+        const quizToggleId = isExisting ? `has_quiz_existing_${moduleId}` : `has_quiz_new_${moduleId}`;
+        const quizToggle = document.getElementById(quizToggleId);
+        const quizSection = moduleCard.querySelector('.quiz-section');
+        
+        if (quizToggle && quizSection) {
+            // Important: Always make quiz sections visible during form submission
+            // This ensures all form fields are included in the submission
+            // The server will check the toggle value to determine if the quiz should be saved
+            quizSection.style.display = 'block';
+            console.log(`Ensuring quiz section for module ${moduleId} is visible for form submission`);
+        }
+    });
+    
+    // Ensure all form data is included by checking required fields
+    const form = document.getElementById('course-form');
+    const requiredFields = form.querySelectorAll('[required]');
+    let missingFields = false;
+    
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            console.error(`Required field missing: ${field.name}`);
+            field.classList.add('is-invalid');
+            missingFields = true;
+        }
+    });
+    
+    if (missingFields) {
+        alert('يرجى ملء جميع الحقول المطلوبة');
+        return false;
+    }
+    
+    // Use FormData to ensure proper file upload
+    const formData = new FormData(form);
+    
+    // Add a flag to indicate this is a form submission
+    formData.append('is_form_submit', 'true');
+    
+    // Debug: Log all form data being submitted
+    console.log('Submitting form with the following data:');
+    for (let [key, value] of formData.entries()) {
+        if (typeof value !== 'object') { // Don't log file objects
+            console.log(`${key}: ${value}`);
+        } else {
+            console.log(`${key}: [File object]`);
+        }
+    }
+    
+    // Show loading indicator
+    const submitBtn = document.getElementById('submit-course-btn');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> جاري الحفظ...`;
+    
+    // Submit the form using fetch API to handle file uploads properly
+    fetch(form.action || window.location.href, {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header - browser will set it with boundary for multipart/form-data
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Server responded with status: ${response.status}`);
+        }
+        return response.text();
+    })
+    .then(html => {
+        // Check if response contains success message
+        if (html.includes('success') || html.includes('تم تحديث')) {
+            // Redirect to course list or show success message
+            window.location.href = '/dashboard/courses/';
+        } else {
+            // If it's a form with errors, replace the page content
+            document.open();
+            document.write(html);
+            document.close();
+        }
+    })
+    .catch(error => {
+        console.error('Error submitting form:', error);
+        alert('حدث خطأ أثناء حفظ الدورة. يرجى المحاولة مرة أخرى.');
+        // Restore button state
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+    });
 }
 
 // Validate the form before submission
