@@ -1,9 +1,79 @@
 // Global variables
 let currentStep = 0;
 let moduleCount = 0;
+let questionCounter = 0;
+const MAX_ANSWERS = 5;
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  // Add module button
+  const addModuleBtn = document.getElementById('add-module-btn');
+  if (addModuleBtn) {
+    addModuleBtn.addEventListener('click', addModule);
+  }
+  
+  // Add initial module if none exists
+  const modulesContainer = document.getElementById('modules-container');
+  if (modulesContainer && modulesContainer.children.length === 0) {
+    addModule();
+  }
+  
+  // Handle form submission
+  const form = document.getElementById('course-form');
+  const submitBtn = document.getElementById('submit-course-btn');
+  
+  if (form && submitBtn) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      submitCourse();
+    });
+    
+    submitBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      submitCourse();
+    });
+  }
+});
+
+
+
+// Show alert message
+function showAlert(type, message) {
+  const alertsContainer = document.getElementById('alerts-container');
+  
+  // Create alert element
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+  alertDiv.role = 'alert';
+  alertDir = document.dir;
+  
+  // Set the alert content
+  alertDiv.innerHTML = `
+    <div class="d-flex align-items-center">
+      <i class="fas ${type === 'danger' ? 'fa-exclamation-circle' : 'fa-check-circle'} me-2"></i>
+      <div>${message}</div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  `;
+  
+  // Add the alert to the container
+  alertsContainer.appendChild(alertDiv);
+  
+  // Auto-dismiss after 5 seconds
+  setTimeout(() => {
+    const alert = bootstrap.Alert.getOrCreateInstance(alertDiv);
+    if (alert) {
+      alert.close();
+    }
+  }, 5000);
+}
 
 // Navigation functions
 function goToNextStep() {
+  if (!validateCurrentStep()) {
+    return false;
+  }
+  
   const steps = document.querySelectorAll('#stepper .step-item');
   const stepCards = document.querySelectorAll('.step-card');
   
@@ -16,7 +86,14 @@ function goToNextStep() {
     currentStep++;
     stepCards[currentStep].classList.remove('d-none');
     steps[currentStep].classList.add('active');
+    
+    // If moving to review step, update the summary
+    if (currentStep === 2) {
+      updateCourseSummary();
+    }
   }
+  
+  return true;
 }
 
 function nextStep() {
@@ -106,10 +183,6 @@ function validateCurrentStep() {
 
 // Module functions
 function addModule() {
-  // Check if we already have a module with this count and increment if needed
-  while (document.getElementById(`module_${moduleCount + 1}`)) {
-    moduleCount++;
-  }
   moduleCount++;
   const moduleId = `module_${moduleCount}`;
 
@@ -128,32 +201,29 @@ function addModule() {
     titleElement.innerHTML = `<i class="fas fa-layer-group text-primary me-2"></i>الموديول ${moduleCount}`;
   }
 
-  // Initialize quiz section
-  const quizElements = {
-    toggle: moduleElement.querySelector('.quiz-toggle'),
-    section: moduleElement.querySelector('.quiz-section'),
-    addButton: moduleElement.querySelector('.add-question-btn')
-  };
-
-  if (quizElements.toggle && quizElements.section && quizElements.addButton) {
-    quizElements.toggle.checked = false;
-    quizElements.section.style.display = 'none';
-    quizElements.addButton.setAttribute('data-module-id', moduleId);
-  }
-
   // Add module to container
   const container = document.getElementById('modules-container');
   if (container) {
     container.appendChild(moduleElement);
-    setupModuleEventListeners(moduleElement, moduleId);
+    // Add a question by default when quiz is enabled
+    const quizToggle = moduleElement.querySelector('.quiz-toggle');
+    if (quizToggle) {
+      quizToggle.addEventListener('change', function() {
+        toggleQuiz(moduleElement, this.checked);
+        if (this.checked) {
+          addQuestion(moduleElement);
+        }
+      });
+    }
+    // Get the module title element
+    const moduleTitle = moduleElement.querySelector('.card-header h5');
+    if (moduleTitle) {
+      moduleTitle.innerHTML = `<i class="fas fa-layer-group text-primary me-2"></i>الموديول ${moduleCount}`;
+    }
   } else {
     console.error('Modules container not found');
     return;
   }
-  
-  // Update module number
-  const moduleTitle = moduleElement.querySelector('.card-header h5');
-  moduleTitle.innerHTML = `<i class="fas fa-layer-group text-primary me-2"></i>الموديول ${moduleCount}`;
   
   // Update PDF input names
   const pdfInputs = moduleElement.querySelectorAll('.pdf-files-container input[type="file"]');
@@ -327,427 +397,208 @@ function toggleQuiz(moduleElement, isChecked) {
 }
 
 // Question and Answer functions
-function addQuestion(moduleElement, moduleId) {
-  if (!moduleId) {
-    console.error('Module ID is required to add a question');
+function addQuestion(moduleElement) {
+  questionCounter++;
+  const questionId = `question_${questionCounter}`;
+  
+  const template = document.getElementById('question-template');
+  if (!template) {
+    console.error('Question template not found');
     return;
   }
-
-  questionCounts[moduleId] = (questionCounts[moduleId] || 0) + 1;
-  const questionIndex = questionCounts[moduleId];
-  const questionId = `question_${moduleId}_${questionIndex}`;
   
-  // Log for debugging
-  console.log('Adding question:', { moduleId, questionIndex, questionId });
+  const questionElement = template.content.cloneNode(true);
+  const questionCard = questionElement.querySelector('.question-card');
+  questionCard.dataset.questionId = questionId;
   
-  // Create the question card using DOM manipulation
-  const questionCard = document.createElement('div');
-  questionCard.className = 'card mb-3 question-card';
-  questionCard.id = questionId;
-  
-  const cardBody = document.createElement('div');
-  cardBody.className = 'card-body';
-  
-  // Header with question number and remove button
-  const headerDiv = document.createElement('div');
-  headerDiv.className = 'd-flex justify-content-between align-items-center mb-3';
-  
-  const questionTitle = document.createElement('h6');
-  questionTitle.className = 'mb-0';
-  questionTitle.textContent = `سؤال #${questionIndex}`;
-  
-  const removeBtn = document.createElement('button');
-  removeBtn.type = 'button';
-  removeBtn.className = 'btn btn-sm btn-outline-danger remove-question-btn';
-  removeBtn.setAttribute('data-question-id', questionId);
-  
-  const removeIcon = document.createElement('i');
-  removeIcon.className = 'fas fa-times';
-  removeBtn.appendChild(removeIcon);
-  
-  headerDiv.appendChild(questionTitle);
-  headerDiv.appendChild(removeBtn);
-  
-  // Question text input
-  const questionTextDiv = document.createElement('div');
-  questionTextDiv.className = 'mb-3';
-  
-  const questionInput = document.createElement('input');
-  questionInput.type = 'text';
-  questionInput.className = 'form-control';
-  questionInput.name = `question_text_${moduleId}_${questionIndex}`;
-  questionInput.placeholder = 'نص السؤال';
-  questionInput.required = true;
-  
-  questionTextDiv.appendChild(questionInput);
-  
-  // Question type select
-  const selectDiv = document.createElement('div');
-  selectDiv.className = 'mb-3';
-  
-  const selectElement = document.createElement('select');
-  selectElement.className = 'form-select question-type-select';
-  selectElement.name = `question_type_${moduleId}_${questionIndex}`;
-  
-  const optionMultiple = document.createElement('option');
-  optionMultiple.value = 'multiple_choice';
-  optionMultiple.textContent = 'اختيار من متعدد';
-  
-  const optionTrueFalse = document.createElement('option');
-  optionTrueFalse.value = 'true_false';
-  optionTrueFalse.textContent = 'صح أو خطأ';
-  
-  const optionShortAnswer = document.createElement('option');
-  optionShortAnswer.value = 'short_answer';
-  optionShortAnswer.textContent = 'إجابة قصيرة';
-  
-  selectElement.appendChild(optionMultiple);
-  selectElement.appendChild(optionTrueFalse);
-  selectElement.appendChild(optionShortAnswer);
-  selectDiv.appendChild(selectElement);
-  
-  // Answers container
-  const answersContainer = document.createElement('div');
-  answersContainer.className = 'answers-container';
-  
-  // Add answer button
-  const addAnswerBtn = document.createElement('button');
-  addAnswerBtn.type = 'button';
-  addAnswerBtn.className = 'btn btn-sm btn-outline-primary mt-2 add-answer-btn';
-  
-  const addIcon = document.createElement('i');
-  addIcon.className = 'fas fa-plus me-1';
-  
-  addAnswerBtn.appendChild(addIcon);
-  addAnswerBtn.appendChild(document.createTextNode('إضافة إجابة'));
-  
-  // Add click event to the add answer button
-  addAnswerBtn.addEventListener('click', function() {
-    console.log('Add answer button clicked for question:', questionId);
-    addAnswer(questionCard, moduleId, questionIndex);
-  });
-  
-  // Assemble all elements
-  cardBody.appendChild(headerDiv);
-  cardBody.appendChild(questionTextDiv);
-  cardBody.appendChild(selectDiv);
-  cardBody.appendChild(answersContainer);
-  cardBody.appendChild(addAnswerBtn);
-  
-  // Add initial answer for multiple choice questions
-  if (selectElement.value === 'multiple_choice') {
-    addAnswer(questionCard, moduleId, questionIndex);
-  }
-  questionCard.appendChild(cardBody);
-  
-  // Add to the questions container
+  // Find the questions container in the module
   const questionsContainer = moduleElement.querySelector('.questions-container');
-  questionsContainer.appendChild(questionCard);
+  if (!questionsContainer) {
+    console.error('Questions container not found');
+    return;
+  }
   
-  // Create and set up add answer button
-  const newAddAnswerBtn = document.createElement('button');
-  newAddAnswerBtn.type = 'button';
-  newAddAnswerBtn.className = 'btn btn-sm btn-outline-primary add-answer-btn mt-2';
-  newAddAnswerBtn.innerHTML = '<i class="fas fa-plus me-1"></i>إضافة إجابة';
-  newAddAnswerBtn.addEventListener('click', function() {
-    addAnswer(questionCard, moduleId, questionIndex);
-  });
-  answersContainer.appendChild(newAddAnswerBtn);
-
-  // Add event listeners to the question's buttons
-  setupQuestionEventListeners(questionCard, moduleElement, moduleId, questionId);
+  questionsContainer.appendChild(questionElement);
   
-  // Initialize with multiple choice answers by default
-  updateAnswerFields(questionCard, 'multiple_choice', moduleId, questionIndex);
+  // Initialize question type
+  updateQuestionType(questionCard.querySelector('.question-type'));
+  
+  return questionCard;
 }
 
-function setupQuestionEventListeners(questionElement, moduleElement, moduleId, questionId) {
-  // Setup question type change
-  const questionTypeSelect = questionElement.querySelector('.question-type-select');
-  if (questionTypeSelect) {
-    questionTypeSelect.addEventListener('change', function() {
-      updateAnswerFields(questionElement, this.value, moduleId, questionId);
-    });
-  }
+function updateQuestionType(selectElement) {
+  const questionCard = selectElement.closest('.question-card');
+  const answersContainer = questionCard.querySelector('.answers-container');
+  const questionType = selectElement.value;
   
-  // Setup remove question button
-  const removeQuestionBtn = questionElement.querySelector('.remove-question-btn');
-  if (removeQuestionBtn) {
-    removeQuestionBtn.addEventListener('click', function() {
-      const questionIdAttr = this.getAttribute('data-question-id');
-      if (questionIdAttr) {
-        // This is an existing question, mark it for deletion
-        const deleteInput = document.getElementById(`delete_question_${questionIdAttr}`);
-        if (deleteInput) {
-          deleteInput.value = '1';
-          questionElement.style.display = 'none';
-        } else {
-          removeQuestion(questionElement, moduleElement);
-        }
-      } else {
-        removeQuestion(questionElement, moduleElement);
-      }
-    });
+  // Clear existing answers
+  answersContainer.innerHTML = '';
+  
+  if (questionType === 'true_false') {
+    // Add true/false options
+    const trueFalseTemplate = `
+      <div class="answer-group mb-2">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="question_${questionCounter}_correct" value="true" required>
+          <label class="form-check-label">
+            صح
+          </label>
+        </div>
+      </div>
+      <div class="answer-group mb-2">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="question_${questionCounter}_correct" value="false" required>
+          <label class="form-check-label">
+            خطأ
+          </label>
+        </div>
+      </div>
+    `;
+    answersContainer.innerHTML = trueFalseTemplate;
+  } 
+  else if (questionType === 'short_answer') {
+    // Add short answer field
+    const shortAnswerTemplate = `
+      <div class="mb-3">
+        <input type="text" class="form-control" name="question_${questionCounter}_answer" required>
+        <input type="hidden" name="question_${questionCounter}_type" value="short_answer">
+      </div>
+    `;
+    answersContainer.innerHTML = shortAnswerTemplate;
+  } 
+  else {
+    // Default to multiple choice
+    const mcqTemplate = `
+      <div class="answer-group mb-2">
+        <div class="input-group">
+          <div class="input-group-text">
+            <input type="radio" name="question_${questionCounter}_correct" value="0" required>
+          </div>
+          <input type="text" class="form-control" name="question_${questionCounter}_answer[]" required placeholder="الإجابة">
+          <button type="button" class="btn btn-outline-danger remove-answer" onclick="removeAnswer(this, this.closest('.answer-group'))">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      <div class="answer-group mb-2">
+        <div class="input-group">
+          <div class="input-group-text">
+            <input type="radio" name="question_${questionCounter}_correct" value="1" required>
+          </div>
+          <input type="text" class="form-control" name="question_${questionCounter}_answer[]" required placeholder="الإجابة">
+          <button type="button" class="btn btn-outline-danger remove-answer" onclick="removeAnswer(this, this.closest('.answer-group'))">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-primary add-answer-btn mt-2" 
+              onclick="addAnswer(this.closest('.question-card'), '${questionCounter}')">
+        <i class="fas fa-plus me-1"></i>إضافة إجابة
+      </button>
+      <input type="hidden" name="question_${questionCounter}_type" value="mcq">
+    `;
+    answersContainer.innerHTML = mcqTemplate;
   }
 }
 
-function removeQuestion(questionElement, moduleElement) {
-  // Get the parent container
-  const questionsContainer = moduleElement.querySelector('.questions-container');
+function addAnswer(questionElement, questionId) {
+  const answersContainer = questionElement.querySelector('.answers-container');
+  const answerGroups = answersContainer.querySelectorAll('.answer-group');
+  const answerCount = answerGroups.length;
   
-  // Check if this is an existing question
-  if (questionElement.id && questionElement.id.startsWith('existing_question_')) {
-    const questionId = questionElement.getAttribute('id').replace('existing_question_', '');
-    const deleteInput = document.getElementById(`delete_question_${questionId}`);
-    
-    if (deleteInput) {
-      deleteInput.value = '1';
-      questionElement.style.display = 'none';
-    } else {
-      questionElement.remove();
-    }
+  // Check if we've reached the maximum number of answers
+  if (answerCount >= MAX_ANSWERS) {
+    showAlert('warning', `لا يمكن إضافة أكثر من ${MAX_ANSWERS} إجابات`);
+    return;
+  }
+  
+  const answerGroup = document.createElement('div');
+  answerGroup.className = 'answer-group mb-2';
+  answerGroup.innerHTML = `
+    <div class="input-group">
+      <div class="input-group-text">
+        <input type="radio" name="question_${questionId}_correct" value="${answerCount}" required>
+      </div>
+      <input type="text" class="form-control" name="question_${questionId}_answer[]" required placeholder="الإجابة">
+      <button type="button" class="btn btn-outline-danger remove-answer" onclick="removeAnswer(this, this.closest('.answer-group'))">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `;
+  
+  // Insert before the add answer button
+  const addButton = answersContainer.querySelector('.add-answer-btn');
+  if (addButton) {
+    answersContainer.insertBefore(answerGroup, addButton);
   } else {
-    // For new questions, just remove the element
-    questionElement.remove();
+    answersContainer.appendChild(answerGroup);
   }
   
-  // Update question numbering
-  updateQuestionNumbering(questionsContainer);
-}
-
-function updateAnswerFields(questionElement, questionType, moduleId, questionIndex) {
-  console.log('Updating answer fields:', { moduleId, questionIndex, questionType });
-  
-  const answersContainer = questionElement.querySelector('.answers-container');
-  const addAnswerBtn = questionElement.querySelector('.add-answer-btn');
-  
-  if (!answersContainer) {
-    console.error('Answers container not found');
-    return;
-  }
-  
-  // Clear existing answers but keep the add answer button
-  while (answersContainer.firstChild && !answersContainer.firstChild.classList?.contains('add-answer-btn')) {
-    answersContainer.removeChild(answersContainer.firstChild);
-  }
-  
-  // Show/hide add answer button based on question type
-  if (questionType === 'multiple_choice') {
-    addAnswerBtn.style.display = 'block';
-    // Add two initial answers for multiple choice
-    addAnswer(questionElement, moduleId, questionIndex);
-    addAnswer(questionElement, moduleId, questionIndex);
-    
-    // Add event listeners to the remove buttons
-    const removeAnswerBtns = answersContainer.querySelectorAll('.remove-answer-btn');
-    removeAnswerBtns.forEach(btn => {
-      btn.addEventListener('click', function() {
-        removeAnswer(this, answersContainer);
-      });
-    });
-    
-  } else if (questionType === 'true_false') {
-    addAnswerBtn.style.display = 'none';
-    
-    // Create true/false radio buttons
-    const trueFalseDiv = document.createElement('div');
-    trueFalseDiv.className = 'true-false-answers';
-    
-    // True option
-    const trueDiv = document.createElement('div');
-    trueDiv.className = 'form-check';
-    const trueInput = document.createElement('input');
-    trueInput.type = 'radio';
-    trueInput.name = `correct_answer_${moduleId}_${questionIndex}`;
-    trueInput.value = 'true';
-    trueInput.id = `true_${moduleId}_${questionIndex}`;
-    trueInput.className = 'form-check-input';
-    const trueLabel = document.createElement('label');
-    trueLabel.className = 'form-check-label';
-    trueLabel.htmlFor = `true_${moduleId}_${questionIndex}`;
-    trueLabel.textContent = 'صح';
-    trueDiv.appendChild(trueInput);
-    trueDiv.appendChild(trueLabel);
-    
-    // False option
-    const falseDiv = document.createElement('div');
-    falseDiv.className = 'form-check';
-    const falseInput = document.createElement('input');
-    falseInput.type = 'radio';
-    falseInput.name = `correct_answer_${moduleId}_${questionIndex}`;
-    falseInput.value = 'false';
-    falseInput.id = `false_${moduleId}_${questionIndex}`;
-    falseInput.className = 'form-check-input';
-    const falseLabel = document.createElement('label');
-    falseLabel.className = 'form-check-label';
-    falseLabel.htmlFor = `false_${moduleId}_${questionIndex}`;
-    falseLabel.textContent = 'خطأ';
-    falseDiv.appendChild(falseInput);
-    falseDiv.appendChild(falseLabel);
-    
-    trueFalseDiv.appendChild(trueDiv);
-    trueFalseDiv.appendChild(falseDiv);
-    
-    // Insert before the add answer button
-    if (addAnswerBtn) {
-      answersContainer.insertBefore(trueFalseDiv, addAnswerBtn);
-    } else {
-      answersContainer.appendChild(trueFalseDiv);
-    }
-    
-    // Set first option as default
-    trueInput.checked = true;
-  } else if (questionType === 'short_answer') {
-    addAnswerBtn.style.display = 'none';
-    
-    // Create short answer input
-    const shortAnswerDiv = document.createElement('div');
-    shortAnswerDiv.className = 'short-answer-container';
-    
-    const inputGroup = document.createElement('div');
-    inputGroup.className = 'input-group';
-    
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'form-control';
-    input.name = `answer_short_${moduleId}_${questionIndex}`;
-    input.placeholder = 'أدخل الإجابة الصحيحة';
-    input.required = true;
-    
-    // Add a hidden input for the answer text to match the expected format
-    const hiddenInput = document.createElement('input');
-    hiddenInput.type = 'hidden';
-    hiddenInput.name = `answer_text_${moduleId}_${questionIndex}_0`;
-    hiddenInput.value = 'إجابة قصيرة';
-    
-    inputGroup.appendChild(input);
-    shortAnswerDiv.appendChild(inputGroup);
-    shortAnswerDiv.appendChild(hiddenInput);
-    
-    // Insert before the add answer button
-    if (addAnswerBtn) {
-      answersContainer.insertBefore(shortAnswerDiv, addAnswerBtn);
-    } else {
-      answersContainer.appendChild(shortAnswerDiv);
-    }
-  }
-}
-
-function addAnswer(questionElement, moduleId, questionIndex) {
-  console.log('Adding answer:', { moduleId, questionIndex });
-  
-  if (!questionElement || !moduleId || !questionIndex) {
-    console.error('Missing required parameters:', { questionElement, moduleId, questionIndex });
-    return;
-  }
-
-  const answersContainer = questionElement.querySelector('.answers-container');
-  if (!answersContainer) {
-    console.error('Answers container not found');
-    return;
-  }
-
-  const answerItems = answersContainer.querySelectorAll('.answer-item:not([style*="display: none"])');
-  const answerCount = answerItems.length;
-  console.log('Current answer count:', answerCount);
-
-  // Limit to 5 answers
-  if (answerCount >= 5) {
-    showAlert('warning', 'لا يمكن إضافة أكثر من 5 إجابات');
-    return;
-  }
-
-  try {
-    // Create answer item
-    const answerItem = document.createElement('div');
-    answerItem.className = 'answer-item mb-2';
-
-    // Create input group
-    const inputGroup = document.createElement('div');
-    inputGroup.className = 'input-group';
-
-    // Create radio button container
-    const inputGroupText = document.createElement('div');
-    inputGroupText.className = 'input-group-text';
-
-    // Create radio button for correct answer
-    const radioInput = document.createElement('input');
-    radioInput.type = 'radio';
-    radioInput.className = 'form-check-input';
-    radioInput.name = `correct_answer_${moduleId}_${questionIndex}`;
-    radioInput.value = answerCount + 1; // Start from 1 instead of 0
-
-    // Create text input for answer
-    const textInput = document.createElement('input');
-    textInput.type = 'text';
-    textInput.className = 'form-control';
-    textInput.name = `answer_text_${moduleId}_${questionIndex}_${answerCount + 1}`;
-    textInput.placeholder = 'أدخل الإجابة';
-    textInput.required = true;
-
-    // Create remove button
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'btn btn-outline-danger remove-answer-btn';
-    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-
-    // Assemble the elements
-    inputGroupText.appendChild(radioInput);
-    inputGroup.appendChild(inputGroupText);
-    inputGroup.appendChild(textInput);
-    inputGroup.appendChild(removeBtn);
-    answerItem.appendChild(inputGroup);
-
-    // Find the add answer button
-    const addAnswerBtn = answersContainer.querySelector('.add-answer-btn');
-    console.log('Found add answer button:', addAnswerBtn ? 'yes' : 'no');
-
-    // Insert before the "Add Answer" button
-    if (addAnswerBtn) {
-      answersContainer.insertBefore(answerItem, addAnswerBtn);
-    } else {
-      answersContainer.appendChild(answerItem);
-    }
-
-    // Add event listener to the new remove button
-    removeBtn.addEventListener('click', function() {
-      removeAnswer(this, answersContainer);
-    });
-
-    // If this is the first answer, select it as correct by default
-    if (answerCount === 0) {
+  // If this is the first answer, check it by default
+  if (answerCount === 0) {
+    const radioInput = answerGroup.querySelector('input[type="radio"]');
+    if (radioInput) {
       radioInput.checked = true;
     }
-
-    // Focus the new text input
-    textInput.focus();
-
-    console.log('Answer added successfully');
-  } catch (error) {
-    console.error('Error adding answer:', error);
+  }
+  
+  // Focus the new answer input
+  const newInput = answerGroup.querySelector('input[type="text"]');
+  if (newInput) {
+    newInput.focus();
   }
 }
 
-function removeAnswer(button, answersContainer) {
-  if (answersContainer.querySelectorAll('.answer-item').length > 2) {
-    const answerItem = button.closest('.answer-item');
-    answerItem.remove();
+function removeAnswer(button, answerElement) {
+  const answersContainer = answerElement.parentElement;
+  const answerGroups = answersContainer.querySelectorAll('.answer-group');
+  
+  // Don't allow removing if we're down to 2 answers
+  if (answerGroups.length <= 2) {
+    showAlert('warning', 'يجب أن يحتوي السؤال على إجابتين على الأقل');
+    return;
+  }
+  
+  // Check if we're removing the currently selected answer
+  const selectedRadio = answerElement.querySelector('input[type="radio"]:checked');
+  
+  answerElement.remove();
+  
+  // Update radio button values and ensure one is checked
+  const questionElement = answersContainer.closest('.question-card');
+  if (questionElement) {
+    const radioButtons = answersContainer.querySelectorAll('input[type="radio"]');
+    let hasChecked = false;
     
-    // Renumber remaining answers
-    const answerItems = answersContainer.querySelectorAll('.answer-item');
-    answerItems.forEach((item, index) => {
-      const radio = item.querySelector('input[type="radio"]');
+    radioButtons.forEach((radio, index) => {
       radio.value = index;
       
-      const textInput = item.querySelector('input[type="text"]:not([readonly])');
-      if (textInput) {
-        const name = textInput.name;
-        const newName = name.replace(/_(\d+)$/, `_${index}`);
-        textInput.name = newName;
+      // If we removed the selected answer, select the first one
+      if (selectedRadio && !hasChecked) {
+        radio.checked = true;
+        hasChecked = true;
       }
     });
+    
+    // If no radio is checked (shouldn't happen), check the first one
+    if (!hasChecked && radioButtons.length > 0) {
+      radioButtons[0].checked = true;
+    }
+  }
+}
+
+function removeQuestion(questionElement) {
+  questionElement.remove();
+}
+
+function toggleQuiz(moduleElement, isChecked) {
+  const quizSection = moduleElement.querySelector('.quiz-section');
+  if (!quizSection) return;
+  
+  if (isChecked) {
+    quizSection.style.display = 'block';
   } else {
-    alert('يجب أن يحتوي السؤال على إجابتين على الأقل');
+    quizSection.style.display = 'none';
   }
 }
 
@@ -758,23 +609,32 @@ function submitCourse() {
     return;
   }
 
-  const formData = new FormData(document.getElementById('course-form'));
+  const form = document.getElementById('course-form');
+  const formData = new FormData(form);
   const submitBtn = document.getElementById('submit-course-btn');
   const originalText = submitBtn.innerHTML;
   submitBtn.disabled = true;
-  let isValid = true; // Initialize isValid variable
+  let isValid = true;
 
   // Show loading state
   submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
   
-  // Make sure course image is included
+  // Add CSRF token
+  const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  
+  // Add course image to form data if exists
   const courseImageInput = document.querySelector('input[name="course_image"]');
   if (courseImageInput && courseImageInput.files.length > 0) {
-    console.log('Adding course image:', courseImageInput.files[0].name);
-    // formData will already include this from the form, but log it for confirmation
-  } else {
-    console.log('No course image selected');
+    formData.append('course_image', courseImageInput.files[0]);
   }
+
+  // Add course description and other fields
+  formData.append('name', document.querySelector('input[name="name"]').value);
+  formData.append('description', document.querySelector('textarea[name="description"]').value);
+  formData.append('small_description', document.querySelector('input[name="small_description"]').value);
+  formData.append('price', document.querySelector('input[name="price"]').value);
+  formData.append('category', document.querySelector('select[name="category"]').value);
+  formData.append('level', document.querySelector('select[name="level"]').value);
 
   // Process modules
   const modules = document.querySelectorAll('.module-card:not([style*="display: none"])');
@@ -788,19 +648,21 @@ function submitCourse() {
   }
   
   // Add total module count to formData
-  formData.append('total_module_count', modules.length);
+  formData.append('module_count', modules.length);
 
   modules.forEach(module => {
     if (module.style.display === 'none') return; // Skip hidden modules
 
     moduleIndex++;
     const moduleId = module.id;
-    console.log('Processing module:', { moduleId, moduleIndex });
-
-    // Process module title
+    
+    // Process module title and description
     const titleInput = module.querySelector('input[name^="module_title"]');
-    if (titleInput) {
+    const descriptionInput = module.querySelector('textarea[name^="module_description"]');
+    
+    if (titleInput && descriptionInput) {
       formData.append(`module_${moduleIndex}_title`, titleInput.value);
+      formData.append(`module_${moduleIndex}_description`, descriptionInput.value);
     }
 
     // Process PDFs
@@ -813,15 +675,8 @@ function submitCourse() {
         if (input.files.length > 0) {
           pdfCount++;
           formData.append(`module_${moduleIndex}_pdf_${pdfCount}`, input.files[0]);
-          
-          // Get the file name display if it exists
-          const fileNameSpan = input.parentElement.nextElementSibling;
-          if (fileNameSpan && fileNameSpan.classList.contains('selected-file-name')) {
-            formData.append(`module_${moduleIndex}_pdf_${pdfCount}_title`, input.files[0].name);
-          }
         }
       });
-      formData.append(`module_${moduleIndex}_pdf_count`, pdfCount);
     }
     
     // Process Videos
@@ -836,16 +691,19 @@ function submitCourse() {
         
         if (videoInput && videoInput.files.length > 0) {
           videoCount++;
-          formData.append(`module_${moduleIndex}_video_${videoCount}`, videoInput.files[0]);
+          formData.append(`module_${moduleIndex}_video`, videoInput.files[0]);
           
           if (videoTitleInput && videoTitleInput.value) {
-            formData.append(`module_${moduleIndex}_video_${videoCount}_title`, videoTitleInput.value);
-          } else {
-            formData.append(`module_${moduleIndex}_video_${videoCount}_title`, videoInput.files[0].name);
+            formData.append(`module_${moduleIndex}_video_title`, videoTitleInput.value);
           }
         }
       });
-      formData.append(`module_${moduleIndex}_video_count`, videoCount);
+    }
+    
+    // Process Notes
+    const noteInput = module.querySelector('textarea[name^="module_note"]');
+    if (noteInput && noteInput.value) {
+      formData.append(`module_${moduleIndex}_note`, noteInput.value);
     }
     
     // Process Materials
@@ -880,8 +738,8 @@ function submitCourse() {
     }
 
     // Process quiz data
-    const quizToggle = module.querySelector('.quiz-toggle');
-    if (quizToggle && quizToggle.checked) {
+    const quizToggleElement = module.querySelector('.quiz-toggle');
+    if (quizToggleElement && quizToggleElement.checked) {
       formData.append(`module_${moduleIndex}_has_quiz`, '1');
       console.log('Module has quiz:', moduleIndex);
 
@@ -1005,8 +863,6 @@ function submitCourse() {
     }
   });
 }
-
-// ...
 
 function validateForm() {
   // Simple validation for required fields
@@ -1149,74 +1005,6 @@ function validateForm() {
   });
   
   return isValid;
-};
-
-// ...
-
-function setupModuleEventListeners(moduleElement, moduleId) {
-  // Remove module button
-  const removeModuleBtn = moduleElement.querySelector('.remove-module-btn');
-  if (removeModuleBtn) {
-    removeModuleBtn.addEventListener('click', () => removeModule(moduleId));
-  }
-  
-  // Add answer button
-  const addAnswerBtn = moduleElement.querySelector('.add-answer-btn');
-  if (addAnswerBtn) {
-    addAnswerBtn.addEventListener('click', function() {
-      const answersContainer = moduleElement.querySelector('.answers-container');
-      const answerCount = answersContainer.children.length;
-      
-      const newAnswer = document.createElement('div');
-      newAnswer.className = 'answer-group mb-2';
-      newAnswer.innerHTML = `
-        <div class="input-group">
-          <div class="input-group-text">
-            <input type="radio" name="module_quiz_correct[]" value="${answerCount}" required>
-          </div>
-          <input type="text" class="form-control" name="module_quiz_answer[]" required placeholder="الإجابة">
-          <button type="button" class="btn btn-outline-danger remove-answer-btn">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      `;
-      
-      answersContainer.appendChild(newAnswer);
-      
-      // Add event listener to the new remove button
-      const removeBtn = newAnswer.querySelector('.remove-answer-btn');
-      removeBtn.addEventListener('click', function() {
-        if (answersContainer.children.length > 2) { // Keep at least 2 answers
-          newAnswer.remove();
-          // Update radio values
-          const answers = answersContainer.querySelectorAll('.answer-group');
-          answers.forEach((answer, index) => {
-            answer.querySelector('input[type="radio"]').value = index;
-          });
-        } else {
-          showAlert('warning', 'يجب أن يحتوي السؤال على إجابتين على الأقل');
-        }
-      });
-    });
-  }
-  
-  // Remove answer buttons for existing answers
-  const removeAnswerBtns = moduleElement.querySelectorAll('.remove-answer-btn');
-  removeAnswerBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
-      const answersContainer = this.closest('.answers-container');
-      if (answersContainer.children.length > 2) { // Keep at least 2 answers
-        this.closest('.answer-group').remove();
-        // Update radio values
-        const answers = answersContainer.querySelectorAll('.answer-group');
-        answers.forEach((answer, index) => {
-          answer.querySelector('input[type="radio"]').value = index;
-        });
-      } else {
-        showAlert('warning', 'يجب أن يحتوي السؤال على إجابتين على الأقل');
-      }
-    });
-  });
 };
 
 // PDF functions

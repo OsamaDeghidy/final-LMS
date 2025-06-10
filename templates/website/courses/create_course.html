@@ -7,8 +7,8 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <link rel="stylesheet" href="{% static 'css/course-creation.css' %}">
-<script src="{% static 'js/course-image-upload.js' %}"></script>
-<script src="{% static 'js/course-creation.js' %}"></script>
+<script src="{% static 'js/course-image-upload.js' %}" defer></script>
+<script src="{% static 'js/course-creation.js' %}" defer></script>
 {% endblock %}
 
 {% block dashboard_content %}
@@ -190,75 +190,109 @@
                         <input type="text" class="form-control" name="module_name[]" required>
                       </div>
                       
-                      <!-- Video Upload -->
-                      <div class="mb-3">
-                        <label class="form-label fw-bold">تحميل الفيديوهات</label>
-                        <div class="input-group mb-2">
-                          <input type="file" class="form-control" name="module_videos[]" multiple accept=".mp4,.mov,.avi">
+                      <!-- Video Section -->
+                      <div class="card mb-3">
+                        <div class="card-header bg-light">
+                          <h6 class="mb-0"><i class="fas fa-video me-2"></i>محتوى الفيديو</h6>
                         </div>
-                        <small class="text-muted">الصيغ المدعومة: MP4, MOV, AVI</small>
-                      </div>
-                      
-                      <!-- Video Titles -->
-                      <div class="mb-3">
-                        <label class="form-label fw-bold">عناوين الفيديوهات</label>
-                        <div class="video-titles-container">
-                          <div class="input-group mb-2">
-                            <input type="text" class="form-control" name="video_title_0" placeholder="أدخل عنوان الفيديو">
-                            <button type="button" class="btn btn-outline-primary add-title-btn">
-                              <i class="fas fa-plus"></i>
-                            </button>
+                        <div class="card-body">
+                          <div class="mb-3">
+                            <label class="form-label fw-bold">تحميل فيديو</label>
+                            <input type="file" class="form-control" name="module_video[]" accept=".mp4,.mov,.avi" required>
+                            <small class="text-muted">الصيغ المدعومة: MP4, MOV, AVI (الحد الأقصى: 500MB)</small>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label fw-bold">عنوان الفيديو</label>
+                            <input type="text" class="form-control" name="video_title[]" required placeholder="أدخل عنوان الفيديو">
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">وصف الفيديو (اختياري)</label>
+                            <textarea class="form-control" name="video_description[]" rows="2" placeholder="وصف مختصر لمحتوى الفيديو"></textarea>
                           </div>
                         </div>
-                        <input type="hidden" name="video_title_count" value="1">
-                        <small class="text-muted">أضف عنواناً لكل فيديو</small>
                       </div>
                       
-                      <!-- Note -->
-                      <div class="mb-3">
-                        <label class="form-label fw-bold">الملاحظة <span class="text-danger">*</span></label>
-                        <textarea class="form-control module-note" name="module_note[]" rows="3" required></textarea>
+                      <!-- PDF Section -->
+                      <div class="card mb-3">
+                        <div class="card-header bg-light">
+                          <h6 class="mb-0"><i class="fas fa-file-pdf me-2"></i>الملفات المرفقة</h6>
+                        </div>
+                        <div class="card-body">
+                          <div class="mb-3">
+                            <label class="form-label fw-bold">تحميل ملف PDF</label>
+                            <input type="file" class="form-control" name="module_pdf[]" accept=".pdf">
+                            <small class="text-muted">حجم الملف الأقصى: 20MB</small>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">وصف الملف (اختياري)</label>
+                            <input type="text" class="form-control" name="pdf_description[]" placeholder="وصف للملف المرفق">
+                          </div>
+                        </div>
                       </div>
                       
-                      <!-- Quiz -->
-                      <div class="mb-3">
-                        <label class="form-label fw-bold">الاختبار <span class="text-danger">*</span></label>
-                        <div class="quiz-section">
+                      <!-- Notes Section -->
+                      <div class="card mb-3">
+                        <div class="card-header bg-light">
+                          <h6 class="mb-0"><i class="fas fa-sticky-note me-2"></i>ملاحظات إضافية</h6>
+                        </div>
+                        <div class="card-body">
+                          <div class="mb-3">
+                            <label class="form-label fw-bold">ملاحظات الموديول</label>
+                            <textarea class="form-control" name="module_note[]" rows="3" placeholder="أضف ملاحظات إضافية عن الموديول"></textarea>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Quiz Section -->
+                      <div class="card mb-3">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                          <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>اختبار الموديول</h6>
+                          <div class="form-check form-switch">
+                            <input class="form-check-input quiz-toggle" type="checkbox" onchange="toggleQuiz(this.parentNode.parentNode.parentNode, this.checked)">
+                            <label class="form-check-label">إضافة اختبار</label>
+                          </div>
+                        </div>
+                        <div class="card-body quiz-section" style="display: none;">
                           <div class="questions-container">
-                            <!-- Default question -->
-                            <div class="question-card card mb-3">
-                              <div class="card-body">
-                                <div class="mb-3">
-                                  <label class="form-label">السؤال</label>
-                                  <input type="text" class="form-control" name="module_quiz_question[]" required>
-                                </div>
-                                <div class="answers-container">
-                                  <!-- Default answers -->
-                                  <div class="answer-group mb-2">
-                                    <div class="input-group">
-                                      <div class="input-group-text">
-                                        <input type="radio" name="module_quiz_correct[]" value="0" required>
-                                      </div>
-                                      <input type="text" class="form-control" name="module_quiz_answer[]" required placeholder="الإجابة">
-                                    </div>
-                                  </div>
-                                  <div class="answer-group mb-2">
-                                    <div class="input-group">
-                                      <div class="input-group-text">
-                                        <input type="radio" name="module_quiz_correct[]" value="1" required>
-                                      </div>
-                                      <input type="text" class="form-control" name="module_quiz_answer[]" required placeholder="الإجابة">
-                                    </div>
-                                  </div>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-outline-primary add-answer-btn mt-2">
-                                  <i class="fas fa-plus me-1"></i>إضافة إجابة
-                                </button>
-                              </div>
+                            <!-- Questions will be added here dynamically -->
+                          </div>
+                          <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addQuestion(this.closest('.module-card'))">
+                            <i class="fas fa-plus me-1"></i>إضافة سؤال
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <!-- Question Template (Hidden) -->
+                      <template id="question-template">
+                        <div class="question-card card mb-3">
+                          <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>سؤال جديد</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeQuestion(this.closest('.question-card'))">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </div>
+                          <div class="card-body">
+                            <div class="mb-3">
+                              <label class="form-label">نص السؤال</label>
+                              <input type="text" class="form-control question-text" name="question_text[]" required>
+                            </div>
+                            <div class="mb-3">
+                              <label class="form-label">نوع السؤال</label>
+                              <select class="form-select question-type" onchange="updateQuestionType(this)">
+                                <option value="mcq">اختيار من متعدد</option>
+                                <option value="true_false">صح / خطأ</option>
+                                <option value="short_answer">إجابة قصيرة</option>
+                              </select>
+                            </div>
+                            <div class="answers-container">
+                              <!-- Answers will be added here based on question type -->
+                            </div>
+                            <div class="mt-2">
+                              <small class="text-muted">انقر على الإجابة الصحيحة لتحديدها</small>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </template>
                     </div>
                   </div>
                 </template>
