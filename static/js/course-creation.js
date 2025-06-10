@@ -146,36 +146,72 @@ function prevStep() {
 }
 
 function validateCurrentStep() {
-  // Simple validation for required fields
+  let isValid = true;
   const currentStepCard = document.querySelectorAll('.step-card')[currentStep];
   const requiredFields = currentStepCard.querySelectorAll('[required]');
+  let errors = [];
   
-  let isValid = true;
+  // Check required text fields
   requiredFields.forEach(field => {
     // Skip hidden fields
     if (field.offsetParent === null) {
       return;
     }
     
-    if (!field.value) {
+    if (!field.value.trim()) {
       field.classList.add('is-invalid');
       isValid = false;
     } else {
       field.classList.remove('is-invalid');
     }
   });
-  
-  if (!isValid) {
-    showAlert('danger', 'يرجى ملء جميع الحقول المطلوبة');
-  }
-  
-  // If we're on step 2 (modules), check if at least one module exists
+
+  // If we're on step 2 (modules), validate module content
   if (currentStep === 1) {
     const modules = document.querySelectorAll('.module-card:not([style*="display: none"])');
+    
     if (modules.length === 0) {
+      isValid = false;
       showAlert('danger', 'يجب إضافة موديول واحد على الأقل');
       return false;
     }
+
+    // Validate each module
+    modules.forEach((module, index) => {
+      const moduleNum = index + 1;
+      
+      // Check module title
+      const titleInput = module.querySelector('input[name^="module_name"]');
+      if (!titleInput || !titleInput.value.trim()) {
+        isValid = false;
+        showAlert('danger', `يرجى إدخال عنوان للموديول ${moduleNum}`);
+      }
+
+      // Check video file
+      const videoInput = module.querySelector('input[name^="module_video"]');
+      if (!videoInput || !videoInput.files || videoInput.files.length === 0) {
+        isValid = false;
+        showAlert('danger', `يجب إضافة فيديو للموديول ${moduleNum}`);
+      }
+
+      // Check video title
+      const videoTitleInput = module.querySelector('input[name^="video_title"]');
+      if (!videoTitleInput || !videoTitleInput.value.trim()) {
+        isValid = false;
+        showAlert('danger', `يرجى إدخال عنوان الفيديو للموديول ${moduleNum}`);
+      }
+
+      // Check PDF file
+      const pdfInput = module.querySelector('input[name^="module_pdf"]');
+      if (!pdfInput || !pdfInput.files || pdfInput.files.length === 0) {
+        isValid = false;
+        showAlert('danger', `يجب إضافة ملف PDF للموديول ${moduleNum}`);
+      }
+    });
+  }
+
+  if (!isValid) {
+    showAlert('danger', 'يرجى ملء جميع الحقول المطلوبة');
   }
   
   return isValid;
@@ -312,12 +348,14 @@ function setupModuleEventListeners(moduleElement, moduleId) {
   }
 
   // Add question button
-  const addQuestionBtn = moduleElement.querySelector('.add-question-btn');
-  if (addQuestionBtn) {
-    addQuestionBtn.setAttribute('data-module-id', moduleId);
-    addQuestionBtn.addEventListener('click', () => addQuestion(moduleElement, moduleId));
-  } else {
-    console.error('Add question button not found in module:', moduleId);
+  // Add question button
+  const quizSection = moduleElement.querySelector('.quiz-section');
+  if (quizSection) {
+    const addQuestionBtn = quizSection.querySelector('.add-question-btn');
+    if (addQuestionBtn) {
+      addQuestionBtn.setAttribute('data-module-id', moduleId);
+      addQuestionBtn.addEventListener('click', () => addQuestion(moduleElement, moduleId));
+    }
   }
 
   // Quiz toggle
@@ -604,17 +642,28 @@ function toggleQuiz(moduleElement, isChecked) {
 
 // Submit the course form
 function submitCourse() {
-  if (!validateForm()) {
-    showAlert('danger', 'يرجى ملء جميع الحقول المطلوبة قبل الحفظ');
-    return;
-  }
-
   const form = document.getElementById('course-form');
+  // If no action is set, use the current URL
+  if (!form.getAttribute('action')) {
+    form.setAttribute('action', window.location.pathname);
+  }
+  
   const formData = new FormData(form);
   const submitBtn = document.getElementById('submit-course-btn');
   const originalText = submitBtn.innerHTML;
   submitBtn.disabled = true;
   let isValid = true;
+
+  // Clear previous error messages
+  const alertsContainer = document.getElementById('alerts-container');
+  alertsContainer.innerHTML = '';
+
+  // Validate form before submission
+  if (!validateCurrentStep()) {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
+    return;
+  }
 
   // Show loading state
   submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
@@ -622,246 +671,187 @@ function submitCourse() {
   // Add CSRF token
   const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
   
-  // Add course image to form data if exists
-  const courseImageInput = document.querySelector('input[name="course_image"]');
-  if (courseImageInput && courseImageInput.files.length > 0) {
-    formData.append('course_image', courseImageInput.files[0]);
-  }
+  try {
+    // Add course image to form data if exists
+    const courseImageInput = document.querySelector('input[name="course_image"]');
+    if (courseImageInput && courseImageInput.files.length > 0) {
+      formData.append('course_image', courseImageInput.files[0]);
+    }
 
-  // Add course description and other fields
-  formData.append('name', document.querySelector('input[name="name"]').value);
-  formData.append('description', document.querySelector('textarea[name="description"]').value);
-  formData.append('small_description', document.querySelector('input[name="small_description"]').value);
-  formData.append('price', document.querySelector('input[name="price"]').value);
-  formData.append('category', document.querySelector('select[name="category"]').value);
-  formData.append('level', document.querySelector('select[name="level"]').value);
+    // Add course description and other fields
+    formData.append('name', document.querySelector('input[name="name"]').value);
+    formData.append('description', document.querySelector('textarea[name="description"]').value);
+    formData.append('small_description', document.querySelector('input[name="small_description"]').value);
+    formData.append('price', document.querySelector('input[name="price"]').value);
+    formData.append('category', document.querySelector('select[name="category"]').value);
+    formData.append('level', document.querySelector('select[name="level"]').value);
 
-  // Process modules
-  const modules = document.querySelectorAll('.module-card:not([style*="display: none"])');
-  let moduleIndex = 0;
+    // Process modules
+    const modules = document.querySelectorAll('.module-card:not([style*="display: none"])');
+    formData.append('module_count', modules.length);
 
-  if (modules.length === 0) {
-    showAlert('danger', 'يجب إضافة موديول واحد على الأقل');
+    modules.forEach((module, moduleIndex) => {
+      // Add module basic info
+      const titleInput = module.querySelector('input[name^="module_name"]');
+      const descriptionInput = module.querySelector('textarea[name^="module_description"]');
+      
+      formData.append(`module_${moduleIndex + 1}_title`, titleInput.value);
+      if (descriptionInput) {
+        formData.append(`module_${moduleIndex + 1}_description`, descriptionInput.value);
+      }
+
+      // Add video file and details
+      const videoInput = module.querySelector('input[name^="module_video"]');
+      const videoTitleInput = module.querySelector('input[name^="video_title"]');
+      const videoDescInput = module.querySelector('textarea[name^="video_description"]');
+
+      if (videoInput && videoInput.files.length > 0) {
+        formData.append(`module_${moduleIndex + 1}_video`, videoInput.files[0]);
+        formData.append(`module_${moduleIndex + 1}_video_title`, videoTitleInput.value);
+        if (videoDescInput) {
+          formData.append(`module_${moduleIndex + 1}_video_description`, videoDescInput.value);
+        }
+      }
+
+      // Add PDF file and description
+      const pdfInput = module.querySelector('input[name^="module_pdf"]');
+      const pdfDescInput = module.querySelector('input[name^="pdf_description"]');
+
+      if (pdfInput && pdfInput.files.length > 0) {
+        formData.append(`module_${moduleIndex + 1}_pdf`, pdfInput.files[0]);
+        if (pdfDescInput) {
+          formData.append(`module_${moduleIndex + 1}_pdf_description`, pdfDescInput.value);
+        }
+      }
+
+      // Add module notes
+      const noteInput = module.querySelector('textarea[name^="module_note"]');
+      if (noteInput && noteInput.value.trim()) {
+        formData.append(`module_${moduleIndex + 1}_note`, noteInput.value);
+      }
+    });
+
+    // Log form data for debugging
+    console.log('Submitting form to:', form.action);
+    for (let pair of formData.entries()) {
+      console.log(pair[0] + ': ', pair[1]);
+    }
+    
+    // Submit the form
+    fetch(form.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': csrftoken
+      },
+      credentials: 'same-origin'  // Ensure cookies are sent with the request
+    })
+    .then(async response => {
+      const text = await response.text();
+      console.log('Server response status:', response.status);
+      console.log('Response content:', text.substring(0, 500) + (text.length > 500 ? '...' : ''));
+      
+      // First try to parse as JSON
+      try {
+        const data = JSON.parse(text);
+        if (response.ok) {
+          return data;
+        }
+        throw new Error(data.message || 'حدث خطأ في الخادم');
+      } catch (e) {
+        // If not JSON, it's probably HTML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        
+        // Check for form validation errors
+        const errorElements = doc.querySelectorAll('.errorlist, .is-invalid');
+        if (errorElements.length > 0) {
+          const errorMessages = [];
+          errorElements.forEach(el => {
+            if (el.textContent.trim()) {
+              errorMessages.push(el.textContent.trim());
+            }
+          });
+          
+          const errorMessage = errorMessages.length > 0 
+            ? errorMessages.join('\n')
+            : 'الرجاء التحقق من صحة البيانات المدخلة';
+          
+          throw new Error(errorMessage);
+        }
+        
+        // Check for success message
+        const successMessage = doc.querySelector('.alert-success') || 
+                              doc.querySelector('[class*="success"]');
+        if (successMessage) {
+          return { success: true, message: successMessage.textContent.trim() };
+        }
+        
+        // Check for redirect
+        const redirectMeta = doc.querySelector('meta[http-equiv="refresh"]');
+        if (redirectMeta) {
+          const content = redirectMeta.getAttribute('content');
+          const urlMatch = content.match(/url=(.*)/i);
+          if (urlMatch && urlMatch[1]) {
+            return { redirect_url: urlMatch[1].trim() };
+          }
+        }
+        
+        // If we get here, it's an unexpected HTML response
+        console.log('Unexpected HTML response:', text.substring(0, 500) + '...');
+        throw new Error('تلقينا استجابة غير متوقعة من الخادم. الرجاء إعادة المحاولة.');
+      }
+    })
+    .then(data => {
+      if (data.redirect_url) {
+        window.location.href = data.redirect_url;
+      } else if (data.success || data.message) {
+        showAlert('success', data.message || 'تم حفظ الدورة بنجاح');
+        // Redirect to the courses list after a short delay
+        setTimeout(() => {
+          // Try to get the base URL from the form action or use the current path
+          const formAction = form.getAttribute('action') || '';
+          const baseUrl = formAction.split('/').slice(0, -1).join('/');
+          window.location.href = baseUrl || '/dashboard/';
+        }, 1500);
+      }
+    })
+    .catch(error => {
+      console.error('Submission error:', error);
+      let errorMessage = 'حدث خطأ أثناء حفظ الدورة. يرجى التحقق من البيانات والمحاولة مرة أخرى.';
+      
+      // More specific error messages
+      if (error.message.includes('Failed to fetch')) {
+        errorMessage = 'تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
+      } else if (error.message.includes('NetworkError')) {
+        errorMessage = 'خطأ في الشبكة. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      showAlert('danger', errorMessage);
+    })
+    .finally(() => {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    });
+
+  } catch (error) {
+    console.error('Error:', error);
+    showAlert('danger', 'حدث خطأ أثناء تجهيز البيانات. يرجى المحاولة مرة أخرى.');
     submitBtn.disabled = false;
     submitBtn.innerHTML = originalText;
-    return;
   }
-  
-  // Add total module count to formData
-  formData.append('module_count', modules.length);
 
-  modules.forEach(module => {
-    if (module.style.display === 'none') return; // Skip hidden modules
 
-    moduleIndex++;
-    const moduleId = module.id;
+
+
     
-    // Process module title and description
-    const titleInput = module.querySelector('input[name^="module_title"]');
-    const descriptionInput = module.querySelector('textarea[name^="module_description"]');
-    
-    if (titleInput && descriptionInput) {
-      formData.append(`module_${moduleIndex}_title`, titleInput.value);
-      formData.append(`module_${moduleIndex}_description`, descriptionInput.value);
-    }
 
-    // Process PDFs
-    const pdfContainer = module.querySelector('.pdf-files-container');
-    if (pdfContainer) {
-      const pdfInputs = pdfContainer.querySelectorAll('input[type="file"]');
-      let pdfCount = 0;
-      
-      pdfInputs.forEach((input, idx) => {
-        if (input.files.length > 0) {
-          pdfCount++;
-          formData.append(`module_${moduleIndex}_pdf_${pdfCount}`, input.files[0]);
-        }
-      });
-    }
-    
-    // Process Videos
-    const videoContainer = module.querySelector('.videos-container');
-    if (videoContainer) {
-      const videoItems = videoContainer.querySelectorAll('.video-item');
-      let videoCount = 0;
-      
-      videoItems.forEach((item, idx) => {
-        const videoInput = item.querySelector('input[type="file"]');
-        const videoTitleInput = item.querySelector('input[type="text"]');
-        
-        if (videoInput && videoInput.files.length > 0) {
-          videoCount++;
-          formData.append(`module_${moduleIndex}_video`, videoInput.files[0]);
-          
-          if (videoTitleInput && videoTitleInput.value) {
-            formData.append(`module_${moduleIndex}_video_title`, videoTitleInput.value);
-          }
-        }
-      });
-    }
-    
-    // Process Notes
-    const noteInput = module.querySelector('textarea[name^="module_note"]');
-    if (noteInput && noteInput.value) {
-      formData.append(`module_${moduleIndex}_note`, noteInput.value);
-    }
-    
-    // Process Materials
-    const materialsContainer = module.querySelector('.materials-container');
-    if (materialsContainer) {
-      const materialInputs = materialsContainer.querySelectorAll('input[type="file"]');
-      let materialCount = 0;
-      
-      materialInputs.forEach((input, idx) => {
-        if (input.files.length > 0) {
-          materialCount++;
-          formData.append(`module_${moduleIndex}_material_${materialCount}`, input.files[0]);
-          formData.append(`module_${moduleIndex}_material_${materialCount}_title`, input.files[0].name);
-        }
-      });
-      formData.append(`module_${moduleIndex}_material_count`, materialCount);
-    }
-    
-    // Process Notes
-    const notesContainer = module.querySelector('.notes-container');
-    if (notesContainer) {
-      const noteInputs = notesContainer.querySelectorAll('input[type="text"]');
-      let noteCount = 0;
-      
-      noteInputs.forEach((input, idx) => {
-        if (input.value.trim()) {
-          noteCount++;
-          formData.append(`module_${moduleIndex}_note_${noteCount}`, input.value.trim());
-        }
-      });
-      formData.append(`module_${moduleIndex}_note_count`, noteCount);
-    }
 
-    // Process quiz data
-    const quizToggleElement = module.querySelector('.quiz-toggle');
-    if (quizToggleElement && quizToggleElement.checked) {
-      formData.append(`module_${moduleIndex}_has_quiz`, '1');
-      console.log('Module has quiz:', moduleIndex);
 
-      const questionsContainer = module.querySelector('.questions-container');
-      if (questionsContainer) {
-        const questions = questionsContainer.querySelectorAll('.question-card:not([style*="display: none"])');
-        formData.append(`module_${moduleIndex}_question_count`, questions.length);
-        console.log('Found questions:', questions.length);
 
-        questions.forEach((question, questionIndex) => {
-          const questionNumber = questionIndex + 1;
-          const questionType = question.querySelector('.question-type-select').value;
-          const questionText = question.querySelector('input[name^="question_text"]').value;
 
-          if (!questionText.trim()) {
-            console.error('Empty question text:', { moduleIndex, questionNumber });
-            return;
-          }
-
-          formData.append(`module_${moduleIndex}_question_${questionNumber}_type`, questionType);
-          formData.append(`module_${moduleIndex}_question_${questionNumber}_text`, questionText);
-
-          console.log('Processing question:', { moduleIndex, questionNumber, type: questionType });
-
-          if (questionType === 'multiple_choice') {
-            const answerItems = question.querySelectorAll('.answer-item:not([style*="display: none"])');
-            const answerCount = answerItems.length;
-            formData.append(`module_${moduleIndex}_question_${questionNumber}_answer_count`, answerCount);
-
-            let correctAnswerIndex = -1;
-            let hasEmptyAnswer = false;
-
-            answerItems.forEach((item, answerIndex) => {
-              const radio = item.querySelector('input[type="radio"]');
-              const textInput = item.querySelector('input[type="text"]');
-              const answerText = textInput.value.trim();
-
-              if (!answerText) {
-                hasEmptyAnswer = true;
-                console.error('Empty answer text:', { moduleIndex, questionNumber, answerIndex: answerIndex + 1 });
-                return;
-              }
-
-              if (radio.checked) {
-                correctAnswerIndex = answerIndex;
-              }
-
-              formData.append(
-                `module_${moduleIndex}_question_${questionNumber}_answer_${answerIndex + 1}`, 
-                answerText
-              );
-            });
-
-            if (correctAnswerIndex === -1) {
-              console.error('No correct answer selected:', { moduleIndex, questionNumber });
-              showAlert('danger', 'يجب تحديد الإجابة الصحيحة لجميع الأسئلة');
-              submitBtn.disabled = false;
-              submitBtn.innerHTML = originalText;
-              isValid = false;
-              return;
-            }
-
-            if (hasEmptyAnswer) {
-              showAlert('danger', 'يجب ملء جميع الإجابات');
-              submitBtn.disabled = false;
-              submitBtn.innerHTML = originalText;
-              isValid = false;
-              return;
-            }
-
-            formData.append(
-              `module_${moduleIndex}_question_${questionNumber}_correct_answer`,
-              (correctAnswerIndex + 1).toString()
-            );
-          } 
-          else if (questionType === 'true_false') {
-            const trueRadio = question.querySelector('input[value="true"]');
-            const falseRadio = question.querySelector('input[value="false"]');
-            
-            if (!trueRadio || !falseRadio || (!trueRadio.checked && !falseRadio.checked)) {
-              console.error('No true/false option selected or elements not found:', { moduleIndex, questionNumber });
-              showAlert('danger', 'يجب اختيار إجابة صحيحة (صح أو خطأ)');
-              submitBtn.disabled = false;
-              submitBtn.innerHTML = originalText;
-              isValid = false;
-              return;
-            }
-            
-            const correctAnswer = trueRadio.checked ? 'true' : 'false';
-            formData.append(`module_${moduleIndex}_question_${questionNumber}_correct_answer`, correctAnswer);
-          } 
-          else if (questionType === 'short_answer') {
-            const answerInput = question.querySelector('input[name^="answer_short_"]');
-            
-            if (!answerInput) {
-              console.error('Short answer input not found:', { moduleIndex, questionNumber });
-              showAlert('danger', 'حدث خطأ في العثور على حقل الإجابة القصيرة');
-              submitBtn.disabled = false;
-              submitBtn.innerHTML = originalText;
-              isValid = false;
-              return;
-            }
-            
-            const correctAnswer = answerInput.value.trim();
-            
-            if (!correctAnswer) {
-              console.error('Empty short answer found:', { moduleIndex, questionNumber });
-              showAlert('danger', 'يجب إدخال الإجابة الصحيحة للسؤال القصير');
-              submitBtn.disabled = false;
-              submitBtn.innerHTML = originalText;
-              isValid = false;
-              return;
-            }
-            
-            formData.append(`module_${moduleIndex}_question_${questionNumber}_correct_answer`, correctAnswer);
-          }
-        });
-      }
-    } else {
-      console.log('Module has no quiz:', moduleId);
-    }
-  });
 }
 
 function validateForm() {
@@ -890,122 +880,41 @@ function validateForm() {
     return false;
   }
   
-  // Validate each module has either video names or PDF files
-  let hasContentError = false;
+  // Validate each module
+  let moduleIndex = 0;
+  let hasError = false;
+  
   modules.forEach(module => {
-    const videoNames = module.querySelectorAll('.video-names-container input[type="text"]');
-    const pdfFiles = module.querySelectorAll('.pdf-files-container input[type="file"]');
-    let hasContent = false;
+    moduleIndex++;
     
-    // Check video names
-    videoNames.forEach(input => {
-      if (input.value.trim()) {
-        hasContent = true;
+    // Check required fields
+    const requiredModuleFields = module.querySelectorAll('[required]');
+    requiredModuleFields.forEach(field => {
+      if (!field.value) {
+        field.classList.add('is-invalid');
+        hasError = true;
+      } else {
+        field.classList.remove('is-invalid');
       }
     });
     
-    // Check PDF files
-    pdfFiles.forEach(input => {
-      if (input.files && input.files.length > 0) {
-        hasContent = true;
-      }
-    });
+    // Check video upload
+    const videoInput = module.querySelector('input[name^="module_video"]');
+    if (!videoInput || !videoInput.files.length) {
+      showAlert('danger', `يجب إضافة فيديو للموديول ${moduleIndex}`);
+      hasError = true;
+    }
     
-    if (!hasContent) {
-      hasContentError = true;
+    // Check video title
+    const videoTitleInput = module.querySelector('input[name^="video_title"]');
+    if (!videoTitleInput || !videoTitleInput.value.trim()) {
+      showAlert('danger', `يجب إضافة عنوان للفيديو في الموديول ${moduleIndex}`);
+      hasError = true;
     }
   });
   
-  if (hasContentError) {
-    showAlert('danger', 'يجب إضافة فيديو أو ملف PDF على الأقل لكل موديول');
-    return false;
-  }
-  
-  // Add validation for quiz questions if needed
-  const quizToggles = document.querySelectorAll('.quiz-toggle:checked');
-  quizToggles.forEach(toggle => {
-    const moduleElement = toggle.closest('.module-card');
-    const questions = moduleElement.querySelectorAll('.question-card:not([style*="display: none"])');
-    
-    if (questions.length === 0) {
-      showAlert('danger', 'يجب إضافة سؤال واحد على الأقل للاختبار');
-      isValid = false;
-      return;
-    }
-    
-    // Validate questions
-    questions.forEach(question => {
-      const questionText = question.querySelector('input[name^="question_text"]');
-      if (!questionText || !questionText.value.trim()) {
-        showAlert('danger', 'يجب ملء نص السؤال لجميع الأسئلة');
-        isValid = false;
-        return;
-      }
-      
-      const questionType = question.querySelector('.question-type-select').value;
-      
-      if (questionType === 'multiple_choice') {
-        const answers = question.querySelectorAll('.answer-item:not([style*="display: none"])');
-        if (answers.length < 2) {
-          showAlert('danger', 'يجب إضافة إجابتين على الأقل لكل سؤال اختيار متعدد');
-          isValid = false;
-          return;
-        }
-        
-        let hasCorrectAnswer = false;
-        let hasEmptyAnswer = false;
-        
-        answers.forEach(answer => {
-          const radio = answer.querySelector('input[type="radio"]');
-          const text = answer.querySelector('input[type="text"]');
-          
-          if (!text || !text.value.trim()) {
-            hasEmptyAnswer = true;
-            return;
-          }
-          
-          if (radio && radio.checked) {
-            hasCorrectAnswer = true;
-          }
-        });
-        
-        if (hasEmptyAnswer) {
-          showAlert('danger', 'يجب ملء جميع الإجابات');
-          isValid = false;
-          return;
-        }
-        
-        if (!hasCorrectAnswer) {
-          showAlert('danger', 'يجب تحديد الإجابة الصحيحة لكل سؤال');
-          isValid = false;
-          return;
-        }
-      } 
-      else if (questionType === 'true_false') {
-        const trueRadio = question.querySelector('input[value="true"]');
-        const falseRadio = question.querySelector('input[value="false"]');
-        
-        if ((!trueRadio || !falseRadio) || (!trueRadio.checked && !falseRadio.checked)) {
-          showAlert('danger', 'يجب اختيار صح أو خطأ لكل سؤال');
-          isValid = false;
-          return;
-        }
-      } 
-      else if (questionType === 'short_answer') {
-        const answerContainer = question.querySelector('.short-answer-container');
-        const answer = answerContainer ? answerContainer.querySelector('input[type="text"]') : null;
-        
-        if (!answer || !answer.value || !answer.value.trim()) {
-          showAlert('danger', 'يجب إدخال الإجابة الصحيحة لكل سؤال من نوع إجابة قصيرة');
-          isValid = false;
-          return;
-        }
-      }
-    });
-  });
-  
-  return isValid;
-};
+  return !hasError && isValid;
+}
 
 // PDF functions
 function addPdf(moduleElement, moduleId) {
