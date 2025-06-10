@@ -230,22 +230,46 @@ def create_course(request):
                 
                 # Save module video with proper file handling
                 video_key = f'module_{module["id"]}_video'
+                video_title_key = f'video_title_{module["id"]}'
+                
                 if video_key in request.FILES:
                     video_file = request.FILES[video_key]
+                    video_title = request.POST.get(video_title_key, f"Video - {new_module.name}")
+                    
                     # Ensure the file is actually a video
-                    if video_file.content_type.startswith('video/'):
+                    if video_file.content_type.startswith('video/') or any(video_file.name.lower().endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.wmv', '.flv']):
+                        # Set the video on the module directly
                         new_module.video = video_file
                         new_module.save()
+                        
+                        # Store the video title in the module description or as metadata
+                        if not new_module.description:
+                            new_module.description = f"<p>Video Title: {video_title}</p>"
+                            new_module.save()
                     else:
                         raise ValueError(f'نوع ملف الفيديو غير صالح: {video_file.content_type}')
                 
-                # Process module PDFs with proper file handling
-                pdf_keys = [key for key in request.FILES.keys() if key.startswith(f'module_{module["id"]}_pdf_')]
-                for pdf_key in pdf_keys:
+                # Process module PDF with proper file handling
+                pdf_key = f'module_{module["id"]}_pdf'
+                
+                if pdf_key in request.FILES:
                     pdf_file = request.FILES[pdf_key]
+                    
+                    # Get the PDF title if available
+                    pdf_title_key = f'pdf_title_{module["id"]}'
+                    pdf_title = request.POST.get(pdf_title_key, f"PDF - {new_module.name}")
+                    
                     # Ensure the file is actually a PDF
-                    if pdf_file.content_type == 'application/pdf':
+                    if pdf_file.content_type == 'application/pdf' or pdf_file.name.lower().endswith('.pdf'):
+                        # Set the PDF directly on the module
                         new_module.pdf = pdf_file
+                        
+                        # Store the PDF title in the module description or as metadata
+                        if new_module.description:
+                            new_module.description += f"<p>PDF Title: {pdf_title}</p>"
+                        else:
+                            new_module.description = f"<p>PDF Title: {pdf_title}</p>"
+                        
                         new_module.save()
                     else:
                         raise ValueError('يجب أن يكون الملف المرفق من نوع PDF')
@@ -254,51 +278,95 @@ def create_course(request):
                 if module.get('has_quiz'):
                     quiz_data = module.get('quiz', {})
                     if not quiz_data:
-                        raise ValueError('Quiz data is missing')
-                        
+                        # If quiz data is missing but has_quiz is true, create an empty quiz structure
+                        quiz_data = {
+                            'title': f'اختبار {new_module.name}',
+                            'description': '',
+                            'time_limit': 30,
+                            'questions': []
+                        }
+                    
+                    # Create the quiz
                     quiz = Quiz.objects.create(
                         module=new_module,
-                        title=quiz_data.get('title', 'Module Quiz'),
+                        title=quiz_data.get('title', f'اختبار {new_module.name}'),
                         description=quiz_data.get('description', ''),
-                        time_limit=quiz_data.get('time_limit', 30)
+                        time_limit=quiz_data.get('time_limit', 30),
+                        pass_mark=quiz_data.get('pass_mark', 50)
                     )
                     
-                    # Process questions with validation
+                    # Process questions
                     questions = quiz_data.get('questions', [])
-                    if not questions:
-                        raise ValueError('Quiz must have at least one question')
-                        
-                    for q_data in questions:
-                        if not q_data.get('text'):
-                            raise ValueError('Question text is required')
-                            
-                        question = Question.objects.create(
-                            quiz=quiz,
-                            text=q_data.get('text'),
-                            question_type=q_data.get('type')
-                        )
-                        
-                        # Process answers with validation
-                        answers = q_data.get('answers', [])
-                        if not answers:
-                            raise ValueError('Question must have at least one answer')
-                            
-                        has_correct_answer = False
-                        for a_data in answers:
-                            if not a_data.get('text'):
-                                raise ValueError('Answer text is required')
+                    
+                    # Check if we have questions from the form
+                    question_texts = request.POST.getlist(f'module_{module["id"]}_question_text[]', [])
+                    question_types = request.POST.getlist(f'module_{module["id"]}_question_type[]', [])
+                    
+                    # If we have form data for questions, use that instead
+                    if question_texts:
+                        for i, q_text in enumerate(question_texts):
+                            if q_text.strip():
+                                q_type = question_types[i] if i < len(question_types) else 'mcq'
                                 
-                            answer = Answer.objects.create(
-                                question=question,
-                                text=a_data.get('text'),
-                                is_correct=a_data.get('is_correct', False)
-                            )
-                            
-                            if answer.is_correct:
-                                has_correct_answer = True
-                        
-                        if not has_correct_answer:
-                            raise ValueError('Question must have at least one correct answer')
+                                # Map frontend question types to backend types
+                                question_type_map = {
+                                    'mcq': 'multiple_choice',
+                                    'true_false': 'true_false',
+                                    'short_answer': 'short_answer'
+                                }
+                                
+                                # Create the question
+                                question = Question.objects.create(
+                                    quiz=quiz,
+                                    text=q_text,
+                                    question_type=question_type_map.get(q_type, 'multiple_choice')
+                                )
+                                
+                                # Get answers for this question
+                                answer_texts = request.POST.getlist(f'module_{module["id"]}_question_{i}_answer_text[]', [])
+                                correct_answers = request.POST.getlist(f'module_{module["id"]}_question_{i}_correct_answer[]', [])
+                                
+                                # Create answers
+                                for j, a_text in enumerate(answer_texts):
+                                    if a_text.strip():
+                                        is_correct = str(j) in correct_answers
+                                        
+                                        Answer.objects.create(
+                                            question=question,
+                                            text=a_text,
+                                            is_correct=is_correct
+                                        )
+                    else:
+                        # Use the JSON data if available
+                        for q_data in questions:
+                            if q_data.get('text'):
+                                question = Question.objects.create(
+                                    quiz=quiz,
+                                    text=q_data.get('text'),
+                                    question_type=q_data.get('question_type', 'multiple_choice')
+                                )
+                                
+                                # Process answers
+                                answers = q_data.get('answers', [])
+                                has_correct_answer = False
+                                
+                                for a_data in answers:
+                                    if a_data.get('text'):
+                                        answer = Answer.objects.create(
+                                            question=question,
+                                            text=a_data.get('text'),
+                                            is_correct=a_data.get('is_correct', False)
+                                        )
+                                        
+                                        if answer.is_correct:
+                                            has_correct_answer = True
+                                
+                                # If no correct answer was marked, mark the first one as correct
+                                if not has_correct_answer and answers:
+                                    first_answer = Answer.objects.filter(question=question).first()
+                                    if first_answer:
+                                        first_answer.is_correct = True
+                                        first_answer.save()
             
             return JsonResponse({
                 'success': True,

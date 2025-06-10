@@ -33,6 +33,42 @@ document.addEventListener('DOMContentLoaded', function() {
       submitCourse();
     });
   }
+  
+  // Set up file input change listeners for PDF files
+  document.body.addEventListener('change', function(e) {
+    // Handle PDF file input changes
+    if (e.target.matches('input[type="file"][accept=".pdf"]')) {
+      const pdfInput = e.target;
+      if (pdfInput.files.length > 0) {
+        const fileName = pdfInput.files[0].name;
+        
+        // Find the title input in the same card
+        const moduleCard = pdfInput.closest('.module-card');
+        if (moduleCard) {
+          const titleInput = moduleCard.querySelector('.pdf-title');
+          if (titleInput && !titleInput.value) {
+            // Auto-populate the title field with the filename (without extension)
+            titleInput.value = fileName.replace(/\.pdf$/i, '');
+          }
+          
+          // Show file name
+          const fileNameSpan = document.createElement('span');
+          fileNameSpan.className = 'selected-file-name mt-1 mb-2 text-primary';
+          fileNameSpan.style.display = 'block';
+          fileNameSpan.innerHTML = `<i class="fas fa-file-pdf me-1"></i>${fileName}`;
+          
+          // Remove any existing file name display
+          const existingFileName = pdfInput.nextElementSibling;
+          if (existingFileName && existingFileName.classList.contains('selected-file-name')) {
+            existingFileName.remove();
+          }
+          
+          // Add file name after input
+          pdfInput.insertAdjacentElement('afterend', fileNameSpan);
+        }
+      }
+    }
+  });
 });
 
 
@@ -332,10 +368,35 @@ function setupModuleEventListeners(moduleElement, moduleId) {
 
   console.log('Setting up module event listeners:', { moduleId });
 
-  // Add PDF button
-  const addPdfBtn = moduleElement.querySelector('.add-pdf-btn');
-  if (addPdfBtn) {
-    addPdfBtn.addEventListener('click', () => addPdf(moduleElement, moduleId));
+  // Set up PDF file input change event
+  const pdfInput = moduleElement.querySelector('input[type="file"][accept=".pdf"]');
+  if (pdfInput) {
+    pdfInput.addEventListener('change', function() {
+      if (this.files.length > 0) {
+        const fileName = this.files[0].name;
+        
+        // Auto-populate the title field
+        const titleInput = moduleElement.querySelector('.pdf-title');
+        if (titleInput && !titleInput.value) {
+          titleInput.value = fileName.replace(/\.pdf$/i, '');
+        }
+        
+        // Show file name
+        const fileNameSpan = document.createElement('span');
+        fileNameSpan.className = 'selected-file-name mt-1 mb-2 text-primary';
+        fileNameSpan.style.display = 'block';
+        fileNameSpan.innerHTML = `<i class="fas fa-file-pdf me-1"></i>${fileName}`;
+        
+        // Remove any existing file name display
+        const existingFileName = this.nextElementSibling;
+        if (existingFileName && existingFileName.classList.contains('selected-file-name')) {
+          existingFileName.remove();
+        }
+        
+        // Add file name after input
+        this.insertAdjacentElement('afterend', fileNameSpan);
+      }
+    });
   }
 
   // Add material button
@@ -698,16 +759,28 @@ async function submitCourse() {
       if (videoInput && videoInput.files.length > 0) {
         formData.append(`module_${moduleId}_video`, videoInput.files[0]);
         moduleData.video = videoInput.files[0].name;
+        
+        // Add video title
+        const videoTitleInput = moduleElement.querySelector('input[name^="video_title"]');
+        if (videoTitleInput && videoTitleInput.value) {
+          formData.append(`video_title_${moduleId}`, videoTitleInput.value);
+          moduleData.video_title = videoTitleInput.value;
+        }
       }
       
-      // Process PDF files
-      const pdfInputs = moduleElement.querySelectorAll('input[type="file"][accept=".pdf"]');
-      if (pdfInputs.length > 0) {
-        pdfInputs.forEach((pdfInput, pdfIndex) => {
-          if (pdfInput.files.length > 0) {
-            formData.append(`module_${moduleId}_pdf_${pdfIndex}`, pdfInput.files[0]);
-          }
-        });
+      // Process PDF file
+      const pdfInput = moduleElement.querySelector('input[type="file"][accept=".pdf"]');
+      if (pdfInput && pdfInput.files.length > 0) {
+        // Add the PDF file to form data
+        formData.append(`module_${moduleId}_pdf`, pdfInput.files[0]);
+        moduleData.pdf = pdfInput.files[0].name;
+        
+        // Add PDF title if available
+        const pdfTitleInput = moduleElement.querySelector('.pdf-title');
+        if (pdfTitleInput && pdfTitleInput.value) {
+          formData.append(`pdf_title_${moduleId}`, pdfTitleInput.value);
+          moduleData.pdf_title = pdfTitleInput.value;
+        }
       }
       
       // Process quiz if exists
@@ -716,27 +789,52 @@ async function submitCourse() {
         const questions = [];
         const questionElements = moduleElement.querySelectorAll('.question-card');
         
+        // Add quiz data to moduleData
+        moduleData.has_quiz = true;
+        
+        // Process each question
         questionElements.forEach((questionElement, qIndex) => {
-          const questionText = questionElement.querySelector('input[name^="question_text"]')?.value;
+          const questionText = questionElement.querySelector('.question-text')?.value;
+          const questionType = questionElement.querySelector('.question-type')?.value || 'mcq';
+          
           if (questionText) {
+            // Add question text to form data
+            formData.append(`module_${moduleId}_question_text[]`, questionText);
+            formData.append(`module_${moduleId}_question_type[]`, questionType);
+            
             const question = {
               text: questionText,
-              question_type: 'multiple_choice',
+              question_type: questionType,
               answers: []
             };
             
             // Process answers
             const answerElements = questionElement.querySelectorAll('.answer-item');
+            const correctAnswers = [];
+            
             answerElements.forEach((answerElement, aIndex) => {
               const answerText = answerElement.querySelector('input[name^="answer_text"]')?.value;
-              const isCorrect = answerElement.querySelector('input[type="checkbox"]')?.checked || false;
+              const isCorrect = answerElement.querySelector('input[type="radio"], input[type="checkbox"]')?.checked || false;
               
               if (answerText) {
+                // Add answer text to form data
+                formData.append(`module_${moduleId}_question_${qIndex}_answer_text[]`, answerText);
+                
+                // Track correct answers
+                if (isCorrect) {
+                  correctAnswers.push(aIndex.toString());
+                }
+                
                 question.answers.push({
                   text: answerText,
                   is_correct: isCorrect
                 });
               }
+            });
+            
+            // Add correct answers to form data
+            correctAnswers.forEach(index => {
+              formData.append(`module_${moduleId}_question_${qIndex}_correct_answer[]`, index);
             });
             
             if (question.answers.length > 0) {
@@ -745,15 +843,13 @@ async function submitCourse() {
           }
         });
         
-        if (questions.length > 0) {
-          moduleData.has_quiz = true;
-          moduleData.quiz = {
-            title: `اختبار ${moduleData.name}`,
-            questions: questions,
-            time_limit: 30,
-            pass_mark: 50
-          };
-        }
+        // Add quiz data to moduleData
+        moduleData.quiz = {
+          title: `اختبار ${moduleData.name}`,
+          questions: questions,
+          time_limit: 30,
+          pass_mark: 50
+        };
       }
       
       modules.push(moduleData);
@@ -894,6 +990,23 @@ function addPdf(moduleElement, moduleId) {
   fileInput.accept = '.pdf';
   fileInput.required = false;
   
+  // Create title input for the PDF
+  const titleInput = document.createElement('input');
+  titleInput.type = 'text';
+  titleInput.className = 'form-control pdf-title';
+  titleInput.name = `pdf_title_${moduleNumber}[]`;
+  titleInput.placeholder = 'عنوان الملف';
+  
+  const removeButton = document.createElement('button');
+  removeButton.type = 'button';
+  removeButton.className = 'btn btn-outline-danger remove-pdf-btn';
+  removeButton.innerHTML = '<i class="fas fa-times"></i>';
+  
+  inputGroup.appendChild(fileInput);
+  inputGroup.appendChild(titleInput);
+  inputGroup.appendChild(removeButton);
+  pdfContainer.appendChild(inputGroup);
+  
   // Add file change event listener to show file name
   fileInput.addEventListener('change', function() {
     if (this.files.length > 0) {
@@ -910,17 +1023,15 @@ function addPdf(moduleElement, moduleId) {
       
       // Add file name after input group
       inputGroup.insertAdjacentElement('afterend', fileNameSpan);
+      
+      // Auto-populate the title field if it's empty
+      if (!titleInput.value) {
+        // Remove file extension for the title
+        const fileName = this.files[0].name.replace(/\.pdf$/i, '');
+        titleInput.value = fileName;
+      }
     }
   });
-  
-  const removeButton = document.createElement('button');
-  removeButton.type = 'button';
-  removeButton.className = 'btn btn-outline-danger remove-pdf-btn';
-  removeButton.innerHTML = '<i class="fas fa-times"></i>';
-  
-  inputGroup.appendChild(fileInput);
-  inputGroup.appendChild(removeButton);
-  pdfContainer.appendChild(inputGroup);
   
   // Add event listener to the new remove button
   removeButton.addEventListener('click', () => {
