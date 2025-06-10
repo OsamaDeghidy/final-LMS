@@ -185,82 +185,121 @@ def create_course(request):
                         'success': False,
                         'message': 'لم يتم العثور على ملفك الشخصي. يرجى إكمال ملفك الشخصي أولاً.'
                     })
-            # Check if profile is a teacher
-            if request.user.profile.status != 'Teacher':
-                messages.error(request, _('You must be a teacher to create a course. Please apply as a teacher first.'))
+            # Check if user is admin or teacher
+            if request.user.profile.status not in ['Admin', 'Teacher']:
+                messages.error(request, _('You must be an admin or teacher to create a course.'))
                 return redirect('create_course')
+                
+            # For admin users, ensure they have a teacher profile
+            if request.user.profile.status == 'Admin' and not teacher:
+                from user.models import Teacher
+                teacher = Teacher.objects.create(
+                    profile=request.user.profile,
+                    bio='System Administrator',
+                    qualification='Administrator'
+                )
             
             # Create course
-            course = Course.objects.create(
-                name=name,
-                description=description,
-                small_description=small_description,
-                price=price,
-                category_id=category_id,
-                level=level,
-                teacher=teacher
-            )
+            course_data = {
+                'name': name,
+                'description': description,
+                'small_description': small_description,
+                'price': price,
+                'category_id': category_id,
+                'level': level,
+                'teacher': teacher,
+                'status': 'draft'  # Set initial status as draft
+            }
+            
+            # Handle course image if provided
+            if 'course_image' in request.FILES:
+                course_data['image'] = request.FILES['course_image']
+            
+            course = Course.objects.create(**course_data)
             
             # Process modules
-            module_count = int(request.POST.get('module_count', 0))
-            for i in range(1, module_count + 1):
-                module_title = request.POST.get(f'module_{i}_title')
-                module_description = request.POST.get(f'module_{i}_description')
-                
-                if not module_title or not module_description:
-                    continue
-                
-                # Get required files and content
-                video_file = request.FILES.get(f'module_{i}_video')
-                pdf_file = request.FILES.get(f'module_{i}_pdf')
-                note_text = request.POST.get(f'module_{i}_note')
-                question_text = request.POST.get(f'module_{i}_quiz_question')
-                
-                # Validate required content
-                if not video_file or not pdf_file or not note_text or not question_text:
-                    messages.error(request, _(f'Module {i} is missing required content (video, PDF, note, or quiz).'))
-                    continue
-                
-                # Create module
-                module = Module.objects.create(
-                    course=course,
-                    name=module_title,
-                    description=module_description,
-                    video=video_file,
-                    pdf=pdf_file,
-                    note=note_text
-                )
-                
-                # Create quiz
-                quiz = Quiz.objects.create(
-                    module=module,
-                    title=f"Quiz for {module_title}",
-                    description="Module quiz",
-                    passing_score=70
-                )
-                
-                # Create question
-                question = Question.objects.create(
-                    quiz=quiz,
-                    text=question_text
-                )
-                
-                # Process answers
-                answer_count = int(request.POST.get(f'module_{i}_quiz_answer_count', 0))
-                for a in range(1, answer_count + 1):
-                    answer_text = request.POST.get(f'module_{i}_quiz_answer_{a}_text')
-                    is_correct = request.POST.get(f'module_{i}_quiz_correct') == str(a)
-                    
-                    if answer_text:
-                        Answer.objects.create(
-                            question=question,
-                            text=answer_text,
-                            is_correct=is_correct
-                        )
-                
-                logger.info(f"Created module {module_title} with video, PDF, note, and quiz")
+            module_data = json.loads(request.POST.get('modules', '[]'))
             
-            messages.success(request, 'تم إنشاء الدورة بنجاح')
+            for module in module_data:
+                new_module = Module.objects.create(
+                    course=course,
+                    name=module.get('name'),
+                    description=module.get('description'),
+                    number=module.get('number')
+                )
+                
+                # Save module video with proper file handling
+                video_key = f'module_{module["id"]}_video'
+                if video_key in request.FILES:
+                    video_file = request.FILES[video_key]
+                    # Ensure the file is actually a video
+                    if video_file.content_type.startswith('video/'):
+                        new_module.video = video_file
+                        new_module.save()
+                    else:
+                        raise ValueError(f'نوع ملف الفيديو غير صالح: {video_file.content_type}')
+                
+                # Process module PDFs with proper file handling
+                pdf_keys = [key for key in request.FILES.keys() if key.startswith(f'module_{module["id"]}_pdf_')]
+                for pdf_key in pdf_keys:
+                    pdf_file = request.FILES[pdf_key]
+                    # Ensure the file is actually a PDF
+                    if pdf_file.content_type == 'application/pdf':
+                        new_module.pdf = pdf_file
+                        new_module.save()
+                    else:
+                        raise ValueError('يجب أن يكون الملف المرفق من نوع PDF')
+                
+                # Process quizzes with proper validation
+                if module.get('has_quiz'):
+                    quiz_data = module.get('quiz', {})
+                    if not quiz_data:
+                        raise ValueError('Quiz data is missing')
+                        
+                    quiz = Quiz.objects.create(
+                        module=new_module,
+                        title=quiz_data.get('title', 'Module Quiz'),
+                        description=quiz_data.get('description', ''),
+                        time_limit=quiz_data.get('time_limit', 30)
+                    )
+                    
+                    # Process questions with validation
+                    questions = quiz_data.get('questions', [])
+                    if not questions:
+                        raise ValueError('Quiz must have at least one question')
+                        
+                    for q_data in questions:
+                        if not q_data.get('text'):
+                            raise ValueError('Question text is required')
+                            
+                        question = Question.objects.create(
+                            quiz=quiz,
+                            text=q_data.get('text'),
+                            question_type=q_data.get('type')
+                        )
+                        
+                        # Process answers with validation
+                        answers = q_data.get('answers', [])
+                        if not answers:
+                            raise ValueError('Question must have at least one answer')
+                            
+                        has_correct_answer = False
+                        for a_data in answers:
+                            if not a_data.get('text'):
+                                raise ValueError('Answer text is required')
+                                
+                            answer = Answer.objects.create(
+                                question=question,
+                                text=a_data.get('text'),
+                                is_correct=a_data.get('is_correct', False)
+                            )
+                            
+                            if answer.is_correct:
+                                has_correct_answer = True
+                        
+                        if not has_correct_answer:
+                            raise ValueError('Question must have at least one correct answer')
+            
             return JsonResponse({
                 'success': True,
                 'message': 'تم إنشاء الدورة بنجاح',

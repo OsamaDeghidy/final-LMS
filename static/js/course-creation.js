@@ -231,10 +231,19 @@ function addModule() {
   const moduleElement = template.content.cloneNode(true).firstElementChild;
   moduleElement.id = moduleId;
 
-  // Update module title
+  // Set module title in the header
   const titleElement = moduleElement.querySelector('.card-header h5');
   if (titleElement) {
     titleElement.innerHTML = `<i class="fas fa-layer-group text-primary me-2"></i>الموديول ${moduleCount}`;
+  }
+  
+  // Set up module name input
+  const moduleNameInput = moduleElement.querySelector('input[name^="module_name"]');
+  if (moduleNameInput) {
+    moduleNameInput.required = true;
+    moduleNameInput.placeholder = `أدخل اسم الموديول ${moduleCount}`;
+  } else {
+    console.error('Module name input not found in template');
   }
 
   // Add module to container
@@ -640,205 +649,159 @@ function toggleQuiz(moduleElement, isChecked) {
   }
 }
 
-// Submit the course form
-function submitCourse() {
+async function submitCourse() {
+  // Get form and submit button
   const form = document.getElementById('course-form');
-  // If no action is set, use the current URL
-  if (!form.getAttribute('action')) {
-    form.setAttribute('action', window.location.pathname);
+  const submitBtn = document.getElementById('submit-course-btn');
+  
+  // Validate form
+  if (!validateForm()) {
+    return false;
   }
   
-  const formData = new FormData(form);
-  const submitBtn = document.getElementById('submit-course-btn');
+  // Disable submit button and show loading state
   const originalText = submitBtn.innerHTML;
   submitBtn.disabled = true;
-  let isValid = true;
-
-  // Clear previous error messages
-  const alertsContainer = document.getElementById('alerts-container');
-  alertsContainer.innerHTML = '';
-
-  // Validate form before submission
-  if (!validateCurrentStep()) {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = originalText;
-    return;
-  }
-
-  // Show loading state
-  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
-  
-  // Add CSRF token
-  const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> جاري الحفظ...';
   
   try {
-    // Add course image to form data if exists
-    const courseImageInput = document.querySelector('input[name="course_image"]');
-    if (courseImageInput && courseImageInput.files.length > 0) {
-      formData.append('course_image', courseImageInput.files[0]);
+    // Create FormData object
+    const formData = new FormData(form);
+    
+    // Add CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    formData.append('csrfmiddlewaretoken', csrfToken);
+    
+    // Process modules data
+    const modules = [];
+    const moduleElements = document.querySelectorAll('.module-card');
+    
+    if (moduleElements.length === 0) {
+      showAlert('danger', 'يجب إضافة موديول واحد على الأقل');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+      return false;
     }
-
-    // Add course description and other fields
-    formData.append('name', document.querySelector('input[name="name"]').value);
-    formData.append('description', document.querySelector('textarea[name="description"]').value);
-    formData.append('small_description', document.querySelector('input[name="small_description"]').value);
-    formData.append('price', document.querySelector('input[name="price"]').value);
-    formData.append('category', document.querySelector('select[name="category"]').value);
-    formData.append('level', document.querySelector('select[name="level"]').value);
-
-    // Process modules
-    const modules = document.querySelectorAll('.module-card:not([style*="display: none"])');
-    formData.append('module_count', modules.length);
-
-    modules.forEach((module, moduleIndex) => {
-      // Add module basic info
-      const titleInput = module.querySelector('input[name^="module_name"]');
-      const descriptionInput = module.querySelector('textarea[name^="module_description"]');
+    
+    // Process each module
+    moduleElements.forEach((moduleElement, index) => {
+      const moduleId = moduleElement.id.replace('module_', '');
+      const moduleData = {
+        id: moduleId,
+        name: moduleElement.querySelector('input[name^="module_name"]').value,
+        number: index + 1,
+        description: moduleElement.querySelector('textarea[name^="module_description"]')?.value || ''
+      };
       
-      formData.append(`module_${moduleIndex + 1}_title`, titleInput.value);
-      if (descriptionInput) {
-        formData.append(`module_${moduleIndex + 1}_description`, descriptionInput.value);
-      }
-
-      // Add video file and details
-      const videoInput = module.querySelector('input[name^="module_video"]');
-      const videoTitleInput = module.querySelector('input[name^="video_title"]');
-      const videoDescInput = module.querySelector('textarea[name^="video_description"]');
-
+      // Process video file
+      const videoInput = moduleElement.querySelector('input[type="file"][accept^="video/"]');
       if (videoInput && videoInput.files.length > 0) {
-        formData.append(`module_${moduleIndex + 1}_video`, videoInput.files[0]);
-        formData.append(`module_${moduleIndex + 1}_video_title`, videoTitleInput.value);
-        if (videoDescInput) {
-          formData.append(`module_${moduleIndex + 1}_video_description`, videoDescInput.value);
+        formData.append(`module_${moduleId}_video`, videoInput.files[0]);
+        moduleData.video = videoInput.files[0].name;
+      }
+      
+      // Process PDF files
+      const pdfInputs = moduleElement.querySelectorAll('input[type="file"][accept=".pdf"]');
+      if (pdfInputs.length > 0) {
+        pdfInputs.forEach((pdfInput, pdfIndex) => {
+          if (pdfInput.files.length > 0) {
+            formData.append(`module_${moduleId}_pdf_${pdfIndex}`, pdfInput.files[0]);
+          }
+        });
+      }
+      
+      // Process quiz if exists
+      const quizToggle = moduleElement.querySelector('.quiz-toggle');
+      if (quizToggle && quizToggle.checked) {
+        const questions = [];
+        const questionElements = moduleElement.querySelectorAll('.question-card');
+        
+        questionElements.forEach((questionElement, qIndex) => {
+          const questionText = questionElement.querySelector('input[name^="question_text"]')?.value;
+          if (questionText) {
+            const question = {
+              text: questionText,
+              question_type: 'multiple_choice',
+              answers: []
+            };
+            
+            // Process answers
+            const answerElements = questionElement.querySelectorAll('.answer-item');
+            answerElements.forEach((answerElement, aIndex) => {
+              const answerText = answerElement.querySelector('input[name^="answer_text"]')?.value;
+              const isCorrect = answerElement.querySelector('input[type="checkbox"]')?.checked || false;
+              
+              if (answerText) {
+                question.answers.push({
+                  text: answerText,
+                  is_correct: isCorrect
+                });
+              }
+            });
+            
+            if (question.answers.length > 0) {
+              questions.push(question);
+            }
+          }
+        });
+        
+        if (questions.length > 0) {
+          moduleData.has_quiz = true;
+          moduleData.quiz = {
+            title: `اختبار ${moduleData.name}`,
+            questions: questions,
+            time_limit: 30,
+            pass_mark: 50
+          };
         }
       }
-
-      // Add PDF file and description
-      const pdfInput = module.querySelector('input[name^="module_pdf"]');
-      const pdfDescInput = module.querySelector('input[name^="pdf_description"]');
-
-      if (pdfInput && pdfInput.files.length > 0) {
-        formData.append(`module_${moduleIndex + 1}_pdf`, pdfInput.files[0]);
-        if (pdfDescInput) {
-          formData.append(`module_${moduleIndex + 1}_pdf_description`, pdfDescInput.value);
-        }
-      }
-
-      // Add module notes
-      const noteInput = module.querySelector('textarea[name^="module_note"]');
-      if (noteInput && noteInput.value.trim()) {
-        formData.append(`module_${moduleIndex + 1}_note`, noteInput.value);
-      }
+      
+      modules.push(moduleData);
     });
-
+    
+    // Add modules data as JSON
+    formData.append('modules', JSON.stringify(modules));
+    
     // Log form data for debugging
-    console.log('Submitting form to:', form.action);
-    for (let pair of formData.entries()) {
-      console.log(pair[0] + ': ', pair[1]);
+    console.log('=== Form Data ===');
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`${key}:`, {
+          name: value.name,
+          type: value.type,
+          size: value.size
+        });
+      } else if (key === 'modules') {
+        console.log('modules:', JSON.parse(value));
+      } else {
+        console.log(`${key}:`, value);
+      }
     }
     
     // Submit the form
-    fetch(form.action, {
+    const response = await fetch(form.action, {
       method: 'POST',
       body: formData,
       headers: {
-        'X-CSRFToken': csrftoken
+        'X-Requested-With': 'XMLHttpRequest'
       },
-      credentials: 'same-origin'  // Ensure cookies are sent with the request
-    })
-    .then(async response => {
-      const text = await response.text();
-      console.log('Server response status:', response.status);
-      console.log('Response content:', text.substring(0, 500) + (text.length > 500 ? '...' : ''));
-      
-      // First try to parse as JSON
-      try {
-        const data = JSON.parse(text);
-        if (response.ok) {
-          return data;
-        }
-        throw new Error(data.message || 'حدث خطأ في الخادم');
-      } catch (e) {
-        // If not JSON, it's probably HTML
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'text/html');
-        
-        // Check for form validation errors
-        const errorElements = doc.querySelectorAll('.errorlist, .is-invalid');
-        if (errorElements.length > 0) {
-          const errorMessages = [];
-          errorElements.forEach(el => {
-            if (el.textContent.trim()) {
-              errorMessages.push(el.textContent.trim());
-            }
-          });
-          
-          const errorMessage = errorMessages.length > 0 
-            ? errorMessages.join('\n')
-            : 'الرجاء التحقق من صحة البيانات المدخلة';
-          
-          throw new Error(errorMessage);
-        }
-        
-        // Check for success message
-        const successMessage = doc.querySelector('.alert-success') || 
-                              doc.querySelector('[class*="success"]');
-        if (successMessage) {
-          return { success: true, message: successMessage.textContent.trim() };
-        }
-        
-        // Check for redirect
-        const redirectMeta = doc.querySelector('meta[http-equiv="refresh"]');
-        if (redirectMeta) {
-          const content = redirectMeta.getAttribute('content');
-          const urlMatch = content.match(/url=(.*)/i);
-          if (urlMatch && urlMatch[1]) {
-            return { redirect_url: urlMatch[1].trim() };
-          }
-        }
-        
-        // If we get here, it's an unexpected HTML response
-        console.log('Unexpected HTML response:', text.substring(0, 500) + '...');
-        throw new Error('تلقينا استجابة غير متوقعة من الخادم. الرجاء إعادة المحاولة.');
-      }
-    })
-    .then(data => {
-      if (data.redirect_url) {
-        window.location.href = data.redirect_url;
-      } else if (data.success || data.message) {
-        showAlert('success', data.message || 'تم حفظ الدورة بنجاح');
-        // Redirect to the courses list after a short delay
-        setTimeout(() => {
-          // Try to get the base URL from the form action or use the current path
-          const formAction = form.getAttribute('action') || '';
-          const baseUrl = formAction.split('/').slice(0, -1).join('/');
-          window.location.href = baseUrl || '/dashboard/';
-        }, 1500);
-      }
-    })
-    .catch(error => {
-      console.error('Submission error:', error);
-      let errorMessage = 'حدث خطأ أثناء حفظ الدورة. يرجى التحقق من البيانات والمحاولة مرة أخرى.';
-      
-      // More specific error messages
-      if (error.message.includes('Failed to fetch')) {
-        errorMessage = 'تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
-      } else if (error.message.includes('NetworkError')) {
-        errorMessage = 'خطأ في الشبكة. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      showAlert('danger', errorMessage);
-    })
-    .finally(() => {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalText;
+      credentials: 'same-origin'
     });
-
+    
+    const result = await response.json();
+    
+    if (response.ok && result.success) {
+      showAlert('success', 'تم حفظ الدورة بنجاح! سيتم مراجعتها من قبل الإدارة.');
+      setTimeout(() => {
+        window.location.href = result.redirect_url || '/my-courses/';
+      }, 2000);
+    } else {
+      throw new Error(result.message || 'حدث خطأ أثناء حفظ الدورة');
+    }
   } catch (error) {
     console.error('Error:', error);
-    showAlert('danger', 'حدث خطأ أثناء تجهيز البيانات. يرجى المحاولة مرة أخرى.');
+    showAlert('danger', error.message || 'حدث خطأ أثناء حفظ الدورة');
+  } finally {
     submitBtn.disabled = false;
     submitBtn.innerHTML = originalText;
   }
