@@ -91,7 +91,8 @@
                   <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
                   <h5 class="text-muted">انقر لتحميل صورة</h5>
                   <p class="small text-muted">الحجم الموصى به: 800x450 بكسل</p>
-                  <input type="file" class="d-none" id="image_course" name="image_course" accept="image/*">
+                  <input type="file" class="d-none" id="image_course" name="image_course" accept="image/jpeg,image/png,image/jpg,image/gif">
+                  <div id="image_preview" class="mt-2"></div>
                 </div>
               </div>
               
@@ -101,17 +102,19 @@
                   <label class="form-label fw-bold">ملف المنهج (PDF)</label>
                   <div class="input-group">
                     <span class="input-group-text bg-light"><i class="fas fa-file-pdf text-primary"></i></span>
-                    <input type="file" class="form-control" name="syllabus_pdf" accept="application/pdf">
+                    <input type="file" class="form-control" name="syllabus_pdf" accept="application/pdf" id="syllabus_pdf">
                   </div>
                   <div class="form-text">تحميل ملف المنهج التفصيلي للدورة (اختياري)</div>
+                  <div id="syllabus_pdf_preview" class="mt-2"></div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label fw-bold">مواد إضافية (PDF)</label>
                   <div class="input-group">
                     <span class="input-group-text bg-light"><i class="fas fa-file-pdf text-primary"></i></span>
-                    <input type="file" class="form-control" name="materials_pdf" accept="application/pdf">
+                    <input type="file" class="form-control" name="materials_pdf" accept="application/pdf" id="materials_pdf">
                   </div>
                   <div class="form-text">تحميل مواد إضافية للدورة (اختياري)</div>
+                  <div id="materials_pdf_preview" class="mt-2"></div>
                 </div>
               </div>
               

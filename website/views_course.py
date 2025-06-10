@@ -211,11 +211,22 @@ def create_course(request):
                 'status': 'draft'  # Set initial status as draft
             }
             
-            # Handle course image if provided
-            if 'course_image' in request.FILES:
-                course_data['image'] = request.FILES['course_image']
-            
+            # Create course first without the image to get an ID
             course = Course.objects.create(**course_data)
+            
+            # Handle course image
+            if 'image_course' in request.FILES:
+                course.image_course = request.FILES['image_course']
+                course.save()
+                
+            # Handle course PDFs
+            if 'syllabus_pdf' in request.FILES:
+                course.syllabus_pdf = request.FILES['syllabus_pdf']
+                course.save()
+                
+            if 'materials_pdf' in request.FILES:
+                course.materials_pdf = request.FILES['materials_pdf']
+                course.save()
             
             # Process modules
             module_data = json.loads(request.POST.get('modules', '[]'))
@@ -230,49 +241,76 @@ def create_course(request):
                 
                 # Save module video with proper file handling
                 video_key = f'module_{module["id"]}_video'
-                video_title_key = f'video_title_{module["id"]}'
+                video_title_key = f'module_{module["id"]}_video_title'
                 
+                # Check for video file in request.FILES
+                video_file = None
                 if video_key in request.FILES:
                     video_file = request.FILES[video_key]
+                
+                if video_file:
                     video_title = request.POST.get(video_title_key, f"Video - {new_module.name}")
                     
                     # Ensure the file is actually a video
-                    if video_file.content_type.startswith('video/') or any(video_file.name.lower().endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.wmv', '.flv']):
-                        # Set the video on the module directly
-                        new_module.video = video_file
-                        new_module.save()
-                        
-                        # Store the video title in the module description or as metadata
-                        if not new_module.description:
-                            new_module.description = f"<p>Video Title: {video_title}</p>"
+                    if video_file.content_type.startswith('video/') or any(video_file.name.lower().endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm']):
+                        try:
+                            # Set the video on the module
+                            new_module.video.save(video_file.name, video_file, save=True)
+                            
+                            # Store the video title in the module description or as metadata
+                            if not new_module.description:
+                                new_module.description = f"<p>عنوان الفيديو: {video_title}</p>"
+                            else:
+                                new_module.description = f"<p>عنوان الفيديو: {video_title}</p>" + new_module.description
+                                
                             new_module.save()
+                            logger.info(f"Successfully saved video for module {new_module.id}")
+                        except Exception as e:
+                            logger.error(f"Error saving video for module {new_module.id}: {str(e)}")
+                            messages.error(request, f'حدث خطأ أثناء حفظ ملف الفيديو: {str(e)}')
                     else:
-                        raise ValueError(f'نوع ملف الفيديو غير صالح: {video_file.content_type}')
+                        messages.error(request, f'نوع ملف الفيديو غير صالح: {video_file.content_type}. يجب أن يكون الملف من نوع فيديو (mp4, avi, mov, wmv, flv, mkv, webm)')
                 
                 # Process module PDF with proper file handling
                 pdf_key = f'module_{module["id"]}_pdf'
+                pdf_title_key = f'module_{module["id"]}_pdf_title'
                 
+                # Check for PDF file in request.FILES
+                pdf_file = None
                 if pdf_key in request.FILES:
                     pdf_file = request.FILES[pdf_key]
-                    
+                
+                if pdf_file:
                     # Get the PDF title if available
-                    pdf_title_key = f'pdf_title_{module["id"]}'
-                    pdf_title = request.POST.get(pdf_title_key, f"PDF - {new_module.name}")
+                    pdf_title = request.POST.get(pdf_title_key, f"ملف PDF - {new_module.name}")
                     
                     # Ensure the file is actually a PDF
                     if pdf_file.content_type == 'application/pdf' or pdf_file.name.lower().endswith('.pdf'):
-                        # Set the PDF directly on the module
-                        new_module.pdf = pdf_file
-                        
-                        # Store the PDF title in the module description or as metadata
-                        if new_module.description:
-                            new_module.description += f"<p>PDF Title: {pdf_title}</p>"
-                        else:
-                            new_module.description = f"<p>PDF Title: {pdf_title}</p>"
-                        
-                        new_module.save()
+                        try:
+                            # Set the PDF on the module
+                            new_module.pdf.save(pdf_file.name, pdf_file, save=True)
+                            
+                            # Store the PDF title in the module description or as metadata
+                            if not new_module.description:
+                                new_module.description = f"<p>عنوان الملف: {pdf_title}</p>"
+                            else:
+                                new_module.description = f"<p>عنوان الملف: {pdf_title}</p>" + new_module.description
+                                
+                            new_module.save()
+                            logger.info(f"Successfully saved PDF for module {new_module.id}")
+                        except Exception as e:
+                            logger.error(f"Error saving PDF for module {new_module.id}: {str(e)}")
+                            messages.error(request, f'حدث خطأ أثناء حفظ ملف PDF: {str(e)}')
                     else:
-                        raise ValueError('يجب أن يكون الملف المرفق من نوع PDF')
+                        messages.error(request, 'يجب أن يكون الملف المرفق من نوع PDF')
+                
+                # Handle module notes if provided
+                note_key = f'module_{module["id"]}_note'
+                if note_key in request.POST:
+                    note_content = request.POST[note_key]
+                    if note_content.strip():
+                        new_module.note = note_content
+                        new_module.save()
                 
                 # Process quizzes with proper validation
                 if module.get('has_quiz'):

@@ -4,6 +4,10 @@ let moduleCount = 0;
 let questionCounter = 0;
 const MAX_ANSWERS = 5;
 
+// File type validation
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
   // Add module button
@@ -17,6 +21,11 @@ document.addEventListener('DOMContentLoaded', function() {
   if (modulesContainer && modulesContainer.children.length === 0) {
     addModule();
   }
+  
+  // Setup file input change handlers
+  setupFileInput('image_course', 'image_preview', validateImageFile);
+  setupFileInput('syllabus_pdf', 'syllabus_pdf_preview', validatePdfFile);
+  setupFileInput('materials_pdf', 'materials_pdf_preview', validatePdfFile);
   
   // Handle form submission
   const form = document.getElementById('course-form');
@@ -72,6 +81,93 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
+
+// Setup file input with preview and validation
+function setupFileInput(inputId, previewId, validationFn) {
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  
+  if (!input || !preview) return;
+  
+  input.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Validate file
+    const validation = validationFn(file);
+    if (!validation.valid) {
+      showAlert('danger', validation.message);
+      input.value = '';
+      preview.innerHTML = '';
+      return;
+    }
+    
+    // Show preview
+    if (inputId === 'image_course') {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        preview.innerHTML = `
+          <div class="position-relative d-inline-block">
+            <img src="${e.target.result}" class="img-thumbnail" style="max-height: 150px;">
+            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" 
+                    onclick="document.getElementById('${inputId}').value=''; this.parentElement.remove()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        `;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      preview.innerHTML = `
+        <div class="alert alert-info p-2 d-flex justify-content-between align-items-center">
+          <span><i class="fas fa-file-pdf me-2"></i>${file.name}</span>
+          <button type="button" class="btn btn-sm btn-outline-danger" 
+                  onclick="document.getElementById('${inputId}').value=''; this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+    }
+  });
+}
+
+// Validate image file
+function validateImageFile(file) {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return {
+      valid: false,
+      message: 'نوع الملف غير مدعوم. يرجى تحميل صورة بصيغة JPG أو PNG أو GIF.'
+    };
+  }
+  
+  if (file.size > MAX_FILE_SIZE) {
+    return {
+      valid: false,
+      message: 'حجم الملف كبير جداً. الحد الأقصى المسموح به هو 10 ميجابايت.'
+    };
+  }
+  
+  return { valid: true };
+}
+
+// Validate PDF file
+function validatePdfFile(file) {
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    return {
+      valid: false,
+      message: 'يجب أن يكون الملف من نوع PDF.'
+    };
+  }
+  
+  if (file.size > MAX_FILE_SIZE) {
+    return {
+      valid: false,
+      message: 'حجم الملف كبير جداً. الحد الأقصى المسموح به هو 10 ميجابايت.'
+    };
+  }
+  
+  return { valid: true };
+}
 
 // Show alert message
 function showAlert(type, message) {
