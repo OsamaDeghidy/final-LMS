@@ -541,44 +541,61 @@ def update_course(request, course_id):
                     
                     updated_module_ids.add(int(module_id))
                     
-                    # Handle video update if provided
-                    video_key = f'module_{module_id}_video'
-                    if video_key in request.FILES:
-                        existing_module.video = request.FILES[video_key]
+                    # Handle video update if provided (accept both naming schemes)
+                    video_key_old = f'module_{module_id}_video'
+                    video_key_new = f'module_videos_existing_{module_id}'
+                    if video_key_old in request.FILES or video_key_new in request.FILES:
+                        video_file = request.FILES.get(video_key_old) or request.FILES.get(video_key_new)
+                        existing_module.video = video_file
                         existing_module.save()
                     
-                    # Handle PDF update if provided
-                    pdf_key = f'module_{module_id}_pdf'
-                    if pdf_key in request.FILES:
-                        existing_module.pdf = request.FILES[pdf_key]
+                    # Handle PDF update if provided (accept both naming schemes)
+                    pdf_key_old = f'module_{module_id}_pdf'
+                    pdf_key_new = f'module_pdf_existing_{module_id}'
+                    if pdf_key_old in request.FILES or pdf_key_new in request.FILES:
+                        pdf_file = request.FILES.get(pdf_key_old) or request.FILES.get(pdf_key_new)
+                        existing_module.pdf = pdf_file
                         existing_module.save()
                     
-                    # Handle quiz update
+                    # Handle quiz update with questions/answers from JSON
                     if module.get('has_quiz'):
-                        # Get or create quiz
-                        quiz, created = Quiz.objects.get_or_create(
+                        quiz_data = module.get('quiz', {})
+                        quiz, _ = Quiz.objects.get_or_create(
                             module=existing_module,
                             defaults={
-                                'title': f'اختبار {existing_module.name}',
-                                'description': '',
-                                'time_limit': 30,
-                                'pass_mark': 50
+                                'title': quiz_data.get('title', f'اختبار {existing_module.name}'),
+                                'description': quiz_data.get('description', ''),
+                                'time_limit': quiz_data.get('time_limit', 30),
+                                'pass_mark': quiz_data.get('pass_mark', 50)
                             }
                         )
-                        
-                        # Update quiz data
-                        quiz_title = request.POST.get(f'quiz_title_{module_id}', f'اختبار {existing_module.name}')
-                        quiz_description = request.POST.get(f'quiz_description_{module_id}', '')
-                        quiz_time_limit = request.POST.get(f'quiz_time_limit_{module_id}', 30)
-                        quiz_pass_mark = request.POST.get(f'quiz_pass_mark_{module_id}', 50)
-                        
-                        quiz.title = quiz_title
-                        quiz.description = quiz_description
-                        quiz.time_limit = quiz_time_limit
-                        quiz.pass_mark = quiz_pass_mark
+                        # Update quiz meta
+                        quiz.title = quiz_data.get('title', quiz.title)
+                        quiz.description = quiz_data.get('description', quiz.description)
+                        quiz.time_limit = quiz_data.get('time_limit', quiz.time_limit)
+                        quiz.pass_mark = quiz_data.get('pass_mark', quiz.pass_mark)
                         quiz.save()
+                        # Rebuild questions
+                        Question.objects.filter(quiz=quiz).delete()
+                        for q in quiz_data.get('questions', []):
+                            q_type_map = {
+                                'mcq': 'multiple_choice',
+                                'true_false': 'true_false',
+                                'short_answer': 'short_answer'
+                            }
+                            question_obj = Question.objects.create(
+                                quiz=quiz,
+                                text=q.get('text',''),
+                                question_type=q_type_map.get(q.get('type','mcq'),'multiple_choice'),
+                                points=q.get('points',1)
+                            )
+                            for ans in q.get('answers', []):
+                                Answer.objects.create(
+                                    question=question_obj,
+                                    text=ans.get('text',''),
+                                    is_correct=ans.get('is_correct', False)
+                                )
                     else:
-                        # Delete quiz if it exists but is no longer needed
                         Quiz.objects.filter(module=existing_module).delete()
                         
                 else:
