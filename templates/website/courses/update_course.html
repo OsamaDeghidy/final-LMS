@@ -473,7 +473,6 @@
 <script>
 // Global variables
 let moduleCounter = 0;
-let questionCounter = 0;
 
 // Initialize when document is ready
 document.addEventListener('DOMContentLoaded', function() {
@@ -1069,4 +1068,104 @@ function updateStepper() {
     });
 }
 </script>
+
+<!-- Module Template -->
+<template id="module-template">
+  <div class="card mb-4 module-card">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="fas fa-layer-group text-primary me-2"></i>موديول جديد</h5>
+      <button type="button" class="btn btn-sm btn-outline-danger remove-module-btn">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label">عنوان الموديول</label>
+        <input type="text" class="form-control" name="module_name" placeholder="أدخل عنوان الموديول" required>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">الفيديو</label>
+        <input type="file" class="form-control" name="module_video" accept="video/*" required>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">عنوان الفيديو</label>
+        <input type="text" class="form-control" name="video_title" placeholder="أدخل عنوان الفيديو" required>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">ملف PDF</label>
+        <input type="file" class="form-control" name="module_pdf" accept=".pdf" required>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">ملاحظات</label>
+        <textarea class="form-control" name="module_notes" rows="3" placeholder="أضف ملاحظات إضافية عن الموديول"></textarea>
+      </div>
+
+      <!-- Quiz Section -->
+      <div class="card mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>اختبار الموديول</h6>
+          <div class="form-check form-switch">
+            <input class="form-check-input quiz-toggle" type="checkbox" id="has_quiz" name="has_quiz">
+            <label class="form-check-label" for="has_quiz">إضافة اختبار</label>
+          </div>
+        </div>
+        <div class="card-body quiz-section" style="display: none;">
+          <div class="questions-container"></div>
+          <button type="button" class="btn btn-sm btn-outline-primary mt-3 add-question-btn">
+            <i class="fas fa-plus me-1"></i>إضافة سؤال
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Question Template -->
+<template id="question-template">
+  <div class="card mb-3 question-card">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0">سؤال جديد</h6>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-question-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="mb-3">
+        <input type="text" class="form-control" name="question_text" placeholder="نص السؤال" required>
+      </div>
+
+      <div class="mb-3">
+        <select class="form-select question-type-select">
+          <option value="multiple_choice">اختيار من متعدد</option>
+          <option value="true_false">صح أو خطأ</option>
+          <option value="short_answer">إجابة قصيرة</option>
+        </select>
+      </div>
+
+      <div class="answers-container">
+        <div class="answer-item mb-2">
+          <div class="input-group">
+            <div class="input-group-text">
+              <input class="form-check-input mt-0" type="radio" name="correct_answer" value="0" checked>
+            </div>
+            <input type="text" class="form-control" name="answer_text" placeholder="الإجابة 1" required>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-answer-btn">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-answer-btn">
+        <i class="fas fa-plus me-1"></i>إضافة إجابة
+      </button>
+    </div>
+  </div>
+</template>
+
 {% endblock dashboard_content %}

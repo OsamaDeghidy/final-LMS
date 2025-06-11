@@ -237,35 +237,54 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to initialize all delete handlers
     function initializeDeleteHandlers() {
-        // Handle PDF delete checkboxes
-        const deleteCheckboxes = document.querySelectorAll('.delete-checkbox');
-        deleteCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const parentElement = this.closest('.d-flex') || this.closest('.list-group-item');
+        // Handle PDF delete checkboxes using event delegation
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('delete-checkbox')) {
+                const checkbox = e.target;
+                const parentElement = checkbox.closest('.d-flex') || checkbox.closest('.list-group-item');
                 if (parentElement) {
-                    if (this.checked) {
-                        parentElement.classList.add('bg-danger', 'bg-opacity-10');
-                        // Ensure the checkbox value is set to 1 when checked
-                        this.value = '1';
-                    } else {
-                        parentElement.classList.remove('bg-danger', 'bg-opacity-10');
-                        // Reset the checkbox value to 0 when unchecked
-                        this.value = '0';
+                    const isChecked = checkbox.checked;
+                    parentElement.classList.toggle('bg-danger', isChecked);
+                    parentElement.classList.toggle('bg-opacity-10', isChecked);
+                    checkbox.value = isChecked ? '1' : '0';
+                    
+                    const deleteInput = document.getElementById(checkbox.getAttribute('data-delete-input'));
+                    if (deleteInput) {
+                        deleteInput.value = isChecked ? '1' : '0';
                     }
                 }
-            });
+            }
         });
 
-        // Handle module delete buttons
-        const removeModuleBtns = document.querySelectorAll('.remove-module-btn');
-        removeModuleBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const moduleId = this.getAttribute('data-module-id');
+        // Handle file input changes using event delegation
+        document.addEventListener('change', function(e) {
+            if (e.target.type === 'file' && e.target.files.length > 0) {
+                const input = e.target;
+                // Clear any deletion flags when new file is selected
+                const deleteInput = document.getElementById(input.getAttribute('data-delete-input'));
+                if (deleteInput) {
+                    deleteInput.value = '0';
+                }
+                // Show file name
+                const fileNameDisplay = input.nextElementSibling;
+                if (fileNameDisplay) {
+                    fileNameDisplay.textContent = input.files[0].name;
+                }
+            }
+        });
+
+
+        // Handle module delete and restore buttons using event delegation
+        document.addEventListener('click', function(e) {
+            // Handle delete button clicks
+            if (e.target.closest('.remove-module-btn')) {
+                const btn = e.target.closest('.remove-module-btn');
+                const moduleId = btn.getAttribute('data-module-id');
                 if (moduleId) {
                     const deleteInput = document.getElementById('delete_module_' + moduleId);
                     if (deleteInput) {
                         deleteInput.value = '1';
-                        const moduleCard = this.closest('.module-card');
+                        const moduleCard = btn.closest('.module-card');
                         if (moduleCard) {
                             moduleCard.classList.add('bg-danger', 'bg-opacity-10');
                             moduleCard.style.opacity = '0.7';
@@ -277,181 +296,289 @@ document.addEventListener('DOMContentLoaded', function() {
                             restoreBtn.innerHTML = '<i class="fas fa-undo"></i>';
                             restoreBtn.setAttribute('data-module-id', moduleId);
                             
-                            this.parentNode.insertBefore(restoreBtn, this.nextSibling);
-                            this.style.display = 'none';
-                            
-                            // Add restore functionality
-                            restoreBtn.addEventListener('click', function() {
-                                deleteInput.value = '0';
-                                moduleCard.classList.remove('bg-danger', 'bg-opacity-10');
-                                moduleCard.style.opacity = '1';
-                                this.previousSibling.style.display = 'inline-block';
-                                this.remove();
-                            });
+                            btn.parentNode.insertBefore(restoreBtn, btn.nextSibling);
+                            btn.style.display = 'none';
                         }
                     }
                 }
-            });
+            }
+            // Handle restore button clicks
+            else if (e.target.closest('.restore-module-btn')) {
+                const restoreBtn = e.target.closest('.restore-module-btn');
+                const moduleId = restoreBtn.getAttribute('data-module-id');
+                if (moduleId) {
+                    const deleteInput = document.getElementById('delete_module_' + moduleId);
+                    const moduleCard = restoreBtn.closest('.module-card');
+                    if (deleteInput && moduleCard) {
+                        deleteInput.value = '0';
+                        moduleCard.classList.remove('bg-danger', 'bg-opacity-10');
+                        moduleCard.style.opacity = '1';
+                        restoreBtn.previousSibling.style.display = 'inline-block';
+                        restoreBtn.remove();
+                    }
+                }
+            }
         });
 
-        // Handle question delete buttons
-        const removeQuestionBtns = document.querySelectorAll('.remove-question-btn');
-        removeQuestionBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const questionId = this.getAttribute('data-question-id');
-                if (questionId) {
+        // Handle question delete and restore buttons using event delegation
+        document.addEventListener('click', function(e) {
+            // Handle delete button clicks
+            if (e.target.closest('.remove-question-btn')) {
+                const btn = e.target.closest('.remove-question-btn');
+                const questionId = btn.getAttribute('data-question-id');
+                const questionCard = btn.closest('.question-card');
+                
+                if (questionId && questionCard) {
+                    // For existing questions, mark for deletion
                     const deleteInput = document.getElementById('delete_question_' + questionId);
                     if (deleteInput) {
                         deleteInput.value = '1';
-                        const questionCard = this.closest('.question-card');
-                        if (questionCard) {
-                            questionCard.classList.add('bg-danger', 'bg-opacity-10');
-                            questionCard.style.opacity = '0.7';
-                            
-                            // Add a restore button
-                            const restoreBtn = document.createElement('button');
-                            restoreBtn.type = 'button';
-                            restoreBtn.className = 'btn btn-sm btn-success restore-question-btn ms-2';
-                            restoreBtn.innerHTML = '<i class="fas fa-undo"></i>';
-                            restoreBtn.setAttribute('data-question-id', questionId);
-                            
-                            this.parentNode.insertBefore(restoreBtn, this.nextSibling);
-                            this.style.display = 'none';
-                            
-                            // Add restore functionality
-                            restoreBtn.addEventListener('click', function() {
-                                deleteInput.value = '0';
-                                questionCard.classList.remove('bg-danger', 'bg-opacity-10');
-                                questionCard.style.opacity = '1';
-                                this.previousSibling.style.display = 'inline-block';
-                                this.remove();
-                            });
-                        }
+                        questionCard.classList.add('bg-danger', 'bg-opacity-10');
+                        questionCard.style.opacity = '0.7';
+                        
+                        // Add a restore button
+                        const restoreBtn = document.createElement('button');
+                        restoreBtn.type = 'button';
+                        restoreBtn.className = 'btn btn-sm btn-success restore-question-btn ms-2';
+                        restoreBtn.innerHTML = '<i class="fas fa-undo"></i>';
+                        restoreBtn.setAttribute('data-question-id', questionId);
+                        
+                        btn.parentNode.insertBefore(restoreBtn, btn.nextSibling);
+                        btn.style.display = 'none';
+                    }
+                } else {
+                    // For new questions, just remove the card
+                    questionCard?.remove();
+                }
+            }
+            // Handle restore button clicks
+            else if (e.target.closest('.restore-question-btn')) {
+                const restoreBtn = e.target.closest('.restore-question-btn');
+                const questionId = restoreBtn.getAttribute('data-question-id');
+                if (questionId) {
+                    const deleteInput = document.getElementById('delete_question_' + questionId);
+                    const questionCard = restoreBtn.closest('.question-card');
+                    if (deleteInput && questionCard) {
+                        deleteInput.value = '0';
+                        questionCard.classList.remove('bg-danger', 'bg-opacity-10');
+                        questionCard.style.opacity = '1';
+                        restoreBtn.previousSibling.style.display = 'inline-block';
+                        restoreBtn.remove();
                     }
                 }
-            });
+            }
         });
 
-        // Handle answer delete buttons
-        const removeAnswerBtns = document.querySelectorAll('.remove-answer-btn');
-        removeAnswerBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const answerId = this.getAttribute('data-answer-id');
-                if (answerId) {
-                    // If there's a hidden input for deletion, use it
-                    const deleteInput = document.getElementById('delete_answer_' + answerId);
-                    if (deleteInput) {
-                        deleteInput.value = '1';
-                        const answerItem = this.closest('.answer-item');
-                        if (answerItem) {
+        // Handle question type changes using event delegation
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('question-type-select')) {
+                const select = e.target;
+                const answersContainer = select.closest('.question-card').querySelector('.answers-container');
+                const questionId = select.closest('.question-card').getAttribute('data-question-id');
+                
+                if (answersContainer) {
+                    if (select.value === 'true_false') {
+                        // For true/false questions, show only two fixed options
+                        answersContainer.innerHTML = `
+                            <div class="answer-item mb-2">
+                                <div class="input-group">
+                                    <div class="input-group-text">
+                                        <input type="radio" name="correct_answer_${questionId}" value="0" required>
+                                    </div>
+                                    <input type="text" class="form-control" name="answer_text_${questionId}[]" value="صح" readonly>
+                                </div>
+                            </div>
+                            <div class="answer-item mb-2">
+                                <div class="input-group">
+                                    <div class="input-group-text">
+                                        <input type="radio" name="correct_answer_${questionId}" value="1" required>
+                                    </div>
+                                    <input type="text" class="form-control" name="answer_text_${questionId}[]" value="خطأ" readonly>
+                                </div>
+                            </div>
+                        `;
+                    } else if (select.value === 'short_answer') {
+                        // For short answer questions, show a single text input for the correct answer
+                        answersContainer.innerHTML = `
+                            <div class="answer-item mb-2">
+                                <div class="input-group">
+                                    <span class="input-group-text">الإجابة الصحيحة</span>
+                                    <input type="text" class="form-control" name="answer_text_${questionId}[]" required>
+                                    <input type="hidden" name="correct_answer_${questionId}" value="0">
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // For multiple choice questions, allow adding multiple answers
+                        answersContainer.innerHTML = `
+                            <div class="answer-item mb-2">
+                                <div class="input-group">
+                                    <div class="input-group-text">
+                                        <input type="radio" name="correct_answer_${questionId}" value="0" required>
+                                    </div>
+                                    <input type="text" class="form-control" name="answer_text_${questionId}[]" placeholder="أدخل الإجابة" required>
+                                    <button type="button" class="btn btn-outline-danger remove-answer-btn">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm add-answer-btn mt-2">
+                                <i class="fas fa-plus me-1"></i>إضافة إجابة
+                            </button>
+                        `;
+                        
+                        // Reinitialize add/remove answer handlers
+                        initializeAnswerHandlers(answersContainer);
+                    }
+                }
+            }
+        });
+
+        // Initialize answer handlers for existing multiple choice questions
+        document.querySelectorAll('.answers-container').forEach(container => {
+            if (container.closest('.question-card').querySelector('.question-type-select').value === 'multiple_choice') {
+                initializeAnswerHandlers(container);
+            }
+        });
+
+
+        // Function to initialize answer handlers using event delegation
+        function initializeAnswerHandlers(container) {
+            // Handle add answer button clicks
+            container.addEventListener('click', function(e) {
+                const addAnswerBtn = e.target.closest('.add-answer-btn');
+                if (addAnswerBtn) {
+                    const questionId = addAnswerBtn.closest('.question-card').getAttribute('data-question-id');
+                    const answersCount = container.querySelectorAll('.answer-item').length;
+                    
+                    const newAnswerHtml = `
+                        <div class="answer-item mb-2">
+                            <div class="input-group">
+                                <div class="input-group-text">
+                                    <input type="radio" name="correct_answer_${questionId}" value="${answersCount}" required>
+                                </div>
+                                <input type="text" class="form-control" name="answer_text_${questionId}[]" placeholder="أدخل الإجابة" required>
+                                <button type="button" class="btn btn-outline-danger remove-answer-btn">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    addAnswerBtn.insertAdjacentHTML('beforebegin', newAnswerHtml);
+                }
+
+                // Handle remove answer button clicks
+                const removeAnswerBtn = e.target.closest('.remove-answer-btn');
+                if (removeAnswerBtn) {
+                    const answerId = removeAnswerBtn.getAttribute('data-answer-id');
+                    const answerItem = removeAnswerBtn.closest('.answer-item');
+                    
+                    if (answerId && answerItem) {
+                        // For existing answers, mark for deletion
+                        const deleteInput = document.getElementById('delete_answer_' + answerId);
+                        if (deleteInput) {
+                            deleteInput.value = '1';
                             answerItem.classList.add('bg-danger', 'bg-opacity-10');
                             answerItem.style.opacity = '0.7';
                             
-                            // Add a restore button
+                            // Add restore button
                             const restoreBtn = document.createElement('button');
                             restoreBtn.type = 'button';
                             restoreBtn.className = 'btn btn-outline-success restore-answer-btn';
                             restoreBtn.innerHTML = '<i class="fas fa-undo"></i>';
                             restoreBtn.setAttribute('data-answer-id', answerId);
                             
-                            this.parentNode.insertBefore(restoreBtn, this.nextSibling);
-                            this.style.display = 'none';
-                            
-                            // Add restore functionality
-                            restoreBtn.addEventListener('click', function() {
-                                deleteInput.value = '0';
-                                answerItem.classList.remove('bg-danger', 'bg-opacity-10');
-                                answerItem.style.opacity = '1';
-                                this.previousSibling.style.display = 'inline-block';
-                                this.remove();
+                            removeAnswerBtn.parentNode.insertBefore(restoreBtn, removeAnswerBtn.nextSibling);
+                            removeAnswerBtn.style.display = 'none';
+                        }
+                    } else if (answerItem) {
+                        // For new answers, remove the element and update remaining answer indices
+                        answerItem.remove();
+                        
+                        const questionCard = removeAnswerBtn.closest('.question-card');
+                        if (questionCard) {
+                            const questionId = questionCard.getAttribute('data-question-id');
+                            questionCard.querySelectorAll('.answer-item').forEach((answer, index) => {
+                                const radio = answer.querySelector(`input[name="correct_answer_${questionId}"]`);
+                                if (radio) radio.value = index;
                             });
                         }
-                    } else {
-                        // If no hidden input exists, just remove the answer (for newly added answers)
-                        const answerItem = this.closest('.answer-item');
-                        if (answerItem) {
-                            answerItem.remove();
+                    }
+                }
+
+                // Handle restore answer button clicks
+                const restoreAnswerBtn = e.target.closest('.restore-answer-btn');
+                if (restoreAnswerBtn) {
+                    const answerId = restoreAnswerBtn.getAttribute('data-answer-id');
+                    const answerItem = restoreAnswerBtn.closest('.answer-item');
+                    if (answerId && answerItem) {
+                        const deleteInput = document.getElementById('delete_answer_' + answerId);
+                        if (deleteInput) {
+                            deleteInput.value = '0';
+                            answerItem.classList.remove('bg-danger', 'bg-opacity-10');
+                            answerItem.style.opacity = '1';
+                            restoreAnswerBtn.previousSibling.style.display = 'inline-block';
+                            restoreAnswerBtn.remove();
                         }
                     }
-                } else {
-                    // For newly added answers without IDs
-                    const answerItem = this.closest('.answer-item') || this.closest('.input-group');
-                    if (answerItem) {
-                        answerItem.remove();
-                    }
                 }
             });
+        }
+        
+        // Initialize answer handlers for all answer containers
+        document.querySelectorAll('.answers-container').forEach(container => {
+            initializeAnswerHandlers(container);
         });
 
-        // Handle video name remove buttons
-        document.querySelectorAll('.remove-video-name-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const videoNameItem = this.closest('.input-group');
-                if (videoNameItem) {
-                    videoNameItem.remove();
-                }
-            });
-        });
-
-        // Handle note remove buttons
-        document.querySelectorAll('.remove-note-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const noteItem = this.closest('.input-group');
-                if (noteItem) {
-                    noteItem.remove();
-                }
-            });
+        // Handle video name and note remove buttons using event delegation
+        document.addEventListener('click', function(e) {
+            // Handle video name remove button clicks
+            if (e.target.closest('.remove-video-name-btn')) {
+                const btn = e.target.closest('.remove-video-name-btn');
+                const videoNameItem = btn.closest('.input-group');
+                videoNameItem?.remove();
+            }
+            // Handle note remove button clicks
+            else if (e.target.closest('.remove-note-btn')) {
+                const btn = e.target.closest('.remove-note-btn');
+                const noteItem = btn.closest('.input-group');
+                noteItem?.remove();
+            }
         });
     }
 
     // Function to initialize quiz toggles
     function initializeQuizToggles() {
-        // Use event delegation for quiz toggles to handle both existing and dynamically added ones
-        document.addEventListener('change', function(e) {
-            if (e.target.classList.contains('quiz-toggle')) {
-                const toggle = e.target;
-                const toggleId = toggle.id;
-                let quizSectionId;
-                
-                // Handle both existing and new modules
-                if (toggleId.includes('has_quiz_existing_')) {
-                    const moduleId = toggleId.replace('has_quiz_existing_', '');
-                    quizSectionId = 'quiz_section_existing_' + moduleId;
-                } else if (toggleId.includes('has_quiz_new_')) {
-                    const moduleId = toggleId.replace('has_quiz_new_', '');
-                    quizSectionId = 'quiz_section_new_' + moduleId;
-                }
-                
+        function getQuizSectionId(toggleId) {
+            if (toggleId.includes('has_quiz_existing_')) {
+                return 'quiz_section_existing_' + toggleId.replace('has_quiz_existing_', '');
+            } else if (toggleId.includes('has_quiz_new_')) {
+                return 'quiz_section_new_' + toggleId.replace('has_quiz_new_', '');
+            }
+            return null;
+        }
+
+        function toggleQuizSection(toggle) {
+            const quizSectionId = getQuizSectionId(toggle.id);
+            if (quizSectionId) {
                 const quizSection = document.getElementById(quizSectionId);
                 if (quizSection) {
                     quizSection.style.display = toggle.checked ? 'block' : 'none';
-                    console.log(`Quiz section ${quizSectionId} display set to ${toggle.checked ? 'block' : 'none'}`);
                 }
+            }
+        }
+
+        // Handle quiz toggle changes using event delegation
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('quiz-toggle')) {
+                toggleQuizSection(e.target);
             }
         });
         
-        // Set initial state for all quiz toggles on page load
-        const quizToggles = document.querySelectorAll('.quiz-toggle');
-        quizToggles.forEach(toggle => {
-            const toggleId = toggle.id;
-            let quizSectionId;
-            
-            // Handle both existing and new modules
-            if (toggleId.includes('has_quiz_existing_')) {
-                const moduleId = toggleId.replace('has_quiz_existing_', '');
-                quizSectionId = 'quiz_section_existing_' + moduleId;
-            } else if (toggleId.includes('has_quiz_new_')) {
-                const moduleId = toggleId.replace('has_quiz_new_', '');
-                quizSectionId = 'quiz_section_new_' + moduleId;
-            }
-            
-            const quizSection = document.getElementById(quizSectionId);
-            if (quizSection) {
-                // Set initial state
-                quizSection.style.display = toggle.checked ? 'block' : 'none';
-                console.log(`Initial quiz section ${quizSectionId} display set to ${toggle.checked ? 'block' : 'none'}`);
-        }
-    });
+        // Set initial state for all quiz toggles
+        document.querySelectorAll('.quiz-toggle').forEach(toggleQuizSection);
+    }
 
     // For add note buttons
     document.addEventListener('click', function(e) {
@@ -997,6 +1124,59 @@ function submitCourse() {
             number: index + 1,
             has_quiz: quizToggle ? quizToggle.checked : false
         };
+
+        // Add quiz data if the module has a quiz
+        if (moduleData.has_quiz) {
+            const quizSection = moduleCard.querySelector('.quiz-section');
+            if (quizSection) {
+                const quizData = {
+                    title: quizSection.querySelector(`[name^="quiz_title_"]`).value,
+                    description: quizSection.querySelector(`[name^="quiz_description_"]`).value,
+                    pass_mark: quizSection.querySelector(`[name^="quiz_pass_mark_"]`).value,
+                    time_limit: quizSection.querySelector(`[name^="quiz_time_limit_"]`).value,
+                    questions: []
+                };
+
+                // Collect questions data
+                quizSection.querySelectorAll('.question-card').forEach((questionCard) => {
+                    const questionId = questionCard.getAttribute('data-question-id');
+                    const questionText = questionCard.querySelector('input[name^="question_text"]').value;
+                    const questionType = questionCard.querySelector('select[name^="question_type"]').value;
+                    
+                    const questionData = {
+                        id: questionId,
+                        text: questionText,
+                        type: questionType,
+                        answers: []
+                    };
+
+                    // Get answers based on question type
+                    if (questionType === 'true_false') {
+                        const correctAnswer = questionCard.querySelector('input[name^="correct_answer"]:checked').value;
+                        questionData.answers.push(
+                            { text: 'صح', is_correct: correctAnswer === '0' },
+                            { text: 'خطأ', is_correct: correctAnswer === '1' }
+                        );
+                    } else if (questionType === 'short_answer') {
+                        const answerText = questionCard.querySelector('input[name^="answer_text"]').value;
+                        questionData.answers.push({ text: answerText, is_correct: true });
+                    } else {
+                        const correctAnswer = questionCard.querySelector('input[name^="correct_answer"]:checked').value;
+                        questionCard.querySelectorAll('.answer-item').forEach((answerItem, index) => {
+                            const answerText = answerItem.querySelector('input[name^="answer_text"]').value;
+                            questionData.answers.push({
+                                text: answerText,
+                                is_correct: index.toString() === correctAnswer
+                            });
+                        });
+                    }
+
+                    quizData.questions.push(questionData);
+                });
+
+                moduleData.quiz = quizData;
+            }
+        }
         
         modules.push(moduleData);
     });
