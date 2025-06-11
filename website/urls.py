@@ -50,20 +50,7 @@ urlpatterns = [
     path('api/<str:content_type>/<int:content_id>/mark-completed/', views.mark_content_viewed, name='mark_content_completed'),
     path('api/assignment/<int:assignment_id>/mark-completed/', views.mark_assignment_completed, name='mark_assignment_completed'),
 
-    path('enroll/<int:course_id>/', views.enroll_course, name='enroll_course'),
-    path('analytics/', views.analytics, name='analytic'),
-    path('submit-quiz/', views.submit_quiz, name='submit_quiz'),
-    path('delete-pdf/<int:course_id>/<str:pdf_type>/', views.delete_pdf, name='delete_pdf'),
-    path('delete-module-pdf/<int:module_id>/<str:pdf_type>/', views.delete_module_pdf, name='delete_module_pdf'),
-    path('course-category/<str:category_slug>/', views.course_category, name='course_category'),
-    path('course/<int:course_id>/add-comment/', views.add_comment, name='add_comment'),
-    #path('create_course', views.create_course, name='create_course'),  # Add this line
-    
-    # Cart URLs
-    path('cart/add/<int:course_id>/', views.add_to_cart, name='add_to_cart'),
-    path('cart/', views.view_cart, name='view_cart'),
-    path('cart/remove/<int:course_id>/', views.remove_from_cart, name='remove_from_cart'),
-    # Checkout and API endpoints are now in urls_course.py
+
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
