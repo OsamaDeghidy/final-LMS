@@ -674,13 +674,34 @@ def update_course(request, course_id):
     # GET request - display the update form
     categories = Category.objects.all()
     
+    # Get user profile and teacher data
+    profile = None
+    teacher = None
+    
+    if request.user.is_authenticated:
+        try:
+            # Get the user's profile
+            profile = request.user.profile
+            
+            # If user is a teacher, get the teacher object
+            if hasattr(profile, 'teacher'):
+                teacher = profile.teacher
+            # If user is a student, get the student object
+            elif hasattr(profile, 'student'):
+                profile = profile.student
+                
+        except Exception as e:
+            print(f"Error getting user profile: {e}")
     # Prepare tags string
     tags_string = ', '.join([tag.name for tag in course.tags.all()])
     
     context = {
         'course': course,
         'categories': categories,
-        'tags_string': tags_string
+        'tags_string': tags_string,
+        'profile': profile,
+        'teacher': teacher,
+       'student': profile if hasattr(profile,'student') else None
     }
     return render(request, 'website/courses/update_course.html', context)
 
