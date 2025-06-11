@@ -202,8 +202,8 @@ function showAlert(type, message) {
   }, 5000);
 }
 
-// Navigation functions
-function goToNextStep() {
+// Move navigation functions to global scope
+window.goToNextStep = function() {
   if (!validateCurrentStep()) {
     return false;
   }
@@ -228,18 +228,18 @@ function goToNextStep() {
   }
   
   return true;
-}
+};
 
-function nextStep() {
+window.nextStep = function() {
   // Validate current step before proceeding
   if (validateCurrentStep()) {
     // If moving to the review step (step 3), update the summary
     if (currentStep === 1) {
       updateCourseSummary();
     }
-    goToNextStep();
+    window.goToNextStep();
   }
-}
+};
 
 // Function to update the course summary in the review step
 function updateCourseSummary() {
@@ -599,43 +599,60 @@ function toggleQuiz(moduleElement, isChecked) {
     }
   } else {
     console.log('Hiding quiz section');
+  };
+  
+  // Remove the duplicate toggleQuiz function that appears later in the file
+  window.toggleQuiz = function(moduleElement, isChecked) {
+    console.log('Toggling quiz (global):', { moduleId: moduleElement.id, isChecked });
+    
+    const quizSection = moduleElement.querySelector('.quiz-section');
+    if (quizSection) {
+      quizSection.style.display = isChecked ? 'block' : 'none';
+      
+      if (isChecked) {
+        const questionsContainer = quizSection.querySelector('.questions-container');
+        if (questionsContainer && questionsContainer.querySelectorAll('.question-card').length === 0) {
+          addQuestion(moduleElement, moduleElement.id);
+        }
+      }
+    }
   }
 }
 
 // Question and Answer functions
-function addQuestion(moduleElement, moduleId) {
+window.addQuestion = function(moduleElement, moduleId) {
+  const questionId = `q_${Date.now()}`; // Generate unique question ID
   const questionCard = document.createElement('div');
   questionCard.className = 'card mb-3 question-card';
+  questionCard.dataset.questionId = questionId;
+  
   questionCard.innerHTML = `
     <div class="card-body">
       <div class="d-flex justify-content-between mb-3">
         <h6 class="card-title">السؤال <span class="question-number"></span></h6>
-        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeQuestion(this.closest('.question-card'))">
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="window.removeQuestion(this.closest('.question-card'))">
           <i class="fas fa-trash"></i> حذف السؤال
         </button>
       </div>
       <div class="mb-3">
         <label class="form-label">نوع السؤال</label>
-        <select class="form-select question-type" onchange="updateQuestionType(this)">
+        <select class="form-select question-type" onchange="window.updateQuestionType(this)">
           <option value="mcq">اختيار من متعدد</option>
           <option value="true_false">صح أو خطأ</option>
-          <option value="essay">مقالي</option>
+          <option value="short_answer">مقالي</option>
         </select>
       </div>
       <div class="mb-3">
         <label class="form-label">نص السؤال</label>
-        <input type="text" class="form-control question-text" required>
+        <input type="text" class="form-control question-text" name="question_${questionId}_text" required>
       </div>
       <div class="mb-3">
         <label class="form-label">درجة السؤال</label>
-        <input type="number" class="form-control question-points" min="1" value="1" required>
+        <input type="number" class="form-control question-points" name="question_${questionId}_points" min="1" value="1" required>
       </div>
-      <div class="answers-container">
+      <div class="answers-container mb-2">
         <!-- Answers will be added here -->
       </div>
-      <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addAnswer(this.closest('.question-card'), 'new')">
-        <i class="fas fa-plus"></i> إضافة إجابة
-      </button>
     </div>
   `;
 
@@ -661,7 +678,7 @@ function addQuestion(moduleElement, moduleId) {
   return questionCard;
 }
 
-function updateQuestionType(selectElement) {
+window.updateQuestionType = function(selectElement) {
   if (!selectElement) {
     console.error('selectElement is null or undefined');
     return;
@@ -673,6 +690,7 @@ function updateQuestionType(selectElement) {
     return;
   }
   
+  const questionId = questionCard.dataset.questionId;
   const answersContainer = questionCard.querySelector('.answers-container');
   if (!answersContainer) {
     console.error('Could not find answers container');
@@ -684,74 +702,89 @@ function updateQuestionType(selectElement) {
   // Clear existing answers
   answersContainer.innerHTML = '';
   
+  // Add hidden input for question type
+  const typeInput = document.createElement('input');
+  typeInput.type = 'hidden';
+  typeInput.name = `question_${questionId}_type`;
+  typeInput.value = questionType;
+  answersContainer.appendChild(typeInput);
+  
   if (questionType === 'true_false') {
     // Add true/false options
     const trueFalseTemplate = `
-      <div class="answer-group mb-2">
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="question_${questionCounter}_correct" value="true" required>
-          <label class="form-check-label">
-            صح
-          </label>
+      <div class="answer-card card mb-2">
+        <div class="card-body p-2">
+          <div class="form-check">
+            <input class="form-check-input answer-correct" type="radio" 
+                   name="question_${questionId}_correct" value="true" required>
+            <label class="form-check-label">
+              صح
+            </label>
+          </div>
         </div>
       </div>
-      <div class="answer-group mb-2">
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="question_${questionCounter}_correct" value="false" required>
-          <label class="form-check-label">
-            خطأ
-          </label>
+      <div class="answer-card card mb-2">
+        <div class="card-body p-2">
+          <div class="form-check">
+            <input class="form-check-input answer-correct" type="radio" 
+                   name="question_${questionId}_correct" value="false" required>
+            <label class="form-check-label">
+              خطأ
+            </label>
+          </div>
         </div>
       </div>
     `;
-    answersContainer.innerHTML = trueFalseTemplate;
+    answersContainer.insertAdjacentHTML('beforeend', trueFalseTemplate);
   } 
   else if (questionType === 'short_answer') {
     // Add short answer field
     const shortAnswerTemplate = `
       <div class="mb-3">
-        <input type="text" class="form-control" name="question_${questionCounter}_answer" required>
-        <input type="hidden" name="question_${questionCounter}_type" value="short_answer">
+        <input type="text" class="form-control" 
+               name="question_${questionId}_answer" 
+               placeholder="إجابة قصيرة" required>
       </div>
     `;
-    answersContainer.innerHTML = shortAnswerTemplate;
+    answersContainer.insertAdjacentHTML('beforeend', shortAnswerTemplate);
   } 
   else {
-    // Default to multiple choice
-    const mcqTemplate = `
-      <div class="answer-group mb-2">
-        <div class="input-group">
-          <div class="input-group-text">
-            <input type="radio" name="question_${questionCounter}_correct" value="0" required>
+    // Default to multiple choice - add 2 empty answers by default
+    for (let i = 0; i < 2; i++) {
+      const answerId = `a_${Date.now()}_${i}`;
+      const answerHtml = `
+        <div class="answer-card card mb-2" data-answer-id="${answerId}">
+          <div class="card-body p-2">
+            <div class="d-flex align-items-center">
+              <div class="form-check me-2">
+                <input class="form-check-input answer-correct" type="radio" 
+                       name="question_${questionId}_correct" 
+                       value="${i}" ${i === 0 ? 'checked' : ''} required>
+              </div>
+              <input type="text" class="form-control form-control-sm answer-text" 
+                     name="question_${questionId}_answers[]" 
+                     placeholder="نص الإجابة" required>
+              <button type="button" class="btn btn-sm btn-outline-danger ms-2" 
+                      onclick="window.removeAnswer(this, this.closest('.answer-card'))">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
           </div>
-          <input type="text" class="form-control" name="question_${questionCounter}_answer[]" required placeholder="الإجابة">
-          <button type="button" class="btn btn-outline-danger remove-answer" onclick="removeAnswer(this, this.closest('.answer-group'))">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-      <div class="answer-group mb-2">
-        <div class="input-group">
-          <div class="input-group-text">
-            <input type="radio" name="question_${questionCounter}_correct" value="1" required>
-          </div>
-          <input type="text" class="form-control" name="question_${questionCounter}_answer[]" required placeholder="الإجابة">
-          <button type="button" class="btn btn-outline-danger remove-answer" onclick="removeAnswer(this, this.closest('.answer-group'))">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-      <button type="button" class="btn btn-sm btn-outline-primary add-answer-btn mt-2" 
-              onclick="addAnswer(this.closest('.question-card'), '${questionCounter}')">
-        <i class="fas fa-plus me-1"></i>إضافة إجابة
-      </button>
-      <input type="hidden" name="question_${questionCounter}_type" value="mcq">
-    `;
-    answersContainer.innerHTML = mcqTemplate;
+        </div>`;
+      answersContainer.insertAdjacentHTML('beforeend', answerHtml);
+    }
+    
+    // Add "Add Answer" button for MCQ
+    const addButton = document.createElement('button');
+    addButton.type = 'button';
+    addButton.className = 'btn btn-sm btn-outline-primary mt-2 add-answer-btn';
+    addButton.innerHTML = '<i class="fas fa-plus me-1"></i> إضافة إجابة';
+    addButton.onclick = () => window.addAnswer(questionCard, questionId);
+    answersContainer.appendChild(addButton);
   }
 }
 
-function addAnswer(questionElement, questionId) {
+window.addAnswer = function(questionElement, questionId) {
   if (!questionElement) {
     console.error('Question element is null or undefined');
     return null;
@@ -763,17 +796,18 @@ function addAnswer(questionElement, questionId) {
     return null;
   }
 
-  const answerCount = answersContainer.querySelectorAll('.answer-card').length;
+  const answerCards = answersContainer.querySelectorAll('.answer-card');
+  const answerCount = answerCards.length;
   
   // Check if we've reached the maximum number of answers
-  const MAX_ANSWERS = 6; // Maximum number of answers per question
+  const MAX_ANSWERS = 6;
   if (answerCount >= MAX_ANSWERS) {
     showAlert('warning', `لا يمكن إضافة أكثر من ${MAX_ANSWERS} إجابات`);
     return null;
   }
   
-  const answerId = `answer_${questionId}_${Date.now()}`;
-  const isCorrect = answerCount === 0; // First answer is correct by default
+  const answerId = `a_${Date.now()}_${answerCount}`;
+  const answerNumber = answerCount;
   
   const answerHtml = `
     <div class="answer-card card mb-2" data-answer-id="${answerId}">
@@ -782,83 +816,107 @@ function addAnswer(questionElement, questionId) {
           <div class="form-check me-2">
             <input class="form-check-input answer-correct" type="radio" 
                    name="question_${questionId}_correct" 
-                   value="${answerCount}" 
-                   ${isCorrect ? 'checked' : ''}>
+                   value="${answerNumber}" 
+                   ${answerNumber === 0 ? 'checked' : ''}>
           </div>
           <input type="text" class="form-control form-control-sm answer-text" 
-                 name="question_${questionId}_answer[]" 
+                 name="question_${questionId}_answers[]" 
                  placeholder="نص الإجابة" required>
           <button type="button" class="btn btn-sm btn-outline-danger ms-2" 
-                  onclick="removeAnswer(this, this.closest('.answer-card'))">
+                  onclick="window.removeAnswer(this, this.closest('.answer-card'))">
             <i class="fas fa-trash"></i>
           </button>
         </div>
       </div>
     </div>`;
     
-  answersContainer.insertAdjacentHTML('beforeend', answerHtml);
-  
-  // If this is the first answer, check it by default
-  if (answerCount === 0) {
-    const radioInput = answersContainer.querySelector('input[type="radio"]');
-    if (radioInput) {
-      radioInput.checked = true;
-    }
+  // Insert before the "Add Answer" button
+  const addButton = answersContainer.querySelector('.add-answer-btn');
+  if (addButton) {
+    addButton.insertAdjacentHTML('beforebegin', answerHtml);
+  } else {
+    answersContainer.insertAdjacentHTML('beforeend', answerHtml);
   }
   
-  // Update answer numbers
-  updateAnswerNumbers(questionElement);
-  
   // Focus the new answer input
-  const newInput = answersContainer.lastElementChild.querySelector('input[type="text"]');
+  const newInput = document.querySelector(`[data-answer-id="${answerId}"] .answer-text`);
   if (newInput) {
     newInput.focus();
   }
   
-  return answersContainer.lastElementChild;
-}
+  return document.querySelector(`[data-answer-id="${answerId}"]`);
+};
 
-function removeAnswer(button, answerElement) {
-  const answersContainer = answerElement.parentElement;
-  const answerGroups = answersContainer.querySelectorAll('.answer-group');
+window.removeAnswer = function(button, answerElement) {
+  if (!answerElement) return;
   
-  // Don't allow removing if we're down to 2 answers
-  if (answerGroups.length <= 2) {
+  const answersContainer = answerElement.closest('.answers-container');
+  if (!answersContainer) return;
+  
+  const answerCards = answersContainer.querySelectorAll('.answer-card');
+  
+  // Don't remove if there are only 2 answers left
+  if (answerCards.length <= 2) {
     showAlert('warning', 'يجب أن يحتوي السؤال على إجابتين على الأقل');
     return;
   }
   
-  // Check if we're removing the currently selected answer
-  const selectedRadio = answerElement.querySelector('input[type="radio"]:checked');
+  // Check if the answer being removed is the currently selected correct answer
+  const isRemovingCorrect = answerElement.querySelector('input[type="radio"]:checked') !== null;
   
+  // Remove the answer
   answerElement.remove();
   
-  // Update radio button values and ensure one is checked
-  const questionElement = answersContainer.closest('.question-card');
-  if (questionElement) {
-    const radioButtons = answersContainer.querySelectorAll('input[type="radio"]');
-    let hasChecked = false;
-    
-    radioButtons.forEach((radio, index) => {
-      radio.value = index;
-      
-      // If we removed the selected answer, select the first one
-      if (selectedRadio && !hasChecked) {
-        radio.checked = true;
-        hasChecked = true;
-      }
-    });
-    
-    // If no radio is checked (shouldn't happen), check the first one
-    if (!hasChecked && radioButtons.length > 0) {
-      radioButtons[0].checked = true;
+  // If we removed the correct answer, select the first remaining answer
+  if (isRemovingCorrect) {
+    const firstRadio = answersContainer.querySelector('input[type="radio"]');
+    if (firstRadio) {
+      firstRadio.checked = true;
     }
   }
-}
+  
+  // Update answer values to maintain correct indices
+  const remainingAnswers = answersContainer.querySelectorAll('.answer-card');
+  remainingAnswers.forEach((card, index) => {
+    const radio = card.querySelector('input[type="radio"]');
+    if (radio) {
+      radio.value = index;
+      radio.name = `question_${card.closest('.question-card').dataset.questionId}_correct`;
+    }
+    
+    const textInput = card.querySelector('input[type="text"]');
+    if (textInput) {
+      textInput.name = `question_${card.closest('.question-card').dataset.questionId}_answers[]`;
+    }
+  });
+};
 
-function removeQuestion(questionElement) {
+window.removeQuestion = function(questionElement) {
+  if (!questionElement) return;
+  
+  const questionsContainer = questionElement.closest('.questions-container');
+  if (!questionsContainer) return;
+  
+  const questionCards = questionsContainer.querySelectorAll('.question-card');
+  
+  // Don't remove if there's only one question left
+  if (questionCards.length <= 1) {
+    showAlert('warning', 'يجب أن يحتوي الموديول على سؤال واحد على الأقل');
+    return;
+  }
+  
+  // Remove the question
   questionElement.remove();
-}
+  
+  // Update question numbers
+  const remainingQuestions = questionsContainer.querySelectorAll('.question-card');
+  remainingQuestions.forEach((card, index) => {
+    const questionNumber = card.querySelector('.question-number');
+    if (questionNumber) {
+      questionNumber.textContent = index + 1;
+    }
+  });
+};
 
 function toggleQuiz(moduleElement, isChecked) {
   const quizSection = moduleElement.querySelector('.quiz-section');
@@ -917,16 +975,16 @@ async function submitCourse() {
       // Process video file
       const videoInput = moduleElement.querySelector('input[type="file"][accept^="video/"]');
       if (videoInput && videoInput.files.length > 0) {
-        // Use the correct field name that matches the model
-        formData.append(`video`, videoInput.files[0]);
+        // Use module-specific field name for the video
+        formData.append(`module_${moduleId}_video`, videoInput.files[0]);
         
-        // Add video title
+        // Add video title with module-specific field name
         const videoTitleInput = moduleElement.querySelector('input[name^="video_title"]');
         if (videoTitleInput && videoTitleInput.value) {
-          formData.append(`video_title`, videoTitleInput.value);
+          formData.append(`module_${moduleId}_video_title`, videoTitleInput.value);
         } else {
           // Default title if none provided
-          formData.append(`video_title`, `Video for ${moduleName}`);
+          formData.append(`module_${moduleId}_video_title`, `Video for ${moduleName}`);
         }
       }
       
@@ -951,40 +1009,56 @@ async function submitCourse() {
       // Process quiz if exists
       const quizToggle = moduleElement.querySelector('.quiz-toggle');
       if (quizToggle && quizToggle.checked) {
+        const quizSection = moduleElement.querySelector('.quiz-section');
+        if (!quizSection) return;
+        
+        const questions = quizSection.querySelectorAll('.question-card');
+        if (questions.length === 0) return;
+        
+        // Add quiz flag for this module
         formData.append(`module_${moduleId}_has_quiz`, 'true');
         
-        const questionElements = moduleElement.querySelectorAll('.question-card');
-        questionElements.forEach((questionElement, qIndex) => {
-          const questionText = questionElement.querySelector('.question-text')?.value;
-          const questionType = questionElement.querySelector('.question-type')?.value || 'mcq';
+        questions.forEach((question, qIndex) => {
+          const questionId = question.dataset.questionId;
+          const questionType = question.querySelector('.question-type').value;
+          const questionText = question.querySelector('.question-text').value;
+          const questionPoints = question.querySelector('.question-points').value;
           
-          if (questionText) {
-            // Add question data
-            formData.append(`module_${moduleId}_question_text[]`, questionText);
-            formData.append(`module_${moduleId}_question_type[]`, questionType);
+          // Add question data with module-specific keys
+          formData.append(`module_${moduleId}_question_${qIndex}_type`, questionType);
+          formData.append(`module_${moduleId}_question_${qIndex}_text`, questionText);
+          formData.append(`module_${moduleId}_question_${qIndex}_points`, questionPoints);
+          
+          // Handle answers based on question type
+          if (questionType === 'short_answer') {
+            const answerInput = question.querySelector('input[type="text"][name$="_answer"]');
+            if (answerInput) {
+              formData.append(`module_${moduleId}_question_${qIndex}_answer`, answerInput.value);
+            }
+          } else {
+            // For MCQ and True/False
+            const answerElements = question.querySelectorAll('.answer-card');
+            let correctAnswerIndex = -1;
             
-            // Process answers
-            const answerElements = questionElement.querySelectorAll('.answer-card');
-            const answerTexts = [];
-            const correctAnswers = [];
-            
-            answerElements.forEach((answerElement, aIndex) => {
-              const answerText = answerElement.querySelector('.answer-text')?.value;
-              const isCorrect = answerElement.querySelector('.answer-correct')?.checked || false;
+            answerElements.forEach((answerEl, aIndex) => {
+              const textInput = answerEl.querySelector('.answer-text');
+              const radioInput = answerEl.querySelector('input[type="radio"]');
               
-              if (answerText && answerText.trim() !== '') {
-                answerTexts.push(answerText);
-                if (isCorrect) {
-                  correctAnswers.push(aIndex);
+              if (textInput) {
+                // Add answer with index
+                formData.append(`module_${moduleId}_question_${qIndex}_answer_${aIndex}`, textInput.value);
+                
+                // Check if this is the correct answer
+                if (radioInput && radioInput.checked) {
+                  correctAnswerIndex = aIndex;
                 }
               }
             });
             
-            // Add answers as JSON string to maintain array structure
-            formData.append(`module_${moduleId}_question_${qIndex}_answers`, JSON.stringify({
-              texts: answerTexts,
-              correct_indices: correctAnswers
-            }));
+            // Add correct answer index
+            if (correctAnswerIndex >= 0) {
+              formData.append(`module_${moduleId}_question_${qIndex}_correct`, correctAnswerIndex);
+            }
           }
         });
       }
@@ -1174,6 +1248,23 @@ function addPdf(moduleElement, moduleId) {
     inputGroup.remove();
   });
 }
+
+// Expose necessary functions to global scope
+window.toggleQuiz = function(moduleElement, isChecked) {
+  console.log('Toggling quiz (global):', { moduleId: moduleElement.id, isChecked });
+  
+  const quizSection = moduleElement.querySelector('.quiz-section');
+  if (quizSection) {
+    quizSection.style.display = isChecked ? 'block' : 'none';
+    
+    if (isChecked) {
+      const questionsContainer = quizSection.querySelector('.questions-container');
+      if (questionsContainer && questionsContainer.querySelectorAll('.question-card').length === 0) {
+        window.addQuestion(moduleElement, moduleElement.id);
+      }
+    }
+  }
+};
 
 // Close the IIFE
 })();

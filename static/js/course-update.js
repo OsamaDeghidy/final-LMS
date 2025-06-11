@@ -867,7 +867,7 @@ function initializePdfDeleteButtons() {
                 </div>
                 
                 <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-answer-btn">
-                    <i class="fas fa-plus me-1"></i>إضافة إجابة
+                    <i class="fas fa-plus"></i> إضافة إجابة
                 </button>
             </div>
         </div>
