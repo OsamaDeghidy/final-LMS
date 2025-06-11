@@ -1,3 +1,5 @@
+// Wrap everything in an IIFE to prevent variable leakage
+(function() {
 // Global variables
 let currentStep = 0;
 let moduleCount = 0;
@@ -601,38 +603,82 @@ function toggleQuiz(moduleElement, isChecked) {
 }
 
 // Question and Answer functions
-function addQuestion(moduleElement) {
-  questionCounter++;
-  const questionId = `question_${questionCounter}`;
-  
-  const template = document.getElementById('question-template');
-  if (!template) {
-    console.error('Question template not found');
-    return;
-  }
-  
-  const questionElement = template.content.cloneNode(true);
-  const questionCard = questionElement.querySelector('.question-card');
-  questionCard.dataset.questionId = questionId;
-  
+function addQuestion(moduleElement, moduleId) {
+  const questionCard = document.createElement('div');
+  questionCard.className = 'card mb-3 question-card';
+  questionCard.innerHTML = `
+    <div class="card-body">
+      <div class="d-flex justify-content-between mb-3">
+        <h6 class="card-title">السؤال <span class="question-number"></span></h6>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeQuestion(this.closest('.question-card'))">
+          <i class="fas fa-trash"></i> حذف السؤال
+        </button>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">نوع السؤال</label>
+        <select class="form-select question-type" onchange="updateQuestionType(this)">
+          <option value="mcq">اختيار من متعدد</option>
+          <option value="true_false">صح أو خطأ</option>
+          <option value="essay">مقالي</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">نص السؤال</label>
+        <input type="text" class="form-control question-text" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">درجة السؤال</label>
+        <input type="number" class="form-control question-points" min="1" value="1" required>
+      </div>
+      <div class="answers-container">
+        <!-- Answers will be added here -->
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addAnswer(this.closest('.question-card'), 'new')">
+        <i class="fas fa-plus"></i> إضافة إجابة
+      </button>
+    </div>
+  `;
+
   // Find the questions container in the module
   const questionsContainer = moduleElement.querySelector('.questions-container');
   if (!questionsContainer) {
     console.error('Questions container not found');
-    return;
+    return null;
   }
   
-  questionsContainer.appendChild(questionElement);
+  questionsContainer.appendChild(questionCard);
   
-  // Initialize question type
-  updateQuestionType(questionCard.querySelector('.question-type'));
+  // Initialize question type after the element is in the DOM
+  setTimeout(() => {
+    const questionTypeSelect = questionCard.querySelector('.question-type');
+    if (questionTypeSelect) {
+      updateQuestionType(questionTypeSelect);
+    } else {
+      console.error('Could not find question type select element');
+    }
+  }, 0);
   
   return questionCard;
 }
 
 function updateQuestionType(selectElement) {
+  if (!selectElement) {
+    console.error('selectElement is null or undefined');
+    return;
+  }
+  
   const questionCard = selectElement.closest('.question-card');
+  if (!questionCard) {
+    console.error('Could not find parent question-card element');
+    return;
+  }
+  
   const answersContainer = questionCard.querySelector('.answers-container');
+  if (!answersContainer) {
+    console.error('Could not find answers container');
+    return;
+  }
+  
   const questionType = selectElement.value;
   
   // Clear existing answers
@@ -706,51 +752,70 @@ function updateQuestionType(selectElement) {
 }
 
 function addAnswer(questionElement, questionId) {
+  if (!questionElement) {
+    console.error('Question element is null or undefined');
+    return null;
+  }
+
   const answersContainer = questionElement.querySelector('.answers-container');
-  const answerGroups = answersContainer.querySelectorAll('.answer-group');
-  const answerCount = answerGroups.length;
+  if (!answersContainer) {
+    console.error('Answers container not found');
+    return null;
+  }
+
+  const answerCount = answersContainer.querySelectorAll('.answer-card').length;
   
   // Check if we've reached the maximum number of answers
+  const MAX_ANSWERS = 6; // Maximum number of answers per question
   if (answerCount >= MAX_ANSWERS) {
     showAlert('warning', `لا يمكن إضافة أكثر من ${MAX_ANSWERS} إجابات`);
-    return;
+    return null;
   }
   
-  const answerGroup = document.createElement('div');
-  answerGroup.className = 'answer-group mb-2';
-  answerGroup.innerHTML = `
-    <div class="input-group">
-      <div class="input-group-text">
-        <input type="radio" name="question_${questionId}_correct" value="${answerCount}" required>
+  const answerId = `answer_${questionId}_${Date.now()}`;
+  const isCorrect = answerCount === 0; // First answer is correct by default
+  
+  const answerHtml = `
+    <div class="answer-card card mb-2" data-answer-id="${answerId}">
+      <div class="card-body p-2">
+        <div class="d-flex align-items-center">
+          <div class="form-check me-2">
+            <input class="form-check-input answer-correct" type="radio" 
+                   name="question_${questionId}_correct" 
+                   value="${answerCount}" 
+                   ${isCorrect ? 'checked' : ''}>
+          </div>
+          <input type="text" class="form-control form-control-sm answer-text" 
+                 name="question_${questionId}_answer[]" 
+                 placeholder="نص الإجابة" required>
+          <button type="button" class="btn btn-sm btn-outline-danger ms-2" 
+                  onclick="removeAnswer(this, this.closest('.answer-card'))">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
       </div>
-      <input type="text" class="form-control" name="question_${questionId}_answer[]" required placeholder="الإجابة">
-      <button type="button" class="btn btn-outline-danger remove-answer" onclick="removeAnswer(this, this.closest('.answer-group'))">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-  `;
-  
-  // Insert before the add answer button
-  const addButton = answersContainer.querySelector('.add-answer-btn');
-  if (addButton) {
-    answersContainer.insertBefore(answerGroup, addButton);
-  } else {
-    answersContainer.appendChild(answerGroup);
-  }
+    </div>`;
+    
+  answersContainer.insertAdjacentHTML('beforeend', answerHtml);
   
   // If this is the first answer, check it by default
   if (answerCount === 0) {
-    const radioInput = answerGroup.querySelector('input[type="radio"]');
+    const radioInput = answersContainer.querySelector('input[type="radio"]');
     if (radioInput) {
       radioInput.checked = true;
     }
   }
   
+  // Update answer numbers
+  updateAnswerNumbers(questionElement);
+  
   // Focus the new answer input
-  const newInput = answerGroup.querySelector('input[type="text"]');
+  const newInput = answersContainer.lastElementChild.querySelector('input[type="text"]');
   if (newInput) {
     newInput.focus();
   }
+  
+  return answersContainer.lastElementChild;
 }
 
 function removeAnswer(button, answerElement) {
@@ -1139,3 +1204,6 @@ function addPdf(moduleElement, moduleId) {
     inputGroup.remove();
   });
 }
+
+// Close the IIFE
+})();
