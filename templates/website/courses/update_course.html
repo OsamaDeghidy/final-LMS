@@ -212,7 +212,7 @@
               
               <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
-                أضف أو عدل موديولات الدورة. يمكنك إضافة فيديوهات وملاحظات واختبارات لكل موديول.
+                قم بإدارة موديولات الدورة. يمكنك تعديل أو حذف الموديولات الحالية وإضافة موديولات جديدة. كل موديول يمكن أن يحتوي على فيديوهات وملفات PDF وملاحظات واختبارات.
               </div>
               
               <div id="modules-container">
@@ -235,252 +235,181 @@
                     </div>
                     
                     <!-- Videos -->
-                    <div class="mb-3">
-                      <label class="form-label fw-bold">الفيديوهات الحالية</label>
-                      <div class="list-group mb-3">
-                        {% for video in module.video_set.all %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                          <div>
-                            <i class="fas fa-video text-primary me-2"></i>
-                            {{ video.name }}
-                          </div>
-                          <div class="form-check">
-                            <input class="form-check-input delete-checkbox" type="checkbox" name="delete_video_{{ video.id }}" id="delete_video_{{ video.id }}" value="1">
-                            <label class="form-check-label text-danger" for="delete_video_{{ video.id }}">
-                              حذف
-                            </label>
-                          </div>
-                        </div>
-                        {% empty %}
-                        <div class="list-group-item text-muted">لا توجد فيديوهات</div>
-                        {% endfor %}
-                      </div>
-                      
-                      <label class="form-label fw-bold">إضافة فيديوهات جديدة</label>
-                      <input type="file" class="form-control" name="module_videos_existing_{{ module.id }}" accept="video/*" multiple>
-                      <small class="text-muted">الصيغ المدعومة: MP4, MOV, AVI</small>
-                    </div>
-
-                    <!-- Module PDFs Section -->
-                    <div class="card mb-3 border-info">
+                    <div class="card mb-3">
                       <div class="card-header bg-light">
-                        <h6 class="mb-0"><i class="fas fa-file-pdf text-danger me-2"></i>ملفات PDF للموديول</h6>
+                        <h6 class="mb-0"><i class="fas fa-video me-2"></i>الفيديوهات</h6>
                       </div>
                       <div class="card-body">
-                        <div class="row">
-                          <!-- Module PDF -->
-                          <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">ملف PDF رئيسي للموديول</label>
-                            {% if module.module_pdf %}
-                            <div class="mb-2">
-                              <div class="d-flex align-items-center p-2 bg-light rounded">
-                                <i class="fas fa-file-pdf text-danger me-2"></i>
-                                <div class="flex-grow-1 text-truncate">{{ module.module_pdf.name }}</div>
-                                <button type="button" class="btn btn-sm btn-danger delete-module-pdf" data-module-id="{{ module.id }}" data-pdf-type="module_pdf">
-                                  <i class="fas fa-trash"></i>
-                                </button>
+                        <!-- Existing Videos -->
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">الفيديوهات الحالية</label>
+                          <div class="list-group mb-3">
+                            {% for video in module.video_set.all %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                              <div>
+                                <i class="fas fa-video text-primary me-2"></i>
+                                {{ video.name }}
+                              </div>
+                              <div class="form-check">
+                                <input class="form-check-input delete-checkbox" type="checkbox" name="delete_video_{{ video.id }}" id="delete_video_{{ video.id }}" value="1">
+                                <label class="form-check-label text-danger" for="delete_video_{{ video.id }}">
+                                  حذف
+                                </label>
                               </div>
                             </div>
-                            {% endif %}
-                            <input type="file" class="form-control" name="module_pdf_existing_{{ module.id }}" accept="application/pdf">
-                            <small class="text-muted">اختياري. ملف PDF يحتوي على محتوى الموديول</small>
-                          </div>
-                          
-                          <!-- Additional Materials -->
-                          <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">مواد إضافية (PDF)</label>
-                            {% if module.additional_materials %}
-                            <div class="mb-2">
-                              <div class="d-flex align-items-center p-2 bg-light rounded">
-                                <i class="fas fa-file-pdf text-danger me-2"></i>
-                                <div class="flex-grow-1 text-truncate">{{ module.additional_materials.name }}</div>
-                                <button type="button" class="btn btn-sm btn-danger delete-module-pdf" data-module-id="{{ module.id }}" data-pdf-type="additional_materials">
-                                  <i class="fas fa-trash"></i>
-                                </button>
-                              </div>
-                            </div>
-                            {% endif %}
-                            <input type="file" class="form-control" name="additional_materials_existing_{{ module.id }}" accept="application/pdf">
-                            <small class="text-muted">اختياري. مواد إضافية للموديول</small>
+                            {% empty %}
+                            <div class="list-group-item text-muted">لا توجد فيديوهات</div>
+                            {% endfor %}
                           </div>
                         </div>
-                      </div>
-                    </div>
-                    
-                    <!-- Notes -->
-                    <div class="mb-3">
-                      <label class="form-label fw-bold">ملاحظات إضافية</label>
-                      <div class="list-group mb-3">
-                        {% for note in module.notes_set.all %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                          <div>
-                            <i class="fas fa-sticky-note text-primary me-2"></i>
-                            {{ note.description|truncatechars:50 }}
-                          </div>
-                          <div class="form-check">
-                            <input class="form-check-input delete-checkbox" type="checkbox" name="delete_note_{{ note.id }}" id="delete_note_{{ note.id }}" value="1">
-                            <label class="form-check-label text-danger" for="delete_note_{{ note.id }}">
-                              حذف
-                            </label>
-                          </div>
+                        <!-- New Video -->
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">تحميل فيديو جديد</label>
+                          <input type="file" class="form-control" name="module_videos_existing_{{ module.id }}" accept=".mp4,.mov,.avi">
+                          <small class="text-muted">الصيغ المدعومة: MP4, MOV, AVI (الحد الأقصى: 500MB)</small>
                         </div>
-                        {% empty %}
-                        <div class="list-group-item text-muted">لا توجد ملاحظات</div>
-                        {% endfor %}
-                      </div>
-                      
-                      <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div></div>
-                        <button type="button" class="btn btn-sm btn-outline-primary add-note-btn" data-module-id="existing_{{ module.id }}">
-                          <i class="fas fa-plus me-1"></i>إضافة ملاحظة
-                        </button>
-                      </div>
-                      <div class="notes-container" id="notes_container_existing_{{ module.id }}">
-                        <div class="input-group mb-2">
-                          <textarea class="form-control" name="module_notes_existing_{{ module.id }}_0" rows="2" placeholder="أدخل ملاحظة"></textarea>
-                          <button type="button" class="btn btn-outline-danger remove-note-btn">
-                            <i class="fas fa-times"></i>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <!-- Video Names -->
-                    <div class="mb-3">
-                      <label class="form-label fw-bold">عناوين الفيديوهات الجديدة</label>
-                      <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div></div>
-                        <button type="button" class="btn btn-sm btn-outline-primary add-video-name-btn" data-module-id="existing_{{ module.id }}">
-                          <i class="fas fa-plus me-1"></i>إضافة عنوان
-                        </button>
-                      </div>
-                      <div class="video-names-container" id="video_names_container_existing_{{ module.id }}">
-                        <div class="input-group mb-2">
-                          <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">عنوان الفيديو</label>
                           <input type="text" class="form-control" name="video_name_existing_{{ module.id }}_0" placeholder="أدخل عنوان الفيديو">
-                          <button type="button" class="btn btn-outline-danger remove-video-name-btn">
-                            <i class="fas fa-times"></i>
-                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- PDF Section -->
+                    <div class="card mb-3">
+                      <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-file-pdf me-2"></i>الملف المرفق</h6>
+                      </div>
+                      <div class="card-body">
+                        <!-- Existing PDFs -->
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">الملفات الحالية</label>
+                          {% if module.module_pdf %}
+                          <div class="list-group mb-3">
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                              <div>
+                                <i class="fas fa-file-pdf text-danger me-2"></i>
+                                {{ module.module_pdf.name }}
+                              </div>
+                              <button type="button" class="btn btn-sm btn-danger delete-module-pdf" data-module-id="{{ module.id }}" data-pdf-type="module_pdf">
+                                <i class="fas fa-trash"></i>
+                              </button>
+                            </div>
+                          </div>
+                          {% else %}
+                          <div class="text-muted mb-3">لا توجد ملفات PDF</div>
+                          {% endif %}
+                        </div>
+                        <!-- New PDF -->
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">تحميل ملف PDF</label>
+                          <input type="file" class="form-control" name="module_pdf_existing_{{ module.id }}" accept=".pdf">
+                          <small class="text-muted">حجم الملف الأقصى: 20MB</small>
+                        </div>
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">عنوان الملف</label>
+                          <input type="text" class="form-control pdf-title" name="pdf_title_existing_{{ module.id }}" placeholder="أدخل عنوان الملف">
                         </div>
                       </div>
                     </div>
                     
-                    <!-- Quiz Section -->
-                    <div class="card mb-3 border-primary">
+                    <!-- Notes Section -->
+                    <div class="card mb-3">
                       <div class="card-header bg-light">
-                        <div class="form-check form-switch">
-                          {% with module_quiz=module.module_quizzes.first %}
-                          <input class="form-check-input quiz-toggle" type="checkbox" id="has_quiz_existing_{{ module.id }}" name="has_quiz_existing_{{ module.id }}" {% if module_quiz %}checked{% endif %}>
-                          <label class="form-check-label fw-bold" for="has_quiz_existing_{{ module.id }}">إضافة اختبار للموديول</label>
-                          {% endwith %}
+                        <h6 class="mb-0"><i class="fas fa-sticky-note me-2"></i>ملاحظات إضافية</h6>
+                      </div>
+                      <div class="card-body">
+                        <!-- Existing Notes -->
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">الملاحظات الحالية</label>
+                          <div class="list-group mb-3">
+                            {% for note in module.notes_set.all %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                              <div>
+                                <i class="fas fa-sticky-note text-primary me-2"></i>
+                                {{ note.description|truncatechars:50 }}
+                              </div>
+                              <div class="form-check">
+                                <input class="form-check-input delete-checkbox" type="checkbox" name="delete_note_{{ note.id }}" id="delete_note_{{ note.id }}" value="1">
+                                <label class="form-check-label text-danger" for="delete_note_{{ note.id }}">
+                                  حذف
+                                </label>
+                              </div>
+                            </div>
+                            {% empty %}
+                            <div class="list-group-item text-muted">لا توجد ملاحظات</div>
+                            {% endfor %}
+                          </div>
+                        </div>
+                        <!-- New Note -->
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">ملاحظات الموديول</label>
+                          <textarea class="form-control" name="module_notes_existing_{{ module.id }}_0" rows="3" placeholder="أضف ملاحظات إضافية عن الموديول"></textarea>
                         </div>
                       </div>
-                      <div class="quiz-section card-body {% if not module.module_quizzes.first %}d-none{% endif %}" id="quiz_section_existing_{{ module.id }}">
-                        {% with module_quiz=module.module_quizzes.first %}
-                        {% if module_quiz %}
-                        <input type="hidden" name="quiz_id_existing_{{ module.id }}" value="{{ module_quiz.id }}">
-                        {% endif %}
-                        <div class="mb-3">
-                          <label class="form-label fw-bold">عنوان الاختبار</label>
-                          <input type="text" class="form-control" name="quiz_title_existing_{{ module.id }}" placeholder="أدخل عنوان الاختبار" value="{% if module_quiz %}{{ module_quiz.title }}{% endif %}">
+                    </div>
+                    
+
+                    <!-- Quiz Section -->
+                    <div class="card mb-3">
+                      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>اختبار الموديول</h6>
+                        <div class="form-check form-switch">
+                          <input class="form-check-input quiz-toggle" type="checkbox" id="has_quiz_existing_{{ module.id }}" name="has_quiz_existing_{{ module.id }}" {% if module.module_quizzes.first %}checked{% endif %} onchange="toggleQuiz(this.closest('.card'), this.checked)">
+                          <label class="form-check-label" for="has_quiz_existing_{{ module.id }}">إضافة اختبار</label>
                         </div>
-                        <div class="mb-3">
-                          <label class="form-label fw-bold">وصف الاختبار</label>
-                          <textarea class="form-control" name="quiz_description_existing_{{ module.id }}" rows="2" placeholder="وصف مختصر للاختبار">{% if module_quiz %}{{ module_quiz.description }}{% endif %}</textarea>
-                        </div>
-                        <div class="row mb-3">
-                          <div class="col-md-6">
-                            <label class="form-label fw-bold">درجة النجاح (%)</label>
-                            <input type="number" class="form-control" name="quiz_pass_mark_existing_{{ module.id }}" min="0" max="100" value="{% if module_quiz %}{{ module_quiz.pass_mark }}{% else %}50{% endif %}">
-                          </div>
-                          <div class="col-md-6">
-                            <label class="form-label fw-bold">مدة الاختبار (دقائق)</label>
-                            <input type="number" class="form-control" name="quiz_time_limit_existing_{{ module.id }}" min="1" value="{% if module_quiz %}{{ module_quiz.time_limit }}{% else %}10{% endif %}">
-                          </div>
-                        </div>
-                        
-                        <div class="questions-container" id="questions_container_existing_{{ module.id }}">
+                      </div>
+                      <div class="card-body quiz-section" id="quiz_section_existing_{{ module.id }}" {% if not module.module_quizzes.first %}style="display: none;"{% endif %}>
+                        <div class="questions-container">
                           <!-- Existing Questions -->
-                          {% if module_quiz %}
-                          {% for question in module_quiz.questions.all %}
-                          <div class="card mb-3 question-card" id="existing_question_{{ question.id }}">
+                          {% if module.module_quizzes.first %}
+                          {% for question in module.module_quizzes.first.questions.all %}
+                          <div class="question-card card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                              <span>سؤال {{ forloop.counter }}</span>
+                              <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeQuestion(this.closest('.question-card'))">
+                                <i class="fas fa-trash"></i>
+                              </button>
+                            </div>
                             <div class="card-body">
-                              <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="mb-0">سؤال #{{ forloop.counter }}</h6>
-                                <button type="button" class="btn btn-sm btn-outline-danger remove-question-btn" data-question-id="{{ question.id }}">
-                                  <i class="fas fa-times"></i>
-                                </button>
-                                <input type="hidden" name="delete_question_{{ question.id }}" id="delete_question_{{ question.id }}" value="0" class="delete-question-input">
-                              </div>
-                              
                               <div class="mb-3">
-                                <input type="text" class="form-control" name="question_text_existing_{{ module.id }}_{{ question.id }}" placeholder="نص السؤال" required value="{{ question.text }}">
-                                <input type="hidden" name="question_id_existing_{{ module.id }}_{{ forloop.counter }}" value="{{ question.id }}">
+                                <label class="form-label">نص السؤال</label>
+                                <input type="text" class="form-control question-text" name="question_text_existing_{{ module.id }}_{{ forloop.counter0 }}" value="{{ question.text }}" required>
                               </div>
-                              
                               <div class="mb-3">
-                                <select class="form-select question-type-select" name="question_type_existing_{{ module.id }}_{{ question.id }}">
-                                  <option value="multiple_choice" {% if question.question_type == 'multiple_choice' %}selected{% endif %}>اختيار من متعدد</option>
-                                  <option value="true_false" {% if question.question_type == 'true_false' %}selected{% endif %}>صح أو خطأ</option>
+                                <label class="form-label">نوع السؤال</label>
+                                <select class="form-select question-type" name="question_type_existing_{{ module.id }}_{{ forloop.counter0 }}" onchange="updateQuestionType(this)">
+                                  <option value="mcq" {% if question.question_type == 'multiple_choice' %}selected{% endif %}>اختيار من متعدد</option>
+                                  <option value="true_false" {% if question.question_type == 'true_false' %}selected{% endif %}>صح / خطأ</option>
                                   <option value="short_answer" {% if question.question_type == 'short_answer' %}selected{% endif %}>إجابة قصيرة</option>
                                 </select>
                               </div>
-                              
-                              <div class="answers-container" id="answers_existing_question_{{ question.id }}">
-                                <!-- Existing Answers -->
-                                {% if question.question_type == 'multiple_choice' %}
-                                  {% for answer in question.answers.all %}
-                                  <div class="answer-item mb-2">
-                                    <div class="input-group">
-                                      <div class="input-group-text">
-                                        <input class="form-check-input mt-0" type="radio" name="correct_answer_existing_{{ question.id }}" value="{{ forloop.counter0 }}" {% if answer.is_correct %}checked{% endif %}>
-                                      </div>
-                                      <input type="text" class="form-control" name="answer_text_existing_{{ question.id }}_{{ forloop.counter0 }}" placeholder="الإجابة {{ forloop.counter }}" required value="{{ answer.text }}">
-                                      <button type="button" class="btn btn-sm btn-outline-danger remove-answer-btn" data-answer-id="{{ answer.id }}">
-                                        <i class="fas fa-times"></i>
-                                      </button>
-                                      <input type="hidden" name="delete_answer_{{ answer.id }}" id="delete_answer_{{ answer.id }}" value="0" class="delete-answer-input">
+                              <div class="answers-container">
+                                {% for answer in question.answers.all %}
+                                <div class="answer-item mb-2">
+                                  <div class="input-group">
+                                    <div class="input-group-text">
+                                      <input class="form-check-input mt-0" type="radio" name="correct_answer_existing_{{ module.id }}_{{ forloop.parentloop.counter0 }}" value="{{ forloop.counter0 }}" {% if answer.is_correct %}checked{% endif %}>
                                     </div>
+                                    <input type="text" class="form-control" name="answer_text_existing_{{ module.id }}_{{ forloop.parentloop.counter0 }}_{{ forloop.counter0 }}" value="{{ answer.text }}" required>
+                                    <button type="button" class="btn btn-outline-danger" onclick="removeAnswer(this.closest('.answer-item'))">
+                                      <i class="fas fa-times"></i>
+                                    </button>
                                   </div>
-                                  {% endfor %}
-                                {% elif question.question_type == 'true_false' %}
-                                  <div class="answer-item mb-2">
-                                    <div class="input-group">
-                                      <div class="input-group-text">
-                                        <input class="form-check-input mt-0" type="radio" name="correct_answer_existing_{{ question.id }}" value="0" {% if question.answers.first.is_correct %}checked{% endif %}>
-                                      </div>
-                                      <input type="text" class="form-control" name="answer_text_existing_{{ question.id }}_0" value="صح" readonly>
-                                    </div>
-                                  </div>
-                                  <div class="answer-item mb-2">
-                                    <div class="input-group">
-                                      <div class="input-group-text">
-                                        <input class="form-check-input mt-0" type="radio" name="correct_answer_existing_{{ question.id }}" value="1" {% if question.answers.last.is_correct %}checked{% endif %}>
-                                      </div>
-                                      <input type="text" class="form-control" name="answer_text_existing_{{ question.id }}_1" value="خطأ" readonly>
-                                    </div>
-                                  </div>
-                                {% elif question.question_type == 'short_answer' %}
-                                  <div class="mb-3">
-                                    <label class="form-label">الإجابة الصحيحة</label>
-                                    <input type="text" class="form-control" name="answer_short_existing_{{ question.id }}" placeholder="أدخل الإجابة الصحيحة" required value="{{ question.answers.first.text }}">
-                                  </div>
-                                {% endif %}
+                                </div>
+                                {% endfor %}
                               </div>
-                              
-                              <button type="button" class="btn btn-sm btn-outline-primary mt-2 add-answer-btn" {% if question.question_type != 'multiple_choice' %}style="display: none;"{% endif %}>
-                                <i class="fas fa-plus me-1"></i>إضافة إجابة
-                              </button>
+                              <div class="mt-2">
+                                <small class="text-muted">انقر على الإجابة الصحيحة لتحديدها</small>
+                              </div>
                             </div>
                           </div>
                           {% endfor %}
                           {% endif %}
                         </div>
-                        
-                        <button type="button" class="btn btn-primary w-100 mt-3 add-question-btn" data-module-id="existing_{{ module.id }}">
-                          <i class="fas fa-plus me-1"></i>إضافة سؤال جديد
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addQuestion(this.closest('.module-card'))">
+                          <i class="fas fa-plus me-1"></i>إضافة سؤال
                         </button>
-                        {% endwith %}
                       </div>
                     </div>
                   </div>
@@ -511,6 +440,19 @@
               <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 راجع معلومات الدورة قبل الحفظ. تأكد من إضافة جميع المعلومات المطلوبة.
+              </div>
+              
+              <div class="course-summary mb-4">
+                <h5 class="text-primary mb-3">ملخص الدورة</h5>
+                <div class="card">
+                  <div class="card-body">
+                    <p><strong>عنوان الدورة:</strong> <span id="summary-title"></span></p>
+                    <p><strong>الوصف المختصر:</strong> <span id="summary-small-desc"></span></p>
+                    <p><strong>السعر:</strong> <span id="summary-price"></span></p>
+                    <p><strong>المستوى:</strong> <span id="summary-level"></span></p>
+                    <p><strong>عدد الموديولات:</strong> <span id="summary-modules"></span></p>
+                  </div>
+                </div>
               </div>
               
               <div class="d-flex justify-content-between mt-4">
