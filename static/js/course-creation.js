@@ -895,7 +895,6 @@ async function submitCourse() {
     formData.append('csrfmiddlewaretoken', csrfToken);
     
     // Process modules data
-    const modules = [];
     const moduleElements = document.querySelectorAll('.module-card');
     
     if (moduleElements.length === 0) {
@@ -908,116 +907,88 @@ async function submitCourse() {
     // Process each module
     moduleElements.forEach((moduleElement, index) => {
       const moduleId = moduleElement.id.replace('module_', '');
-      const moduleData = {
-        id: moduleId,
-        name: moduleElement.querySelector('input[name^="module_name"]').value,
-        number: index + 1,
-        description: moduleElement.querySelector('textarea[name^="module_description"]')?.value || ''
-      };
+      const moduleName = moduleElement.querySelector('input[name^="module_name"]')?.value || `Module ${index + 1}`;
+      const moduleDescription = moduleElement.querySelector('textarea[name^="module_description"]')?.value || '';
+      
+      // Add module data to form
+      formData.append(`module_${moduleId}_name`, moduleName);
+      formData.append(`module_${moduleId}_description`, moduleDescription);
       
       // Process video file
       const videoInput = moduleElement.querySelector('input[type="file"][accept^="video/"]');
       if (videoInput && videoInput.files.length > 0) {
-        formData.append(`module_${moduleId}_video`, videoInput.files[0]);
-        moduleData.video = videoInput.files[0].name;
+        // Use the correct field name that matches the model
+        formData.append(`video`, videoInput.files[0]);
         
         // Add video title
         const videoTitleInput = moduleElement.querySelector('input[name^="video_title"]');
         if (videoTitleInput && videoTitleInput.value) {
-          formData.append(`video_title_${moduleId}`, videoTitleInput.value);
-          moduleData.video_title = videoTitleInput.value;
+          formData.append(`video_title`, videoTitleInput.value);
+        } else {
+          // Default title if none provided
+          formData.append(`video_title`, `Video for ${moduleName}`);
         }
       }
       
       // Process PDF file
       const pdfInput = moduleElement.querySelector('input[type="file"][accept=".pdf"]');
       if (pdfInput && pdfInput.files.length > 0) {
-        // Add the PDF file to form data
         formData.append(`module_${moduleId}_pdf`, pdfInput.files[0]);
-        moduleData.pdf = pdfInput.files[0].name;
         
         // Add PDF title if available
         const pdfTitleInput = moduleElement.querySelector('.pdf-title');
         if (pdfTitleInput && pdfTitleInput.value) {
-          formData.append(`pdf_title_${moduleId}`, pdfTitleInput.value);
-          moduleData.pdf_title = pdfTitleInput.value;
+          formData.append(`module_${moduleId}_pdf_title`, pdfTitleInput.value);
         }
+      }
+      
+      // Process notes
+      const noteInput = moduleElement.querySelector('textarea[name^="module_note"]');
+      if (noteInput && noteInput.value) {
+        formData.append(`module_${moduleId}_note`, noteInput.value);
       }
       
       // Process quiz if exists
       const quizToggle = moduleElement.querySelector('.quiz-toggle');
       if (quizToggle && quizToggle.checked) {
-        const questions = [];
+        formData.append(`module_${moduleId}_has_quiz`, 'true');
+        
         const questionElements = moduleElement.querySelectorAll('.question-card');
-        
-        // Add quiz data to moduleData
-        moduleData.has_quiz = true;
-        
-        // Process each question
         questionElements.forEach((questionElement, qIndex) => {
           const questionText = questionElement.querySelector('.question-text')?.value;
           const questionType = questionElement.querySelector('.question-type')?.value || 'mcq';
           
           if (questionText) {
-            // Add question text to form data
+            // Add question data
             formData.append(`module_${moduleId}_question_text[]`, questionText);
             formData.append(`module_${moduleId}_question_type[]`, questionType);
             
-            const question = {
-              text: questionText,
-              question_type: questionType,
-              answers: []
-            };
-            
             // Process answers
-            const answerElements = questionElement.querySelectorAll('.answer-item');
+            const answerElements = questionElement.querySelectorAll('.answer-card');
+            const answerTexts = [];
             const correctAnswers = [];
             
             answerElements.forEach((answerElement, aIndex) => {
-              const answerText = answerElement.querySelector('input[name^="answer_text"]')?.value;
-              const isCorrect = answerElement.querySelector('input[type="radio"], input[type="checkbox"]')?.checked || false;
+              const answerText = answerElement.querySelector('.answer-text')?.value;
+              const isCorrect = answerElement.querySelector('.answer-correct')?.checked || false;
               
-              if (answerText) {
-                // Add answer text to form data
-                formData.append(`module_${moduleId}_question_${qIndex}_answer_text[]`, answerText);
-                
-                // Track correct answers
+              if (answerText && answerText.trim() !== '') {
+                answerTexts.push(answerText);
                 if (isCorrect) {
-                  correctAnswers.push(aIndex.toString());
+                  correctAnswers.push(aIndex);
                 }
-                
-                question.answers.push({
-                  text: answerText,
-                  is_correct: isCorrect
-                });
               }
             });
             
-            // Add correct answers to form data
-            correctAnswers.forEach(index => {
-              formData.append(`module_${moduleId}_question_${qIndex}_correct_answer[]`, index);
-            });
-            
-            if (question.answers.length > 0) {
-              questions.push(question);
-            }
+            // Add answers as JSON string to maintain array structure
+            formData.append(`module_${moduleId}_question_${qIndex}_answers`, JSON.stringify({
+              texts: answerTexts,
+              correct_indices: correctAnswers
+            }));
           }
         });
-        
-        // Add quiz data to moduleData
-        moduleData.quiz = {
-          title: `اختبار ${moduleData.name}`,
-          questions: questions,
-          time_limit: 30,
-          pass_mark: 50
-        };
       }
-      
-      modules.push(moduleData);
     });
-    
-    // Add modules data as JSON
-    formData.append('modules', JSON.stringify(modules));
     
     // Log form data for debugging
     console.log('=== Form Data ===');
@@ -1028,8 +999,6 @@ async function submitCourse() {
           type: value.type,
           size: value.size
         });
-      } else if (key === 'modules') {
-        console.log('modules:', JSON.parse(value));
       } else {
         console.log(`${key}:`, value);
       }
@@ -1040,7 +1009,8 @@ async function submitCourse() {
       method: 'POST',
       body: formData,
       headers: {
-        'X-Requested-With': 'XMLHttpRequest'
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': csrfToken
       },
       credentials: 'same-origin'
     });

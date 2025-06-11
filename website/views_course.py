@@ -70,8 +70,9 @@ def course_detail(request, course_id):
 
 @login_required
 def course(request):
-    courses = Course.objects.filter(teacher__profile__user=request.user)
-    return render(request, 'website/course.html', {'courses': courses})
+    # Redirect to dashboard instead of showing course list
+    from django.shortcuts import redirect
+    return redirect('dashboard')
 
 # Course viewing pages
 @login_required
@@ -240,36 +241,45 @@ def create_course(request):
                 )
                 
                 # Save module video with proper file handling
-                video_key = f'module_{module["id"]}_video'
-                video_title_key = f'module_{module["id"]}_video_title'
-                
-                # Check for video file in request.FILES
                 video_file = None
-                if video_key in request.FILES:
-                    video_file = request.FILES[video_key]
+                video_title = None
+                
+                # Check for video file in request.FILES (new format)
+                if 'video' in request.FILES:
+                    video_file = request.FILES['video']
+                    video_title = request.POST.get('video_title', f"Video - {new_module.name}")
+                # Fallback to old format
+                elif f'module_{module["id"]}_video' in request.FILES:
+                    video_file = request.FILES[f'module_{module["id"]}_video']
+                    video_title = request.POST.get(f'module_{module["id"]}_video_title', f"Video - {new_module.name}")
                 
                 if video_file:
-                    video_title = request.POST.get(video_title_key, f"Video - {new_module.name}")
-                    
                     # Ensure the file is actually a video
-                    if video_file.content_type.startswith('video/') or any(video_file.name.lower().endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm']):
+                    valid_extensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm']
+                    if (video_file.content_type and video_file.content_type.startswith('video/')) or \
+                       any(video_file.name.lower().endswith(ext) for ext in valid_extensions):
                         try:
+                            # Generate a unique filename to avoid conflicts
+                            filename = f"{new_module.id}_{video_file.name}"
+                            
                             # Set the video on the module
-                            new_module.video.save(video_file.name, video_file, save=True)
+                            new_module.video.save(filename, video_file, save=True)
                             
                             # Store the video title in the module description or as metadata
                             if not new_module.description:
                                 new_module.description = f"<p>عنوان الفيديو: {video_title}</p>"
                             else:
                                 new_module.description = f"<p>عنوان الفيديو: {video_title}</p>" + new_module.description
-                                
+                            
                             new_module.save()
                             logger.info(f"Successfully saved video for module {new_module.id}")
                         except Exception as e:
                             logger.error(f"Error saving video for module {new_module.id}: {str(e)}")
                             messages.error(request, f'حدث خطأ أثناء حفظ ملف الفيديو: {str(e)}')
                     else:
-                        messages.error(request, f'نوع ملف الفيديو غير صالح: {video_file.content_type}. يجب أن يكون الملف من نوع فيديو (mp4, avi, mov, wmv, flv, mkv, webm)')
+                        error_msg = f'نوع ملف الفيديو غير صالح: {getattr(video_file, "content_type", "unknown")}. يجب أن يكون الملف من نوع فيديو (mp4, avi, mov, wmv, flv, mkv, webm)'
+                        logger.error(error_msg)
+                        messages.error(request, error_msg)
                 
                 # Process module PDF with proper file handling
                 pdf_key = f'module_{module["id"]}_pdf'
@@ -360,20 +370,38 @@ def create_course(request):
                                     question_type=question_type_map.get(q_type, 'multiple_choice')
                                 )
                                 
-                                # Get answers for this question
-                                answer_texts = request.POST.getlist(f'module_{module["id"]}_question_{i}_answer_text[]', [])
-                                correct_answers = request.POST.getlist(f'module_{module["id"]}_question_{i}_correct_answer[]', [])
-                                
-                                # Create answers
-                                for j, a_text in enumerate(answer_texts):
-                                    if a_text.strip():
-                                        is_correct = str(j) in correct_answers
+                                # Get answers for this question (new JSON format)
+                                answer_key = f'module_{module["id"]}_question_{i}_answers'
+                                if answer_key in request.POST:
+                                    try:
+                                        answers_data = json.loads(request.POST[answer_key])
+                                        answer_texts = answers_data.get('texts', [])
+                                        correct_indices = answers_data.get('correct_indices', [])
                                         
-                                        Answer.objects.create(
-                                            question=question,
-                                            text=a_text,
-                                            is_correct=is_correct
-                                        )
+                                        # Create answers
+                                        for j, a_text in enumerate(answer_texts):
+                                            if a_text.strip():
+                                                Answer.objects.create(
+                                                    question=question,
+                                                    text=a_text,
+                                                    is_correct=j in correct_indices
+                                                )
+                                    except json.JSONDecodeError as e:
+                                        logger.error(f"Error decoding answers JSON: {e}")
+                                        messages.error(request, 'حدث خطأ في معالجة إجابات الأسئلة')
+                                else:
+                                    # Fallback to old format if new format not available
+                                    answer_texts = request.POST.getlist(f'module_{module["id"]}_question_{i}_answer_text[]', [])
+                                    correct_answers = request.POST.getlist(f'module_{module["id"]}_question_{i}_correct_answer[]', [])
+                                    
+                                    for j, a_text in enumerate(answer_texts):
+                                        if a_text.strip():
+                                            is_correct = str(j) in correct_answers
+                                            Answer.objects.create(
+                                                question=question,
+                                                text=a_text,
+                                                is_correct=is_correct
+                                            )
                     else:
                         # Use the JSON data if available
                         for q_data in questions:
