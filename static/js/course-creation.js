@@ -82,8 +82,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-
-
 // Setup file input with preview and validation
 function setupFileInput(inputId, previewId, validationFn) {
   const input = document.getElementById(inputId);
@@ -963,23 +961,35 @@ async function submitCourse() {
     }
     
     // Process each module
+    const modules = [];
     moduleElements.forEach((moduleElement, index) => {
       const moduleId = moduleElement.id.replace('module_', '');
       const moduleName = moduleElement.querySelector('input[name^="module_name"]')?.value || `Module ${index + 1}`;
       const moduleDescription = moduleElement.querySelector('textarea[name^="module_description"]')?.value || '';
       
-      // Add module data to form
+      // Add module data to form (fields expected by backend)
       formData.append(`module_${moduleId}_name`, moduleName);
       formData.append(`module_${moduleId}_description`, moduleDescription);
       
+      // Build module JSON object
+      const moduleData = {
+        id: moduleId,
+        name: moduleName,
+        description: moduleDescription,
+        number: index + 1,
+        has_quiz: false // will be updated below if quiz exists
+      };
+      
       // Process video file
-      const videoInput = moduleElement.querySelector('input[type="file"][accept^="video/"]');
+      const videoInput = moduleElement.querySelector('input[type="file"][accept^="video/"]') ||
+                        moduleElement.querySelector('input[type="file"][name="module_video[]"]');
       if (videoInput && videoInput.files.length > 0) {
         // Use module-specific field name for the video
         formData.append(`module_${moduleId}_video`, videoInput.files[0]);
         
         // Add video title with module-specific field name
-        const videoTitleInput = moduleElement.querySelector('input[name^="video_title"]');
+        const videoTitleInput = moduleElement.querySelector('input[name^="video_title"]') ||
+                                 moduleElement.querySelector('input[name="video_title[]"]');
         if (videoTitleInput && videoTitleInput.value) {
           formData.append(`module_${moduleId}_video_title`, videoTitleInput.value);
         } else {
@@ -1018,51 +1028,99 @@ async function submitCourse() {
         // Add quiz flag for this module
         formData.append(`module_${moduleId}_has_quiz`, 'true');
         
+        // Build quiz JSON structure
+        const quizData = {
+          title: quizSection.querySelector(`[name^="quiz_title_"]`)?.value || `Quiz - ${moduleName}`,
+          description: quizSection.querySelector(`[name^="quiz_description_"]`)?.value || '',
+          pass_mark: quizSection.querySelector(`[name^="quiz_pass_mark_"]`)?.value || 50,
+          time_limit: quizSection.querySelector(`[name^="quiz_time_limit_"]`)?.value || 30,
+          questions: []
+        };
+        
+        moduleData.has_quiz = true;
+        
         questions.forEach((question, qIndex) => {
-          const questionId = question.dataset.questionId;
           const questionType = question.querySelector('.question-type').value;
           const questionText = question.querySelector('.question-text').value;
-          const questionPoints = question.querySelector('.question-points').value;
+          const questionPoints = question.querySelector('.question-points')?.value || 1;
           
-          // Add question data with module-specific keys
-          formData.append(`module_${moduleId}_question_${qIndex}_type`, questionType);
-          formData.append(`module_${moduleId}_question_${qIndex}_text`, questionText);
-          formData.append(`module_${moduleId}_question_${qIndex}_points`, questionPoints);
+          // Add question data with module-specific keys (existing behaviour)
+          formData.append(`module_${moduleId}_question_type[]`, questionType);
+          formData.append(`module_${moduleId}_question_text[]`, questionText);
           
-          // Handle answers based on question type
+          // Build question JSON
+          const questionData = {
+            text: questionText,
+            type: questionType,
+            points: questionPoints,
+            answers: []
+          };
+          
           if (questionType === 'short_answer') {
             const answerInput = question.querySelector('input[type="text"][name$="_answer"]');
             if (answerInput) {
-              formData.append(`module_${moduleId}_question_${qIndex}_answer`, answerInput.value);
+              // --- old fallback fields ---
+              formData.append(`module_${moduleId}_question_${qIndex}_answer_text[]`, answerInput.value);
+              formData.append(`module_${moduleId}_question_${qIndex}_correct_answer[]`, '0');
+              // --- new JSON field ---
+              const answersPayload = {
+                texts: [answerInput.value],
+                correct_indices: [0]
+              };
+              formData.append(`module_${moduleId}_question_${qIndex}_answers`, JSON.stringify(answersPayload));
+              questionData.answers.push({ text: answerInput.value, is_correct: true });
             }
           } else {
-            // For MCQ and True/False
             const answerElements = question.querySelectorAll('.answer-card');
-            let correctAnswerIndex = -1;
-            
+            const answerTexts = [];
+            const correctIdxArr = [];
             answerElements.forEach((answerEl, aIndex) => {
               const textInput = answerEl.querySelector('.answer-text');
               const radioInput = answerEl.querySelector('input[type="radio"]');
-              
               if (textInput) {
-                // Add answer with index
-                formData.append(`module_${moduleId}_question_${qIndex}_answer_${aIndex}`, textInput.value);
-                
-                // Check if this is the correct answer
+                answerTexts.push(textInput.value);
+                formData.append(`module_${moduleId}_question_${qIndex}_answer_text[]`, textInput.value);
                 if (radioInput && radioInput.checked) {
-                  correctAnswerIndex = aIndex;
+                  correctIdxArr.push(aIndex);
+                  formData.append(`module_${moduleId}_question_${qIndex}_correct_answer[]`, aIndex.toString());
                 }
+                questionData.answers.push({
+                  text: textInput.value,
+                  is_correct: radioInput && radioInput.checked
+                });
               }
             });
-            
-            // Add correct answer index
-            if (correctAnswerIndex >= 0) {
-              formData.append(`module_${moduleId}_question_${qIndex}_correct`, correctAnswerIndex);
+            // If true/false and no custom texts, populate defaults
+            if (questionType === 'true_false' && answerTexts.length === 0) {
+              // true option index 0, false option index 1
+              answerTexts.push('صح', 'خطأ');
+              const correctVal = question.querySelector('input[name^="correct_answer"]:checked')?.value || '0';
+              correctIdxArr.push(parseInt(correctVal, 10));
+              questionData.answers.push({ text: 'صح', is_correct: correctVal === '0' });
+              questionData.answers.push({ text: 'خطأ', is_correct: correctVal === '1' });
+            }
+            // --- new JSON answers field ---
+            if (answerTexts.length > 0) {
+              const answersPayload = {
+                texts: answerTexts,
+                correct_indices: correctIdxArr
+              };
+              formData.append(`module_${moduleId}_question_${qIndex}_answers`, JSON.stringify(answersPayload));
             }
           }
+          
+          quizData.questions.push(questionData);
         });
+        
+        moduleData.quiz = quizData;
       }
+      
+      // Push module JSON to array
+      modules.push(moduleData);
     });
+    
+    // Send modules JSON to backend
+    formData.append('modules', JSON.stringify(modules));
     
     // Log form data for debugging
     console.log('=== Form Data ===');
@@ -1106,16 +1164,6 @@ async function submitCourse() {
     submitBtn.disabled = false;
     submitBtn.innerHTML = originalText;
   }
-
-
-
-
-    
-
-
-
-
-
 }
 
 function validateForm() {
