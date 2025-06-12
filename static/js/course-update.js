@@ -640,182 +640,181 @@ function initializePdfDeleteButtons() {
     const modulesContainer = document.getElementById('modules-container');
     if (!modulesContainer) {
         console.error('Modules container not found');
-        return;
-    }
-    
-    // Get the current number of modules (including deleted ones)
-    const updateModuleCount = modulesContainer.querySelectorAll('.module-card').length;
-    const newModuleNumber = updateModuleCount + 1;
-    const newModuleId = 'new_' + Date.now(); // Use timestamp for unique ID
-    
-    const moduleHtml = `
-    <div class="card mb-4 module-card" id="module_${newModuleId}">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-layer-group text-primary me-2"></i>الموديول ${newModuleNumber}</h5>
-            <button type="button" class="btn btn-sm btn-outline-danger remove-module-btn" data-module-id="${newModuleId}">
-                <i class="fas fa-trash"></i>
-            </button>
-            <input type="hidden" name="delete_module_${newModuleId}" id="delete_module_${newModuleId}" value="0">
-        </div>
-        <div class="card-body">
-            <!-- Module Info -->
-            <div class="mb-3">
-                <label class="form-label fw-bold">اسم الموديول</label>
-                <input type="text" class="form-control" name="module_name_new_${newModuleId}" placeholder="أدخل اسم الموديول" required>
-                <input type="hidden" name="module_id_new_${newModuleId}" value="new">
+    } else {
+        // Get the current number of modules (including deleted ones)
+        const updateModuleCount = modulesContainer.querySelectorAll('.module-card').length;
+        const newModuleNumber = updateModuleCount + 1;
+        const newModuleId = 'new_' + Date.now(); // Use timestamp for unique ID
+        
+        const moduleHtml = `
+        <div class="card mb-4 module-card" id="module_${newModuleId}">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-layer-group text-primary me-2"></i>الموديول ${newModuleNumber}</h5>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-module-btn" data-module-id="${newModuleId}">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <input type="hidden" name="delete_module_${newModuleId}" id="delete_module_${newModuleId}" value="0">
             </div>
-            
-            <!-- Videos -->
-            <div class="mb-3">
-                <label class="form-label fw-bold">إضافة فيديوهات جديدة</label>
-                <input type="file" class="form-control" name="module_videos_new_${newModuleId}" accept="video/*" multiple>
-                <small class="text-muted">الصيغ المدعومة: MP4, MOV, AVI</small>
-            </div>
-            
-            <!-- Notes -->
-            <div class="mb-3">
-                <label class="form-label fw-bold">ملاحظات إضافية</label>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div></div>
-                    <button type="button" class="btn btn-sm btn-outline-primary add-note-btn" data-module-id="${newModuleId}">
-                        <i class="fas fa-plus me-1"></i>إضافة ملاحظة
-                    </button>
+            <div class="card-body">
+                <!-- Module Info -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">اسم الموديول</label>
+                    <input type="text" class="form-control" name="module_name_new_${newModuleId}" placeholder="أدخل اسم الموديول" required>
+                    <input type="hidden" name="module_id_new_${newModuleId}" value="new">
                 </div>
-                <div class="notes-container" id="notes_container_${newModuleId}">
-                    <div class="input-group mb-2">
-                        <textarea class="form-control" name="module_notes_new_${newModuleId}_0" rows="2" placeholder="أدخل ملاحظة"></textarea>
-                        <button type="button" class="btn btn-outline-danger remove-note-btn">
-                            <i class="fas fa-times"></i>
+                
+                <!-- Videos -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">إضافة فيديوهات جديدة</label>
+                    <input type="file" class="form-control" name="module_videos_new_${newModuleId}" accept="video/*" multiple>
+                    <small class="text-muted">الصيغ المدعومة: MP4, MOV, AVI</small>
+                </div>
+                
+                <!-- Notes -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">ملاحظات إضافية</label>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div></div>
+                        <button type="button" class="btn btn-sm btn-outline-primary add-note-btn" data-module-id="${newModuleId}">
+                            <i class="fas fa-plus me-1"></i>إضافة ملاحظة
+                        </button>
+                    </div>
+                    <div class="notes-container" id="notes_container_${newModuleId}">
+                        <div class="input-group mb-2">
+                            <textarea class="form-control" name="module_notes_new_${newModuleId}_0" rows="2" placeholder="أدخل ملاحظة"></textarea>
+                            <button type="button" class="btn btn-outline-danger remove-note-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Video Names -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">عناوين الفيديوهات الجديدة</label>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div></div>
+                        <button type="button" class="btn btn-sm btn-outline-primary add-video-name-btn" data-module-id="${newModuleId}">
+                            <i class="fas fa-plus me-1"></i>إضافة عنوان
+                        </button>
+                    </div>
+                    <div class="video-names-container" id="video_names_container_${newModuleId}">
+                        <div class="input-group mb-2">
+                            <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
+                            <input type="text" class="form-control" name="video_name_new_${newModuleId}_0" placeholder="أدخل عنوان الفيديو">
+                            <button type="button" class="btn btn-outline-danger remove-video-name-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quiz Section -->
+                <div class="card mb-3 border-primary">
+                    <div class="card-header bg-light">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input quiz-toggle" type="checkbox" id="has_quiz_new_${newModuleId}" name="has_quiz_new_${newModuleId}">
+                            <label class="form-check-label fw-bold" for="has_quiz_new_${newModuleId}">إضافة اختبار للموديول</label>
+                        </div>
+                    </div>
+                    <div class="quiz-section card-body" id="quiz_section_new_${newModuleId}" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">عنوان الاختبار</label>
+                            <input type="text" class="form-control" name="quiz_title_new_${newModuleId}" placeholder="أدخل عنوان الاختبار">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">وصف الاختبار</label>
+                            <textarea class="form-control" name="quiz_description_new_${newModuleId}" rows="2" placeholder="وصف مختصر للاختبار"></textarea>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">درجة النجاح (%)</label>
+                                <input type="number" class="form-control" name="quiz_pass_mark_new_${newModuleId}" min="0" max="100" value="50">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">مدة الاختبار (دقائق)</label>
+                                <input type="number" class="form-control" name="quiz_time_limit_new_${newModuleId}" min="1" value="10">
+                            </div>
+                        </div>
+                        
+                        <div class="questions-container" id="questions_container_new_${newModuleId}">
+                            <!-- Questions will be added here -->
+                        </div>
+                        
+                        <button type="button" class="btn btn-primary w-100 mt-3 add-question-btn" data-module-id="new_${newModuleId}">
+                            <i class="fas fa-plus me-1"></i>إضافة سؤال جديد
                         </button>
                     </div>
                 </div>
             </div>
-            
-            <!-- Video Names -->
-            <div class="mb-3">
-                <label class="form-label fw-bold">عناوين الفيديوهات الجديدة</label>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div></div>
-                    <button type="button" class="btn btn-sm btn-outline-primary add-video-name-btn" data-module-id="${newModuleId}">
-                        <i class="fas fa-plus me-1"></i>إضافة عنوان
-                    </button>
-                </div>
-                <div class="video-names-container" id="video_names_container_${newModuleId}">
-                    <div class="input-group mb-2">
-                        <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
-                        <input type="text" class="form-control" name="video_name_new_${newModuleId}_0" placeholder="أدخل عنوان الفيديو">
-                        <button type="button" class="btn btn-outline-danger remove-video-name-btn">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Quiz Section -->
-            <div class="card mb-3 border-primary">
-                <div class="card-header bg-light">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input quiz-toggle" type="checkbox" id="has_quiz_new_${newModuleId}" name="has_quiz_new_${newModuleId}">
-                        <label class="form-check-label fw-bold" for="has_quiz_new_${newModuleId}">إضافة اختبار للموديول</label>
-                    </div>
-                </div>
-                <div class="quiz-section card-body" id="quiz_section_new_${newModuleId}" style="display: none;">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">عنوان الاختبار</label>
-                        <input type="text" class="form-control" name="quiz_title_new_${newModuleId}" placeholder="أدخل عنوان الاختبار">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">وصف الاختبار</label>
-                        <textarea class="form-control" name="quiz_description_new_${newModuleId}" rows="2" placeholder="وصف مختصر للاختبار"></textarea>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">درجة النجاح (%)</label>
-                            <input type="number" class="form-control" name="quiz_pass_mark_new_${newModuleId}" min="0" max="100" value="50">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">مدة الاختبار (دقائق)</label>
-                            <input type="number" class="form-control" name="quiz_time_limit_new_${newModuleId}" min="1" value="10">
-                        </div>
-                    </div>
-                    
-                    <div class="questions-container" id="questions_container_new_${newModuleId}">
-                        <!-- Questions will be added here -->
-                    </div>
-                    
-                    <button type="button" class="btn btn-primary w-100 mt-3 add-question-btn" data-module-id="new_${newModuleId}">
-                        <i class="fas fa-plus me-1"></i>إضافة سؤال جديد
-                    </button>
-                </div>
-            </div>
         </div>
-    </div>
-    `;
-    
-    modulesContainer.insertAdjacentHTML('beforeend', moduleHtml);
-    
-    // Add event listeners to the new elements
-    const newModule = document.getElementById(`module_${newModuleId}`);
-    if (newModule) {
-        // Add event listener to remove module button
-        const removeBtn = newModule.querySelector('.remove-module-btn');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', function() {
-                newModule.remove();
+        `;
+        
+        modulesContainer.insertAdjacentHTML('beforeend', moduleHtml);
+        
+        // Add event listeners to the new elements
+        const newModule = document.getElementById(`module_${newModuleId}`);
+        if (newModule) {
+            // Add event listener to remove module button
+            const removeBtn = newModule.querySelector('.remove-module-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    newModule.remove();
+                });
+            }
+            
+            // Add event listener to quiz toggle
+            const quizToggle = newModule.querySelector('.quiz-toggle');
+            if (quizToggle) {
+                quizToggle.addEventListener('change', function() {
+                    const quizSection = document.getElementById(`quiz_section_new_${newModuleId}`);
+                    if (quizSection) {
+                        quizSection.style.display = this.checked ? 'block' : 'none';
+                    }
+                });
+            }
+            
+            // Add event listeners to add buttons
+            const addNoteBtn = newModule.querySelector('.add-note-btn');
+            if (addNoteBtn) {
+                addNoteBtn.addEventListener('click', function() {
+                    addNewNote(`new_${newModuleId}`);
+                });
+            }
+            
+            const addVideoNameBtn = newModule.querySelector('.add-video-name-btn');
+            if (addVideoNameBtn) {
+                addVideoNameBtn.addEventListener('click', function() {
+                    addNewVideoName(`new_${newModuleId}`);
+                });
+            }
+            
+            const addQuestionBtn = newModule.querySelector('.add-question-btn');
+            if (addQuestionBtn) {
+                addQuestionBtn.addEventListener('click', function() {
+                    addNewQuestion(`new_${newModuleId}`);
+                });
+            }
+            
+            // Add event listeners to remove buttons
+            newModule.querySelectorAll('.remove-note-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const noteItem = this.closest('.input-group');
+                    if (noteItem) {
+                        noteItem.remove();
+                    }
+                });
+            });
+            
+            newModule.querySelectorAll('.remove-video-name-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const videoNameItem = this.closest('.input-group');
+                    if (videoNameItem) {
+                        videoNameItem.remove();
+                    }
+                });
             });
         }
-        
-        // Add event listener to quiz toggle
-        const quizToggle = newModule.querySelector('.quiz-toggle');
-        if (quizToggle) {
-            quizToggle.addEventListener('change', function() {
-                const quizSection = document.getElementById(`quiz_section_new_${newModuleId}`);
-                if (quizSection) {
-                    quizSection.style.display = this.checked ? 'block' : 'none';
-                }
-            });
-        }
-        
-        // Add event listeners to add buttons
-        const addNoteBtn = newModule.querySelector('.add-note-btn');
-        if (addNoteBtn) {
-            addNoteBtn.addEventListener('click', function() {
-                addNewNote(`new_${newModuleId}`);
-            });
-        }
-        
-        const addVideoNameBtn = newModule.querySelector('.add-video-name-btn');
-        if (addVideoNameBtn) {
-            addVideoNameBtn.addEventListener('click', function() {
-                addNewVideoName(`new_${newModuleId}`);
-            });
-        }
-        
-        const addQuestionBtn = newModule.querySelector('.add-question-btn');
-        if (addQuestionBtn) {
-            addQuestionBtn.addEventListener('click', function() {
-                addNewQuestion(`new_${newModuleId}`);
-            });
-        }
-        
-        // Add event listeners to remove buttons
-        newModule.querySelectorAll('.remove-note-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const noteItem = this.closest('.input-group');
-                if (noteItem) {
-                    noteItem.remove();
-                }
-            });
-        });
-        
-        newModule.querySelectorAll('.remove-video-name-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const videoNameItem = this.closest('.input-group');
-                if (videoNameItem) {
-                    videoNameItem.remove();
-                }
-            });
-        });
     }
     // End of addNewModule function
 

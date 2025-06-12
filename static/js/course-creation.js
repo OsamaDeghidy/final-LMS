@@ -171,7 +171,17 @@ function validatePdfFile(file) {
 
 // Show alert message
 function showAlert(type, message) {
-  const alertsContainer = document.getElementById('alerts-container');
+  let alertsContainer = document.getElementById('alerts-container');
+  if (!alertsContainer) {
+    alertsContainer = document.createElement('div');
+    alertsContainer.id = 'alerts-container';
+    alertsContainer.style.position = 'fixed';
+    alertsContainer.style.top = '1rem';
+    alertsContainer.style.left = '50%';
+    alertsContainer.style.transform = 'translateX(-50%)';
+    alertsContainer.style.zIndex = '1080';
+    document.body.appendChild(alertsContainer);
+  }
   
   // Create alert element
   const alertDiv = document.createElement('div');
@@ -1122,19 +1132,12 @@ async function submitCourse() {
     // Send modules JSON to backend
     formData.append('modules', JSON.stringify(modules));
     
-    // Log form data for debugging
-    console.log('=== Form Data ===');
-    for (let [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        console.log(`${key}:`, {
-          name: value.name,
-          type: value.type,
-          size: value.size
-        });
-      } else {
-        console.log(`${key}:`, value);
-      }
+    console.group('Course Submit Debug');
+    console.log('Modules JSON:', modules);
+    for (let pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
     }
+    console.groupEnd();
     
     // Submit the form
     const response = await fetch(form.action, {
