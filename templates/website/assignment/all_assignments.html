@@ -36,7 +36,7 @@
 
         <!-- Card Body -->
         <div class="card-body p-4">
-            {% if is_teacher and teaching_assignments %}
+            {% if is_teacher and teaching_assignments or is_admin %}
             <div class="mb-5">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h6 class="fw-bold mb-0 text-dark">
@@ -236,19 +236,35 @@
                     </table>
                 </div>
             </div>
-            {% else %}
-            <div class="text-center py-5">
-                <div class="mb-4">
-                    <img src="https://cdn-icons-png.flaticon.com/512/4076/4076478.png" 
-                         alt="لا توجد واجبات" style="width: 120px; opacity: 0.7;">
+            {% endif %}
+
+            {% if not teaching_assignments and not enrolled_assignments %}
+            <div class="d-flex justify-content-center align-items-center" style="min-height: 40vh;">
+                <div class="text-center p-5 rounded-3 shadow-sm bg-white" style="max-width: 500px; width: 100%;">
+                    <div class="mb-4">
+                        <img src="https://cdn-icons-png.flaticon.com/512/4076/4076478.png" 
+                             alt="لا توجد واجبات" style="width: 120px; opacity: 0.7;">
+                    </div>
+                    <h4 class="text-dark mb-3 fw-bold">لا توجد واجبات متاحة حالياً</h4>
+                    <p class="text-muted mb-4">سيظهر هنا أي واجبات مطلوبة منك أو قمت بإنشائها</p>
+                    {% if is_teacher or is_admin %}
+                    <div class="dropdown d-inline-block">
+                        <a href="#" class="btn btn-primary rounded-pill px-4" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-plus-circle me-2"></i>إنشاء واجب جديد
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded-3">
+                            {% for course in teacher_courses %}
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center py-2" href="{% url 'create_assignment' course.id %}">
+                                    <i class="fas fa-book me-2 text-primary"></i>
+                                    <span>{{ course.name }}</span>
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
                 </div>
-                <h4 class="text-muted mb-3">لا توجد واجبات حالياً</h4>
-                <p class="text-muted mb-4">سيظهر هنا أي واجبات مطلوبة منك أو قمت بإنشائها</p>
-                {% if is_teacher %}
-                <a href="#" class="btn btn-primary rounded-pill px-4" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-plus-circle me-2"></i>إنشاء واجب جديد
-                </a>
-                {% endif %}
             </div>
             {% endif %}
         </div>

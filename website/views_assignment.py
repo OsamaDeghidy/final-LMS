@@ -16,11 +16,12 @@ def assignment_list(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     assignments = Assignment.objects.filter(course=course).order_by('-created_at')
     
-    # Check if user is teacher of the course or a student enrolled in the course
+    # Check if user is teacher of the course, admin, or a student enrolled in the course
+    is_admin = request.user.is_authenticated and hasattr(request.user, 'profile') and request.user.profile.status == 'admin'
     is_teacher = request.user.is_authenticated and hasattr(request.user, 'teacher') and course.teacher == request.user.teacher
     is_enrolled = request.user.is_authenticated and course.enrollments.filter(student=request.user).exists()
     
-    if not (is_teacher or is_enrolled):
+    if not (is_teacher or is_enrolled or is_admin or request.user.is_superuser):
         messages.error(request, 'ليس لديك صلاحية لعرض الواجبات لهذه الدورة')
         return redirect('course_detail', course_id=course_id)
     
@@ -34,6 +35,7 @@ def assignment_list(request, course_id):
         'course': course,
         'assignments': assignments,
         'is_teacher': is_teacher,
+        'is_admin': is_admin,  # Add is_admin to context
         'profile': profile,  # Add profile to context
         'student': getattr(request.user, 'student', None)  # Add student to context if exists
     }
@@ -44,17 +46,24 @@ def create_assignment(request, course_id):
     """Create a new assignment for a course"""
     course = get_object_or_404(Course, id=course_id)
     
-    # Check if user is teacher of the course
-    is_teacher = False
+    # Check if user is teacher of the course or admin
+    is_authorized = False
+    is_admin = False
+    
     try:
         profile = Profile.objects.get(user=request.user)
         if profile.status == 'Teacher':
             teacher = Teacher.objects.get(profile=profile)
-            is_teacher = (course.teacher == teacher)
+            is_authorized = (course.teacher == teacher)
+        elif profile.status == 'admin' or request.user.is_superuser:
+            is_authorized = True
+            is_admin = True
     except (Profile.DoesNotExist, Teacher.DoesNotExist):
-        pass
+        if request.user.is_superuser:
+            is_authorized = True
+            is_admin = True
         
-    if not is_teacher:
+    if not is_authorized:
         messages.error(request, 'ليس لديك صلاحية لإضافة واجبات لهذه الدورة')
         return redirect('course_detail', course_id=course_id)
     
@@ -118,23 +127,25 @@ def create_assignment(request, course_id):
 def update_assignment(request, assignment_id):
     """Update an existing assignment"""
     assignment = get_object_or_404(Assignment, id=assignment_id)
-    course = assignment.course
     
-    # Check if user is teacher of the course
-    is_teacher = False
+    # Check if user is teacher of the course or admin
+    is_authorized = False
     try:
         profile = Profile.objects.get(user=request.user)
         if profile.status == 'Teacher':
             teacher = Teacher.objects.get(profile=profile)
-            is_teacher = (course.teacher == teacher)
+            is_authorized = (assignment.course.teacher == teacher)
+        elif profile.status == 'admin' or request.user.is_superuser:
+            is_authorized = True
     except (Profile.DoesNotExist, Teacher.DoesNotExist):
-        pass
+        if request.user.is_superuser:
+            is_authorized = True
         
-    if not is_teacher:
+    if not is_authorized:
         messages.error(request, 'ليس لديك صلاحية لتعديل هذا الواجب')
         return redirect('assignment_detail', assignment_id=assignment_id)
     
-    modules = Module.objects.filter(course=course)
+    modules = Module.objects.filter(course=assignment.course)
     
     if request.method == 'POST':
         title = request.POST.get('title')
@@ -148,7 +159,7 @@ def update_assignment(request, assignment_id):
         if not title or not description:
             messages.error(request, 'يرجى ملء جميع الحقول المطلوبة')
             return render(request, 'website/assignment/update_assignment.html', 
-                          {'assignment': assignment, 'course': course, 'modules': modules})
+                          {'assignment': assignment, 'modules': modules})
         
         # Update the assignment
         assignment.title = title
@@ -182,7 +193,6 @@ def update_assignment(request, assignment_id):
     
     context = {
         'assignment': assignment,
-        'course': course,
         'modules': modules,
         'profile': profile,  # Add profile to context
         'student': getattr(request.user, 'student', None)  # Add student to context if exists
@@ -193,24 +203,26 @@ def update_assignment(request, assignment_id):
 def delete_assignment(request, assignment_id):
     """Delete an assignment"""
     assignment = get_object_or_404(Assignment, id=assignment_id)
-    course = assignment.course
+    course_id = assignment.course.id
     
-    # Check if user is teacher of the course
-    is_teacher = False
+    # Check if user is teacher of the course or admin
+    is_authorized = False
     try:
         profile = Profile.objects.get(user=request.user)
         if profile.status == 'Teacher':
             teacher = Teacher.objects.get(profile=profile)
-            is_teacher = (course.teacher == teacher)
+            is_authorized = (assignment.course.teacher == teacher)
+        elif profile.status == 'admin' or request.user.is_superuser:
+            is_authorized = True
     except (Profile.DoesNotExist, Teacher.DoesNotExist):
-        pass
+        if request.user.is_superuser:
+            is_authorized = True
         
-    if not is_teacher:
+    if not is_authorized:
         messages.error(request, 'ليس لديك صلاحية لحذف هذا الواجب')
         return redirect('assignment_detail', assignment_id=assignment_id)
     
     if request.method == 'POST':
-        course_id = course.id
         assignment.delete()
         messages.success(request, 'تم حذف الواجب بنجاح')
         return redirect('assignment_list', course_id=course_id)
@@ -233,11 +245,12 @@ def assignment_detail(request, assignment_id):
     assignment = get_object_or_404(Assignment, id=assignment_id)
     course = assignment.course
     
-    # Check if user is teacher of the course or a student enrolled in the course
+    # Check if user is teacher of the course, admin, superuser, or a student enrolled in the course
+    is_admin = request.user.is_authenticated and hasattr(request.user, 'profile') and request.user.profile.status == 'admin'
     is_teacher = request.user.is_authenticated and hasattr(request.user, 'teacher') and course.teacher == request.user.teacher
     is_enrolled = request.user.is_authenticated and course.enrollments.filter(student=request.user).exists()
     
-    if not (is_teacher or is_enrolled):
+    if not (is_teacher or is_enrolled or is_admin or request.user.is_superuser):
         messages.error(request, 'ليس لديك صلاحية لعرض هذا الواجب')
         return redirect('course_detail', course_id=course.id)
     
@@ -256,9 +269,9 @@ def assignment_detail(request, assignment_id):
             user=request.user
         ).first()
     
-    # Get all submissions if teacher
+    # Get all submissions if teacher or admin
     submissions = None
-    if is_teacher:
+    if is_teacher or is_admin or request.user.is_superuser:
         submissions = AssignmentSubmission.objects.filter(assignment=assignment).order_by('-submitted_at')
     
     # Get user profile for dashboard template
@@ -358,20 +371,22 @@ def grade_submission(request, submission_id):
     """Grade a student's assignment submission"""
     submission = get_object_or_404(AssignmentSubmission, id=submission_id)
     assignment = submission.assignment
-    course = assignment.course
     
-    # Check if user is teacher of the course
-    is_teacher = False
+    # Check if user is teacher of the course or admin
+    is_authorized = False
     try:
         profile = Profile.objects.get(user=request.user)
         if profile.status == 'Teacher':
             teacher = Teacher.objects.get(profile=profile)
-            is_teacher = (course.teacher == teacher)
+            is_authorized = (assignment.course.teacher == teacher)
+        elif profile.status == 'admin' or request.user.is_superuser:
+            is_authorized = True
     except (Profile.DoesNotExist, Teacher.DoesNotExist):
-        pass
+        if request.user.is_superuser:
+            is_authorized = True
         
-    if not is_teacher:
-        messages.error(request, 'ليس لديك صلاحية لتقييم هذا الواجب')
+    if not is_authorized:
+        messages.error(request, 'ليس لديك صلاحية لتقييم هذا التسليم')
         return redirect('assignment_detail', assignment_id=assignment.id)
     
     if request.method == 'POST':
@@ -427,19 +442,28 @@ def all_assignments(request):
         messages.error(request, 'يرجى تسجيل الدخول لعرض الواجبات')
         return redirect('login')
     
-    # Get assignments for courses the user is teaching
+    # Check if user is admin or superuser
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'admin' or request.user.is_superuser
+    
+    # Initialize variables
     teaching_assignments = []
     teacher_courses = []
+    enrolled_assignments = []
     
-    # Check if user is a teacher
-    teacher = get_teacher(request.user)
-    if teacher:
-        teacher_courses = Course.objects.filter(teacher=teacher)
-        teaching_assignments = Assignment.objects.filter(course__in=teacher_courses).order_by('-created_at')
-    
-    # Get assignments for courses the user is enrolled in
-    enrolled_courses = Course.objects.filter(enrollments__student=request.user)
-    enrolled_assignments = Assignment.objects.filter(course__in=enrolled_courses).order_by('-created_at')
+    if is_admin:
+        # Show all courses and assignments to admin
+        teacher_courses = Course.objects.all()
+        teaching_assignments = Assignment.objects.all().order_by('-created_at')
+    else:
+        # Check if user is a teacher
+        teacher = get_teacher(request.user)
+        if teacher:
+            teacher_courses = Course.objects.filter(teacher=teacher)
+            teaching_assignments = Assignment.objects.filter(course__in=teacher_courses).order_by('-created_at')
+        
+        # Get assignments for courses the user is enrolled in
+        enrolled_courses = Course.objects.filter(enrollments__student=request.user)
+        enrolled_assignments = Assignment.objects.filter(course__in=enrolled_courses).order_by('-created_at')
     
     # Get user's submissions for enrolled assignments
     submissions_by_assignment = {}
@@ -461,7 +485,7 @@ def all_assignments(request):
         'teaching_assignments': teaching_assignments,
         'enrolled_assignments': enrolled_assignments,
         'submissions_by_assignment': submissions_by_assignment,
-        'is_teacher': is_teacher(request.user),
+        'is_teacher': is_teacher(request.user) or is_admin,
         'teacher_courses': teacher_courses,
         'now': timezone.now(),
         'profile': profile,  # Add profile to context

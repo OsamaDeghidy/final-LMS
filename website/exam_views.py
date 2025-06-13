@@ -27,10 +27,10 @@ def teacher_exams(request, course_id=None):
     """
     logger.info(f"teacher_exams view called with course_id: {course_id}")
     
-    # Check if user is a teacher via their profile
-    if not hasattr(request.user, 'profile') or request.user.profile.status != 'Teacher':
-        logger.warning(f"User {request.user} is not a teacher or has no profile")
-        return HttpResponseForbidden("You must be a teacher to access this page.")
+    # Check if user is a teacher or admin via their profile
+    if not hasattr(request.user, 'profile') or (request.user.profile.status not in ['Teacher', 'admin'] and not request.user.is_superuser):
+        logger.warning(f"User {request.user} is not authorized to access teacher exams")
+        return HttpResponseForbidden("You must be a teacher or admin to access this page.")
     
     # Get the teacher's profile
     teacher_profile = request.user.profile
@@ -41,16 +41,22 @@ def teacher_exams(request, course_id=None):
         teacher = Teacher.objects.get(profile=teacher_profile)
         logger.info(f"Teacher object found: {teacher}")
         
-        # Get all courses taught by this teacher
-        teacher_courses = Course.objects.filter(teacher=teacher).order_by('name')
-        logger.info(f"Found {teacher_courses.count()} courses for teacher")
+        # Get all courses - all courses for admin, only taught courses for teachers
+        if teacher_profile.status == 'admin' or request.user.is_superuser:
+            teacher_courses = Course.objects.all().order_by('name')
+        else:
+            teacher_courses = Course.objects.filter(teacher=teacher).order_by('name')
+        logger.info(f"Found {teacher_courses.count()} courses")
         
         # Only get course and exams if course_id is provided
         course = None
         exams = []
         if course_id:
             logger.info(f"Looking for course with id {course_id}")
-            course = get_object_or_404(Course, id=course_id, teacher=teacher)
+            if teacher_profile.status == 'admin' or request.user.is_superuser:
+                course = get_object_or_404(Course, id=course_id)
+            else:
+                course = get_object_or_404(Course, id=course_id, teacher=teacher)
             logger.info(f"Found course: {course}")
             exams = Exam.objects.filter(course=course).order_by('-created_at')
             logger.info(f"Found {exams.count()} exams for course {course_id}")
@@ -74,9 +80,17 @@ def teacher_exams(request, course_id=None):
 
 @login_required
 def create_exam(request, course_id):
-    """View for teachers to create a new exam"""
-    # Get the course, ensuring the current user is the teacher
-    course = get_object_or_404(Course, id=course_id, teacher__profile__user=request.user)
+    """View for teachers/admins to create a new exam"""
+    # Get the course
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Check if user is the teacher or an admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'admin'
+    
+    if not (is_teacher and course.teacher.profile.user == request.user) and not (is_admin or request.user.is_superuser):
+        return HttpResponseForbidden("You don't have permission to create exams for this course.")
+        
     modules = Module.objects.filter(course=course)
     
     # Prepare context with user profile and student data
@@ -132,13 +146,16 @@ def create_exam(request, course_id):
 
 @login_required
 def edit_exam(request, exam_id):
-    """View for teachers to edit an existing exam"""
+    """View for teachers/admins to edit an existing exam"""
     exam = get_object_or_404(Exam, id=exam_id)
     
-    # Check if user is the course teacher through profile
-    if not hasattr(request.user, 'profile') or request.user.profile.status != 'Teacher' or request.user.profile != exam.course.teacher.profile:
-        return HttpResponseForbidden("ليس لديك صلاحية تعديل هذا الاختبار")
+    # Check if user is the teacher or an admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'admin'
     
+    if not (is_teacher and exam.course.teacher.profile.user == request.user) and not (is_admin or request.user.is_superuser):
+        return HttpResponseForbidden("You don't have permission to edit this exam.")
+        
     modules = Module.objects.filter(course=exam.course)
     questions = ExamQuestion.objects.filter(exam=exam).order_by('order')
     
@@ -184,19 +201,22 @@ def edit_exam(request, exam_id):
 
 @login_required
 def delete_exam(request, exam_id):
-    """View for teachers to delete an exam"""
+    """View for teachers/admins to delete an exam"""
     exam = get_object_or_404(Exam, id=exam_id)
     
-    # Check if user is the course teacher through profile
-    if not hasattr(request.user, 'profile') or request.user.profile.status != 'Teacher' or request.user.profile != exam.course.teacher.profile:
-        return HttpResponseForbidden("ليس لديك صلاحية حذف هذا الاختبار")
+    # Check if user is the teacher or an admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'admin'
+    
+    if not (is_teacher and exam.course.teacher.profile.user == request.user) and not (is_admin or request.user.is_superuser):
+        return HttpResponseForbidden("You don't have permission to delete this exam.")
     
     course_id = exam.course.id
     
     if request.method == 'POST':
         exam.delete()
-        messages.success(request, 'تم حذف الاختبار بنجاح.')
-        return redirect('teacher_exams_course', course_id=course_id)
+        messages.success(request, 'تم حذف الامتحان بنجاح')
+        return redirect('teacher_exams', course_id=course_id)
     
     context = {
         'exam': exam,

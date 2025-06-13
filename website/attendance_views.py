@@ -21,8 +21,9 @@ def attendance_dashboard(request):
     """
     user = request.user
     is_teacher = hasattr(user, 'profile') and user.profile.status == 'Teacher'
+    is_admin = hasattr(user, 'profile') and user.profile.status == 'admin'
     
-    if is_teacher:
+    if is_teacher or is_admin or user.is_superuser:
         # Get courses taught by this teacher
         courses = Course.objects.filter(teacher__profile__user=user)
         
@@ -33,11 +34,15 @@ def attendance_dashboard(request):
             attendance_records = Attendance.objects.filter(course=course)
             
             # Calculate attendance rate
-            total_sessions = attendance_records.values('date', 'video').distinct().count()
+            # Count distinct attendance dates for this course
+            total_sessions = attendance_records.values('date').distinct().count()
             if total_sessions > 0 and total_students > 0:
+                # Calculate expected records (sessions * students)
                 expected_records = total_sessions * total_students
+                # Count actual attendance records
                 actual_records = attendance_records.filter(is_present=True).count()
-                attendance_rate = (actual_records / expected_records) * 100
+                # Calculate attendance rate
+                attendance_rate = (actual_records / expected_records) * 100 if expected_records > 0 else 0
             else:
                 attendance_rate = 0
                 
