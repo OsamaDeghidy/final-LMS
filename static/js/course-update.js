@@ -75,9 +75,9 @@ function initializeApp() {
 
   // Initialize event handlers
   initializeDeleteHandlers();
+  initializePdfDeleteButtons();
   initializeQuizToggles();
   initializeAddButtons();
-  initializePdfDeleteButtons();
   
   // Add event listener to the "Submit" button
   const submitBtn = document.getElementById('submit-course-btn');
@@ -642,187 +642,78 @@ function initializePdfDeleteButtons() {
         }
     });
     
-    // Get the modules container
-    const modulesContainer = document.getElementById('modules-container');
-    if (!modulesContainer) {
-        console.warn('Modules container not yet in DOM');
-    } else {
-        // Get the current number of modules (including deleted ones)
-        const updateModuleCount = modulesContainer.querySelectorAll('.module-card').length;
-        const newModuleNumber = updateModuleCount + 1;
-        const newModuleId = 'new_' + Date.now(); // Use timestamp for unique ID
+    // Function to add a new module
+    function addNewModule() {
+        const template = document.getElementById('module-template');
+        const modulesContainer = document.getElementById('modules-container');
+        if (!template || !modulesContainer) {
+            console.warn('Module template or container not found');
+            return;
+        }
         
-        const moduleHtml = `
-        <div class="card mb-4 module-card" id="module_${newModuleId}">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-layer-group text-primary me-2"></i>الموديول ${newModuleNumber}</h5>
-                <button type="button" class="btn btn-sm btn-outline-danger remove-module-btn" data-module-id="${newModuleId}">
-                    <i class="fas fa-trash"></i>
-                </button>
-                <input type="hidden" name="delete_module_${newModuleId}" id="delete_module_${newModuleId}" value="0">
-            </div>
-            <div class="card-body">
-                <!-- Module Info -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">اسم الموديول</label>
-                    <input type="text" class="form-control" name="module_name_new_${newModuleId}" placeholder="أدخل اسم الموديول" required>
-                    <input type="hidden" name="module_id_new_${newModuleId}" value="new">
-                </div>
-                
-                <!-- Videos -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">إضافة فيديوهات جديدة</label>
-                    <input type="file" class="form-control" name="module_videos_new_${newModuleId}" accept="video/*" multiple>
-                    <small class="text-muted">الصيغ المدعومة: MP4, MOV, AVI</small>
-                </div>
-                
-                <!-- Notes -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">ملاحظات إضافية</label>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div></div>
-                        <button type="button" class="btn btn-sm btn-outline-primary add-note-btn" data-module-id="${newModuleId}">
-                            <i class="fas fa-plus me-1"></i>إضافة ملاحظة
-                        </button>
-                    </div>
-                    <div class="notes-container" id="notes_container_${newModuleId}">
-                        <div class="input-group mb-2">
-                            <textarea class="form-control" name="module_notes_new_${newModuleId}_0" rows="2" placeholder="أدخل ملاحظة"></textarea>
-                            <button type="button" class="btn btn-outline-danger remove-note-btn">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Video Names -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">عناوين الفيديوهات الجديدة</label>
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div></div>
-                        <button type="button" class="btn btn-sm btn-outline-primary add-video-name-btn" data-module-id="${newModuleId}">
-                            <i class="fas fa-plus me-1"></i>إضافة عنوان
-                        </button>
-                    </div>
-                    <div class="video-names-container" id="video_names_container_${newModuleId}">
-                        <div class="input-group mb-2">
-                            <span class="input-group-text bg-light"><i class="fas fa-video text-primary"></i></span>
-                            <input type="text" class="form-control" name="video_name_new_${newModuleId}_0" placeholder="أدخل عنوان الفيديو">
-                            <button type="button" class="btn btn-outline-danger remove-video-name-btn">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Quiz Section -->
-                <div class="card mb-3 border-primary">
-                    <div class="card-header bg-light">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input quiz-toggle" type="checkbox" id="has_quiz_new_${newModuleId}" name="has_quiz_new_${newModuleId}">
-                            <label class="form-check-label fw-bold" for="has_quiz_new_${newModuleId}">إضافة اختبار للموديول</label>
-                        </div>
-                    </div>
-                    <div class="quiz-section card-body" id="quiz_section_new_${newModuleId}" style="display: none;">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">عنوان الاختبار</label>
-                            <input type="text" class="form-control" name="quiz_title_new_${newModuleId}" placeholder="أدخل عنوان الاختبار">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">وصف الاختبار</label>
-                            <textarea class="form-control" name="quiz_description_new_${newModuleId}" rows="2" placeholder="وصف مختصر للاختبار"></textarea>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">درجة النجاح (%)</label>
-                                <input type="number" class="form-control" name="quiz_pass_mark_new_${newModuleId}" min="0" max="100" value="50">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">مدة الاختبار (دقائق)</label>
-                                <input type="number" class="form-control" name="quiz_time_limit_new_${newModuleId}" min="1" value="10">
-                            </div>
-                        </div>
-                        
-                        <div class="questions-container" id="questions_container_new_${newModuleId}">
-                            <!-- Questions will be added here -->
-                        </div>
-                        
-                        <button type="button" class="btn btn-primary w-100 mt-3 add-question-btn" data-module-id="new_${newModuleId}">
-                            <i class="fas fa-plus me-1"></i>إضافة سؤال جديد
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        `;
+        const clone = template.content.cloneNode(true);
+        const moduleElement = clone.querySelector('.module-card');
+        const newModuleId = 'new_' + Date.now();
+        moduleElement.id = `module_${newModuleId}`;
+
+        // Update dynamic ids/names inside the cloned module for uniqueness
+        moduleElement.querySelectorAll('[id]').forEach(el => {
+            if (el.id === 'has_quiz') {
+                el.id = `has_quiz_${newModuleId}`;
+            }
+        });
         
-        modulesContainer.insertAdjacentHTML('beforeend', moduleHtml);
+        // Update label 'for' attributes to point to new checkbox id
+        moduleElement.querySelectorAll('label[for="has_quiz"]').forEach(label => {
+            label.setAttribute('for', `has_quiz_${newModuleId}`);
+        });
         
-        // Add event listeners to the new elements
-        const newModule = document.getElementById(`module_${newModuleId}`);
-        if (newModule) {
-            // Add event listener to remove module button
-            const removeBtn = newModule.querySelector('.remove-module-btn');
-            if (removeBtn) {
-                removeBtn.addEventListener('click', function() {
-                    newModule.remove();
-                });
-            }
-            
-            // Add event listener to quiz toggle
-            const quizToggle = newModule.querySelector('.quiz-toggle');
-            if (quizToggle) {
-                quizToggle.addEventListener('change', function() {
-                    const quizSection = document.getElementById(`quiz_section_new_${newModuleId}`);
-                    if (quizSection) {
-                        quizSection.style.display = this.checked ? 'block' : 'none';
-                    }
-                });
-            }
-            
-            // Add event listeners to add buttons
-            const addNoteBtn = newModule.querySelector('.add-note-btn');
-            if (addNoteBtn) {
-                addNoteBtn.addEventListener('click', function() {
-                    addNewNote(`new_${newModuleId}`);
-                });
-            }
-            
-            const addVideoNameBtn = newModule.querySelector('.add-video-name-btn');
-            if (addVideoNameBtn) {
-                addVideoNameBtn.addEventListener('click', function() {
-                    addNewVideoName(`new_${newModuleId}`);
-                });
-            }
-            
-            const addQuestionBtn = newModule.querySelector('.add-question-btn');
-            if (addQuestionBtn) {
-                addQuestionBtn.addEventListener('click', function() {
-                    addNewQuestion(`new_${newModuleId}`);
-                });
-            }
-            
-            // Add event listeners to remove buttons
-            newModule.querySelectorAll('.remove-note-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const noteItem = this.closest('.input-group');
-                    if (noteItem) {
-                        noteItem.remove();
-                    }
-                });
-            });
-            
-            newModule.querySelectorAll('.remove-video-name-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const videoNameItem = this.closest('.input-group');
-                    if (videoNameItem) {
-                        videoNameItem.remove();
-                    }
-                });
-            });
+        // Add data-module-id attribute to dynamic action buttons
+        moduleElement.querySelectorAll('.add-question-btn, .add-note-btn, .add-video-name-btn').forEach(btn => {
+            btn.setAttribute('data-module-id', newModuleId);
+        });
+        
+        moduleElement.querySelectorAll('[name]').forEach(el => {
+            el.name = el.name.replace('module_', `module_${newModuleId}_`);
+        });
+        
+        // Remove module button
+        const removeBtn = moduleElement.querySelector('.remove-module-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => moduleElement.remove());
+        }
+        
+        modulesContainer.appendChild(moduleElement);
+        
+        // Attach toggle handler for the newly added module
+        const quizToggle = moduleElement.querySelector('.quiz-toggle');
+        if (quizToggle) {
+            quizToggle.addEventListener('change', (e) => toggleQuiz(moduleElement, e.target.checked));
+            // Ensure initial state
+            toggleQuiz(moduleElement, quizToggle.checked);
+        }
+        
+        // Re-init any listeners that rely on dynamic content (except quiz toggles which are handled above)
+        initializeDeleteHandlers();
+        
+        // Enhance new module quiz section to mirror existing modules
+        const quizToggleInput = moduleElement.querySelector('.quiz-toggle');
+        if (quizToggleInput) {
+            quizToggleInput.id = `has_quiz_${newModuleId}`;
+            quizToggleInput.name = `has_quiz_${newModuleId}`;
+        }
+        
+        const quizSectionElem = moduleElement.querySelector('.quiz-section');
+        if (quizSectionElem) {
+            quizSectionElem.id = `quiz_section_${newModuleId}`;
+        }
+        
+        const questionsContainerElem = moduleElement.querySelector('.questions-container');
+        if (questionsContainerElem) {
+            questionsContainerElem.id = `questions_container_${newModuleId}`;
         }
     }
-    // End of addNewModule function
+    // End of addNewModule
 
     // Function to add a new question
     function addNewQuestion(moduleId) {
@@ -1286,7 +1177,7 @@ function submitCourse() {
         
         // Handle quiz sections
         const isExisting = moduleId.match(/^\d+$/) !== null;
-        const quizToggleId = isExisting ? `has_quiz_existing_${moduleId}` : `has_quiz_new_${moduleId}`;
+        const quizToggleId = isExisting ? `has_quiz_existing_${moduleId}` : `has_quiz_${moduleId}`;
         const quizToggle = document.getElementById(quizToggleId);
         const quizSection = moduleCard.querySelector('.quiz-section');
         
@@ -1414,11 +1305,7 @@ function showStep(stepIdx) {
     const stepCards = document.querySelectorAll('.step-card');
     if (!stepCards.length) return;
     stepCards.forEach((card, idx) => {
-        if (idx === stepIdx) {
-            card.classList.remove('d-none');
-        } else {
-            card.classList.add('d-none');
-        }
+        card.classList.toggle('d-none', idx !== stepIdx);
     });
     currentStepIndex = stepIdx;
 }
@@ -1426,13 +1313,15 @@ function showStep(stepIdx) {
 function nextStep() {
     const stepCards = document.querySelectorAll('.step-card');
     if (currentStepIndex < stepCards.length - 1) {
-        showStep(currentStepIndex + 1);
+        currentStepIndex += 1;
+        showStep(currentStepIndex);
     }
 }
 
 function prevStep() {
     if (currentStepIndex > 0) {
-        showStep(currentStepIndex - 1);
+        currentStepIndex -= 1;
+        showStep(currentStepIndex);
     }
 }
 
@@ -1666,55 +1555,12 @@ function addModule() {
     }
   
     const quizSection = moduleElement.querySelector('.quiz-section');
-    if (!quizSection) {
-      console.error('Quiz section not found');
-      return;
-    }
-  
-    const questionsContainer = quizSection.querySelector('.questions-container');
-    if (!questionsContainer) {
-      console.error('Questions container not found');
-      return;
-    }
-  
-    // Toggle quiz section visibility
-    quizSection.style.display = isChecked ? 'block' : 'none';
-  
-    if (isChecked) {
-      // Add first question if none exist
-      const visibleQuestions = Array.from(questionsContainer.querySelectorAll('.question-card'))
-        .filter(q => q.style.display !== 'none');
-  
-      if (visibleQuestions.length === 0) {
-        const moduleId = moduleElement.id;
-        if (!moduleId) {
-          console.error('Module ID not found');
-          return;
-        }
-        console.log('Adding initial question for module:', moduleId);
-        addQuestion(moduleElement, moduleId);
-      } else {
-        console.log('Questions already exist, not adding new one');
-      }
-    } else {
-      console.log('Hiding quiz section');
-    };
+    if (!quizSection) return;
     
-    // Remove the duplicate toggleQuiz function that appears later in the file
-    window.toggleQuiz = function(moduleElement, isChecked) {
-      console.log('Toggling quiz (global):', { moduleId: moduleElement.id, isChecked });
-      
-      const quizSection = moduleElement.querySelector('.quiz-section');
-      if (quizSection) {
-        quizSection.style.display = isChecked ? 'block' : 'none';
-        
-        if (isChecked) {
-          const questionsContainer = quizSection.querySelector('.questions-container');
-          if (questionsContainer && questionsContainer.querySelectorAll('.question-card').length === 0) {
-            addQuestion(moduleElement, moduleElement.id);
-          }
-        }
-      }
+    if (isChecked) {
+      quizSection.style.display = 'block';
+    } else {
+      quizSection.style.display = 'none';
     }
   }
   
@@ -1927,7 +1773,8 @@ function addModule() {
             </button>
           </div>
         </div>
-      </div>`;
+      </div>
+    `;
       
     // Insert before the "Add Answer" button
     const addButton = answersContainer.querySelector('.add-answer-btn');
