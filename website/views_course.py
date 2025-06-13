@@ -1382,17 +1382,20 @@ def enroll_course(request, course_id):
         messages.info(request, _('You are already enrolled in this course.'))
         return redirect('courseviewpage', course_id=course_id)
     
-    # Check if course is free or if user has purchased it
-    if course.price == 0 or CartItem.objects.filter(cart__user=request.user, course=course, purchased=True).exists():
+    # Check if course is free or if user has the course in their cart
+    if course.price == 0 or CartItem.objects.filter(cart__user=request.user, course=course).exists():
         # Create enrollment
         Enrollment.objects.create(
             course=course,
             student=request.user
         )
+        # Remove from cart if it was there
+        CartItem.objects.filter(cart__user=request.user, course=course).delete()
         messages.success(request, _('Successfully enrolled in the course.'))
         return redirect('courseviewpage', course_id=course_id)
     else:
-        messages.error(request, _('You need to purchase this course before enrolling.'))
+        messages.error(request, _('You need to add this course to your cart and complete the purchase before enrolling.'))
+        return redirect('view_cart')
         return redirect('course_detail', course_id=course_id)
 
 
@@ -1486,7 +1489,7 @@ def add_to_cart(request, course_id):
 def view_cart(request):
     try:
         cart = Cart.objects.get(user=request.user)
-        cart_items = CartItem.objects.filter(cart=cart, purchased=False)
+        cart_items = CartItem.objects.filter(cart=cart)
         total_price = sum(item.course.price for item in cart_items)
     except Cart.DoesNotExist:
         cart_items = []
@@ -1517,7 +1520,7 @@ def remove_from_cart(request, course_id):
 def checkout(request):
     try:
         cart = Cart.objects.get(user=request.user)
-        cart_items = CartItem.objects.filter(cart=cart, purchased=False)
+        cart_items = CartItem.objects.filter(cart=cart)
         
         if not cart_items.exists():
             messages.error(request, _('Your cart is empty.'))
@@ -1525,10 +1528,6 @@ def checkout(request):
         
         # Process payment (simplified for now)
         for item in cart_items:
-            item.purchased = True
-            item.purchase_date = timezone.now()
-            item.save()
-            
             # Create enrollment for purchased course
             enrollment, created = Enrollment.objects.get_or_create(
                 course=item.course,
@@ -1539,6 +1538,9 @@ def checkout(request):
                     'progress': 0
                 }
             )
+        
+        # Clear the cart after successful checkout
+        cart_items.delete()
         
         messages.success(request, _('Purchase completed successfully. You are now enrolled in the courses.'))
         return redirect('dashboard')

@@ -252,25 +252,24 @@ def dashboard(request):
                     'course__teacher__profile'
                 ).prefetch_related(
                     'course__tags',
-                    'course__module_set',
-                    'course__module_set__video_set'
+                    'course__module_set'
                 )
                 
                 # Calculate progress for each enrollment
                 for enrollment in enrollments:
                     # Calculate total videos in course
-                    total_videos = sum(module.video_set.count() for module in enrollment.course.module_set.all())
+                    total_videos = sum(1 for module in enrollment.course.module_set.all() if module.video)
                     
                     if total_videos > 0:
                         # Get watched videos for this course
-                        watched_videos = VideoProgress.objects.filter(
-                            student=request.user,
-                            video__module__course=enrollment.course,
-                            watched=True
+                        watched_videos = ModuleProgress.objects.filter(
+                            user=request.user,
+                            module__course=enrollment.course,
+                            video_watched=True
                         ).count()
                         
                         # Calculate progress percentage
-                        progress = (watched_videos / total_videos) * 100
+                        progress = (watched_videos / total_videos) * 100 if total_videos > 0 else 0
                     else:
                         progress = 0
                         
