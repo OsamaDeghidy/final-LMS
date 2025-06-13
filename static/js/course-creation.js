@@ -976,16 +976,19 @@ async function submitCourse() {
       const moduleId = moduleElement.id.replace('module_', '');
       const moduleName = moduleElement.querySelector('input[name^="module_name"]')?.value || `Module ${index + 1}`;
       const moduleDescription = moduleElement.querySelector('textarea[name^="module_description"]')?.value || '';
+      const moduleLearned = moduleElement.querySelector('textarea[name^="module_learned"]')?.value || '';
       
       // Add module data to form (fields expected by backend)
       formData.append(`module_${moduleId}_name`, moduleName);
       formData.append(`module_${moduleId}_description`, moduleDescription);
+      formData.append(`module_${moduleId}_learned`, moduleLearned);
       
       // Build module JSON object
       const moduleData = {
         id: moduleId,
         name: moduleName,
         description: moduleDescription,
+        learned: moduleLearned,
         number: index + 1,
         has_quiz: false // will be updated below if quiz exists
       };

@@ -148,6 +148,7 @@ def create_course(request):
             # Get form data
             name = request.POST.get('name')
             description = request.POST.get('description')
+            learned = request.POST.get('learned')
             small_description = request.POST.get('small_description')
             price = request.POST.get('price', 0)
             category_id = request.POST.get('category')
@@ -204,6 +205,7 @@ def create_course(request):
             course_data = {
                 'name': name,
                 'description': description,
+                'learned': learned,
                 'small_description': small_description,
                 'price': price,
                 'category_id': category_id,
