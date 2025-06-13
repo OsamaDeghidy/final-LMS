@@ -366,11 +366,48 @@
                             <div class="pdf-viewer">
                                 <h3>منهج الدورة التفصيلي</h3>
                                 <div class="pdf-container">
-                                    <!-- محاولة 1: استخدام وسم embed -->
-                                    <embed src="{{ course.syllabus_pdf.url }}" type="application/pdf" width="100%" height="600px" style="border: none;">
+                                    <!-- محاولة عرض PDF بطرق متعددة للتوافق -->
+                                    <iframe src="{{ course.syllabus_pdf.url }}" 
+                                            width="100%" 
+                                            height="600px" 
+                                            style="border: 1px solid #ddd; border-radius: 8px;"
+                                            title="منهج الدورة التفصيلي">
+                                    </iframe>
+                                    
+                                    <!-- Fallback للمتصفحات التي لا تدعم iframe -->
+                                    <noscript>
+                                        <object data="{{ course.syllabus_pdf.url }}" 
+                                                type="application/pdf" 
+                                                width="100%" 
+                                                height="600px"
+                                                style="border: 1px solid #ddd; border-radius: 8px;">
+                                            <embed src="{{ course.syllabus_pdf.url }}" 
+                                                   type="application/pdf" 
+                                                   width="100%" 
+                                                   height="600px"
+                                                   style="border: 1px solid #ddd; border-radius: 8px;">
+                                        </object>
+                                    </noscript>
                                 </div>
-                                <div class="pdf-fallback" style="text-align: center; margin-top: 15px;">
-                                    <p>إذا لم يظهر الملف أعلاه، يمكنك <a href="{{ course.syllabus_pdf.url }}" target="_blank" style="color: #3a7bd5; text-decoration: underline;">فتحه في نافذة جديدة</a></p>
+                                
+                                <!-- أزرار التحكم والتحميل -->
+                                <div class="pdf-controls" style="text-align: center; margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ course.syllabus_pdf.url }}" 
+                                           target="_blank" 
+                                           class="btn btn-primary btn-sm">
+                                            <i class="fas fa-external-link-alt"></i> فتح في نافذة جديدة
+                                        </a>
+                                        <a href="{{ course.syllabus_pdf.url }}" 
+                                           download 
+                                           class="btn btn-success btn-sm">
+                                            <i class="fas fa-download"></i> تحميل الملف
+                                        </a>
+                                     
+                                    </div>
+                                    <p class="text-muted mt-2 mb-0">
+                                        <small>إذا لم يظهر الملف بشكل صحيح، استخدم الأزرار أعلاه للوصول إليه</small>
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -382,11 +419,48 @@
                             <div class="pdf-viewer">
                                 <h3>مواد إضافية للدورة</h3>
                                 <div class="pdf-container">
-                                    <!-- محاولة 1: استخدام وسم embed -->
-                                    <embed src="{{ course.materials_pdf.url }}" type="application/pdf" width="100%" height="600px" style="border: none;">
+                                    <!-- محاولة عرض PDF بطرق متعددة للتوافق -->
+                                    <iframe src="{{ course.materials_pdf.url }}" 
+                                            width="100%" 
+                                            height="600px" 
+                                            style="border: 1px solid #ddd; border-radius: 8px;"
+                                            title="مواد إضافية للدورة">
+                                    </iframe>
+                                    
+                                    <!-- Fallback للمتصفحات التي لا تدعم iframe -->
+                                    <noscript>
+                                        <object data="{{ course.materials_pdf.url }}" 
+                                                type="application/pdf" 
+                                                width="100%" 
+                                                height="600px"
+                                                style="border: 1px solid #ddd; border-radius: 8px;">
+                                            <embed src="{{ course.materials_pdf.url }}" 
+                                                   type="application/pdf" 
+                                                   width="100%" 
+                                                   height="600px"
+                                                   style="border: 1px solid #ddd; border-radius: 8px;">
+                                        </object>
+                                    </noscript>
                                 </div>
-                                <div class="pdf-fallback" style="text-align: center; margin-top: 15px;">
-                                    <p>إذا لم يظهر الملف أعلاه، يمكنك <a href="{{ course.materials_pdf.url }}" target="_blank" style="color: #3a7bd5; text-decoration: underline;">فتحه في نافذة جديدة</a></p>
+                                
+                                <!-- أزرار التحكم والتحميل -->
+                                <div class="pdf-controls" style="text-align: center; margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ course.materials_pdf.url }}" 
+                                           target="_blank" 
+                                           class="btn btn-primary btn-sm">
+                                            <i class="fas fa-external-link-alt"></i> فتح في نافذة جديدة
+                                        </a>
+                                        <a href="{{ course.materials_pdf.url }}" 
+                                           download 
+                                           class="btn btn-success btn-sm">
+                                            <i class="fas fa-download"></i> تحميل الملف
+                                        </a>
+                               
+                                    </div>
+                                    <p class="text-muted mt-2 mb-0">
+                                        <small>إذا لم يظهر الملف بشكل صحيح، استخدم الأزرار أعلاه للوصول إليه</small>
+                                    </p>
                                 </div>
                             </div>
                         </div>

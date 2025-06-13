@@ -131,3 +131,47 @@
         });
     });
 });
+
+// Function to print PDF
+function printPDF(pdfUrl) {
+    // Open PDF in new window for printing
+    const printWindow = window.open(pdfUrl, '_blank');
+    if (printWindow) {
+        printWindow.onload = function() {
+            printWindow.print();
+        };
+    } else {
+        // Fallback if popup is blocked
+        alert('يرجى السماح بالنوافذ المنبثقة لطباعة الملف، أو استخدم زر "فتح في نافذة جديدة" ثم اطبع من هناك.');
+    }
+}
+
+// Enhanced PDF viewer functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if PDF iframes are loaded properly
+    const pdfIframes = document.querySelectorAll('iframe[src*=".pdf"]');
+    
+    pdfIframes.forEach(iframe => {
+        iframe.addEventListener('load', function() {
+            console.log('PDF loaded successfully');
+        });
+        
+        iframe.addEventListener('error', function() {
+            console.log('PDF failed to load, showing fallback');
+            // Show fallback message
+            const container = iframe.closest('.pdf-container');
+            if (container) {
+                const fallbackDiv = document.createElement('div');
+                fallbackDiv.className = 'pdf-load-error';
+                fallbackDiv.style.cssText = 'padding: 40px; text-align: center; background-color: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 8px; margin: 20px 0;';
+                fallbackDiv.innerHTML = `
+                    <i class="fas fa-file-pdf fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">لا يمكن عرض الملف مباشرة</h4>
+                    <p class="text-muted">يرجى استخدام الأزرار أدناه للوصول إلى الملف</p>
+                `;
+                container.appendChild(fallbackDiv);
+                iframe.style.display = 'none';
+            }
+        });
+    });
+});
