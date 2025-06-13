@@ -168,6 +168,77 @@ class Module(models.Model):
             if os.path.isfile(self.pdf.path):
                 os.remove(self.pdf.path)
         super().delete(*args, **kwargs)
+    
+    def get_ordered_content(self):
+        """
+        Returns all content for this module in a structured order:
+        1. Video (if exists)
+        2. PDF (if exists) 
+        3. Notes (if exists)
+        4. Quizzes (related to this module)
+        5. Assignments (related to this module)
+        """
+        content_items = []
+        
+        # 1. Add video if exists
+        if self.video:
+            content_items.append({
+                'type': 'video',
+                'id': f'module_video_{self.id}',
+                'name': f'فيديو: {self.name}',
+                'duration': self.video_duration if self.video_duration else 0,
+                'url': self.video.url,
+                'order': 1
+            })
+        
+        # 2. Add PDF if exists
+        if self.pdf:
+            content_items.append({
+                'type': 'pdf',
+                'id': f'module_pdf_{self.id}',
+                'name': f'ملف PDF: {self.name}',
+                'url': self.pdf.url,
+                'order': 2
+            })
+        
+        # 3. Add notes if exists
+        if self.note:
+            content_items.append({
+                'type': 'note',
+                'id': f'module_note_{self.id}',
+                'name': f'ملاحظات: {self.name}',
+                'content': self.note,
+                'order': 3
+            })
+        
+        # 4. Add quizzes related to this module
+        quizzes = self.module_quizzes.filter(is_active=True).order_by('created_at')
+        for quiz in quizzes:
+            content_items.append({
+                'type': 'quiz',
+                'id': quiz.id,
+                'name': quiz.title or f'اختبار: {self.name}',
+                'description': quiz.description,
+                'time_limit': quiz.time_limit,
+                'questions_count': quiz.questions.count(),
+                'order': 4
+            })
+        
+        # 5. Add assignments related to this module
+        assignments = self.module_assignments.filter(is_active=True).order_by('created_at')
+        for assignment in assignments:
+            content_items.append({
+                'type': 'assignment',
+                'id': assignment.id,
+                'name': assignment.title,
+                'description': assignment.description,
+                'due_date': assignment.due_date,
+                'points': assignment.points,
+                'order': 5
+            })
+        
+        # Sort by order and return
+        return sorted(content_items, key=lambda x: x['order'])
 
 
 class CourseReview(models.Model):

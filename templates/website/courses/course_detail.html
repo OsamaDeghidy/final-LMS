@@ -71,7 +71,6 @@
                 <div class="course-tabs">
                     <div class="tab active" data-tab="about">عن الدورة</div>
                     <div class="tab" data-tab="content">المحتوى</div>
-                    <div class="tab" data-tab="exams">الاختبارات</div>
                     <div class="tab" data-tab="reviews">التقييمات</div>
                     <div class="tab" data-tab="faq">الأسئلة الشائعة</div>
                 </div>
@@ -137,40 +136,138 @@
                                 {% for module in modules %}
                                     <div class="module-item">
                                         <div class="module-header">
-                                            <h3>{{ module.name }}</h3>
-                                            <span class="module-meta">{{ module.videos.count }} فيديو • {{ module.duration }}</span>
+                                            <h3>الوحدة {{ forloop.counter }}: {{ module.name }}</h3>
+                                            <span class="module-meta">
+                                                {% with content_count=module.get_ordered_content|length %}
+                                                    {{ content_count }} عنصر
+                                                {% endwith %}
+                                                {% if module.video_duration %}
+                                                    • {{ module.video_duration|floatformat:0 }} دقيقة
+                                                {% endif %}
+                                            </span>
                                         </div>
                                         <div class="module-content">
                                             {% for item in module.get_ordered_content %}
                                                 {% if item.type == 'video' %}
                                                     <div class="content-item video-item">
-                                                        <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=item.id %}" class="content-link">
+                                                        {% if is_enrolled %}
+                                                            <a href="{% url 'courseviewpage' course_id=course.id %}?content_type=video&content_id={{ item.id }}" class="content-link">
+                                                        {% else %}
+                                                            <div class="content-link locked">
+                                                        {% endif %}
                                                             <div class="content-header">
                                                                 <i class="fas fa-play-circle"></i>
                                                                 <span class="content-title">{{ item.name }}</span>
                                                                 <span class="content-meta">
                                                                     {% if item.duration %}
-                                                                        {{ item.duration|time:"H:i:s" }}
+                                                                        {{ item.duration|floatformat:0 }} دقيقة
                                                                     {% else %}
-                                                                        00:00
+                                                                        --:--
                                                                     {% endif %}
                                                                 </span>
+                                                                {% if not is_enrolled %}
+                                                                    <i class="fas fa-lock text-muted"></i>
+                                                                {% endif %}
                                                             </div>
-                                                        </a>
+                                                        {% if is_enrolled %}
+                                                            </a>
+                                                        {% else %}
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                {% elif item.type == 'pdf' %}
+                                                    <div class="content-item pdf-item">
+                                                        {% if is_enrolled %}
+                                                            <a href="{% url 'courseviewpage' course_id=course.id %}?content_type=pdf&content_id={{ item.id }}" class="content-link">
+                                                        {% else %}
+                                                            <div class="content-link locked">
+                                                        {% endif %}
+                                                            <div class="content-header">
+                                                                <i class="fas fa-file-pdf"></i>
+                                                                <span class="content-title">{{ item.name }}</span>
+                                                                <span class="content-meta">PDF</span>
+                                                                {% if not is_enrolled %}
+                                                                    <i class="fas fa-lock text-muted"></i>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% if is_enrolled %}
+                                                            </a>
+                                                        {% else %}
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                {% elif item.type == 'note' %}
+                                                    <div class="content-item note-item">
+                                                        {% if is_enrolled %}
+                                                            <a href="{% url 'courseviewpage' course_id=course.id %}?content_type=note&content_id={{ item.id }}" class="content-link">
+                                                        {% else %}
+                                                            <div class="content-link locked">
+                                                        {% endif %}
+                                                            <div class="content-header">
+                                                                <i class="fas fa-sticky-note"></i>
+                                                                <span class="content-title">{{ item.name }}</span>
+                                                                <span class="content-meta">ملاحظات</span>
+                                                                {% if not is_enrolled %}
+                                                                    <i class="fas fa-lock text-muted"></i>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% if is_enrolled %}
+                                                            </a>
+                                                        {% else %}
+                                                            </div>
+                                                        {% endif %}
                                                     </div>
                                                 {% elif item.type == 'quiz' %}
                                                     <div class="content-item quiz-item">
-                                                        {% if item.video %}
-                                                            <a href="{% url 'courseviewpagevideo' course_id=course.id video_id=item.video.id %}" class="content-link">
+                                                        {% if is_enrolled %}
+                                                            <a href="{% url 'courseviewpage' course_id=course.id %}?content_type=quiz&content_id={{ item.id }}" class="content-link">
                                                         {% else %}
-                                                            <a href="#" class="content-link">
+                                                            <div class="content-link locked">
                                                         {% endif %}
-                                                                <div class="content-header">
-                                                                    <i class="fas fa-question-circle"></i>
-                                                                    <span class="content-title">اختبار: {{ item.title|default:"اختبار الفيديو" }}</span>
-                                                                    <span class="content-meta">{{ item.questions_count }} سؤال</span>
-                                                                </div>
+                                                            <div class="content-header">
+                                                                <i class="fas fa-question-circle"></i>
+                                                                <span class="content-title">{{ item.name }}</span>
+                                                                <span class="content-meta">
+                                                                    {{ item.questions_count }} سؤال
+                                                                    {% if item.time_limit %}
+                                                                        • {{ item.time_limit }} دقيقة
+                                                                    {% endif %}
+                                                                </span>
+                                                                {% if not is_enrolled %}
+                                                                    <i class="fas fa-lock text-muted"></i>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% if is_enrolled %}
                                                             </a>
+                                                        {% else %}
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                {% elif item.type == 'assignment' %}
+                                                    <div class="content-item assignment-item">
+                                                        {% if is_enrolled %}
+                                                            <a href="{% url 'courseviewpage' course_id=course.id %}?content_type=assignment&content_id={{ item.id }}" class="content-link">
+                                                        {% else %}
+                                                            <div class="content-link locked">
+                                                        {% endif %}
+                                                            <div class="content-header">
+                                                                <i class="fas fa-tasks"></i>
+                                                                <span class="content-title">{{ item.name }}</span>
+                                                                <span class="content-meta">
+                                                                    {{ item.points }} نقطة
+                                                                    {% if item.due_date %}
+                                                                        • مطلوب: {{ item.due_date|date:"d/m/Y" }}
+                                                                    {% endif %}
+                                                                </span>
+                                                                {% if not is_enrolled %}
+                                                                    <i class="fas fa-lock text-muted"></i>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% if is_enrolled %}
+                                                            </a>
+                                                        {% else %}
+                                                            </div>
+                                                        {% endif %}
                                                     </div>
                                                 {% endif %}
                                             {% empty %}
@@ -181,6 +278,85 @@
                                 {% empty %}
                                     <div class="alert alert-info">لم يتم إضافة وحدات بعد</div>
                                 {% endfor %}
+                                
+                                <!-- Final Exams Section -->
+                                {% if final_exams %}
+                                    <div class="module-item final-exams-section">
+                                        <div class="module-header">
+                                            <h3><i class="fas fa-graduation-cap text-primary"></i> الاختبارات النهائية</h3>
+                                            <span class="module-meta">{{ final_exams.count }} اختبار نهائي</span>
+                                        </div>
+                                        <div class="module-content">
+                                            {% for exam in final_exams %}
+                                                <div class="content-item exam-item">
+                                                    {% if is_enrolled %}
+                                                        <a href="{% url 'courseviewpage' course_id=course.id %}?content_type=exam&content_id={{ exam.id }}" class="content-link">
+                                                    {% else %}
+                                                        <div class="content-link locked">
+                                                    {% endif %}
+                                                        <div class="content-header">
+                                                            <i class="fas fa-graduation-cap"></i>
+                                                            <span class="content-title">{{ exam.title }}</span>
+                                                            <span class="content-meta">
+                                                                {{ exam.questions.count }} سؤال
+                                                                {% if exam.time_limit %}
+                                                                    • {{ exam.time_limit }} دقيقة
+                                                                {% endif %}
+                                                                • نسبة النجاح: {{ exam.pass_mark }}%
+                                                            </span>
+                                                            {% if not is_enrolled %}
+                                                                <i class="fas fa-lock text-muted"></i>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% if is_enrolled %}
+                                                        </a>
+                                                    {% else %}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Course-level Assignments -->
+                                {% if course_assignments %}
+                                    <div class="module-item course-assignments-section">
+                                        <div class="module-header">
+                                            <h3><i class="fas fa-clipboard-list text-success"></i> واجبات الدورة</h3>
+                                            <span class="module-meta">{{ course_assignments.count }} واجب</span>
+                                        </div>
+                                        <div class="module-content">
+                                            {% for assignment in course_assignments %}
+                                                <div class="content-item assignment-item">
+                                                    {% if is_enrolled %}
+                                                        <a href="{% url 'courseviewpage' course_id=course.id %}?content_type=assignment&content_id={{ assignment.id }}" class="content-link">
+                                                    {% else %}
+                                                        <div class="content-link locked">
+                                                    {% endif %}
+                                                        <div class="content-header">
+                                                            <i class="fas fa-clipboard-list"></i>
+                                                            <span class="content-title">{{ assignment.title }}</span>
+                                                            <span class="content-meta">
+                                                                {{ assignment.points }} نقطة
+                                                                {% if assignment.due_date %}
+                                                                    • مطلوب: {{ assignment.due_date|date:"d/m/Y" }}
+                                                                {% endif %}
+                                                            </span>
+                                                            {% if not is_enrolled %}
+                                                                <i class="fas fa-lock text-muted"></i>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% if is_enrolled %}
+                                                        </a>
+                                                    {% else %}
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         

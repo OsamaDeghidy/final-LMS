@@ -60,10 +60,22 @@ def course_detail(request, course_id):
     if request.user.is_authenticated:
         is_enrolled = Enrollment.objects.filter(course=course, student=request.user).exists()
     
+    # Get final exams for the course
+    final_exams = course.exams.filter(is_final=True, is_active=True).order_by('created_at')
+    
+    # Get course-level assignments (not module-specific)
+    course_assignments = course.assignments.filter(module__isnull=True, is_active=True).order_by('created_at')
+    
+    # Get course-level quizzes (not module-specific)
+    course_quizzes = course.course_quizzes.filter(module__isnull=True, is_active=True).order_by('created_at')
+    
     context = {
         'course': course,
         'modules': modules,
         'is_enrolled': is_enrolled,
+        'final_exams': final_exams,
+        'course_assignments': course_assignments,
+        'course_quizzes': course_quizzes,
     }
     
     return render(request, 'website/courses/course_detail.html', context)

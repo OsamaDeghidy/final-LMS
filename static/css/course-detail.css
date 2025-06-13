@@ -267,6 +267,53 @@
         color: #ec5252;
     }
 
+    .pdf-item i {
+        color: #dc3545;
+    }
+
+    .note-item i {
+        color: #ffc107;
+    }
+
+    .assignment-item i {
+        color: #28a745;
+    }
+
+    .exam-item i {
+        color: #007bff;
+    }
+
+    /* Locked content styles */
+    .content-link.locked {
+        opacity: 0.6;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .content-link.locked .content-header {
+        color: #6c757d;
+    }
+
+    /* Final exams and course assignments sections */
+    .final-exams-section .module-header h3,
+    .course-assignments-section .module-header h3 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .final-exams-section {
+        border: 2px solid #007bff;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #f8f9ff 0%, #e3f2fd 100%);
+    }
+
+    .course-assignments-section {
+        border: 2px solid #28a745;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
+    }
+
     .content-title {
         flex: 1;
         font-size: 0.95rem;
