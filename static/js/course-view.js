@@ -6,19 +6,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // إعداد أزرار تحديد ملفات PDF كمقروءة
     setupPdfMarkingButtons();
     
-    // فتح وغلق أقسام المحتوى
+    // فتح وغلق أقسام المحتوى مع تحسينات الانتقال
     window.toggleModule = function(moduleId) {
         const moduleContent = document.getElementById(moduleId);
         const icon = document.getElementById('icon-' + moduleId);
         
-        if (moduleContent.style.display === 'none' || moduleContent.style.display === '') {
-            moduleContent.style.display = 'block';
-            icon.classList.remove('fa-chevron-down');
-            icon.classList.add('fa-chevron-up');
-        } else {
-            moduleContent.style.display = 'none';
-            icon.classList.remove('fa-chevron-up');
-            icon.classList.add('fa-chevron-down');
+        if (moduleContent && icon) {
+            if (moduleContent.classList.contains('active')) {
+                // إغلاق الوحدة
+                moduleContent.classList.remove('active');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+                icon.classList.add('rotated');
+            } else {
+                // فتح الوحدة
+                moduleContent.classList.add('active');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+                icon.classList.remove('rotated');
+            }
         }
     }
     const sidebarProgressBar = document.querySelector('.progress-fill-sidebar');

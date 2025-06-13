@@ -108,6 +108,79 @@
     padding: 1.5rem;
     background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
     color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+    pointer-events: none;
+}
+
+.course-info {
+    position: relative;
+    z-index: 1;
+}
+
+.sidebar-progress-section {
+    position: relative;
+    z-index: 1;
+    margin-top: 1rem;
+}
+
+.progress-title-sidebar {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.course-progress-sidebar {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.progress-fill-sidebar {
+    height: 100%;
+    background: linear-gradient(90deg, #ffffff, #f0f9ff);
+    transition: width 0.5s ease;
+    border-radius: 10px;
+}
+
+.current-position-indicator {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.position-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+.current-content-info {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.completion-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
 }
 
 .course-info h3 {
@@ -153,7 +226,7 @@
     padding: 1rem 1.5rem;
     background: #f9fafb;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.3s ease;
     border: none;
     width: 100%;
     text-align: right;
@@ -164,6 +237,13 @@
 
 .module-header:hover {
     background: #f3f4f6;
+    transform: translateY(-1px);
+}
+
+.module-title-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .module-title {
@@ -172,13 +252,83 @@
     color: var(--dark-color);
 }
 
+.module-meta {
+    font-size: 0.875rem;
+    color: #6b7280;
+    background: rgba(99, 102, 241, 0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.module-progress-badge {
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
+}
+
+.toggle-icon {
+    font-size: 0.875rem;
+    transition: transform 0.3s ease;
+    color: #6b7280;
+    min-width: 16px;
+}
+
+.toggle-icon.rotated {
+    transform: rotate(-90deg);
+}
+
 .module-content {
     display: none;
     padding: 0;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
 }
 
 .module-content.active {
     display: block;
+    max-height: none;
+    opacity: 1;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+    }
+}
+
+/* تحسينات للأقسام الخاصة */
+.final-exam-section .module-header {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-left: 4px solid var(--primary-color);
+}
+
+.course-assignments-section .module-header {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border-left: 4px solid var(--success-color);
+}
+
+.course-files-section .module-header {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-left: 4px solid var(--warning-color);
+}
+
+/* تحسين عرض المحتوى */
+.no-content {
+    padding: 1rem 1.5rem;
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+    background: #f9fafb;
 }
 
 .content-item {
@@ -187,26 +337,39 @@
     padding: 1rem 1.5rem;
     text-decoration: none;
     color: inherit;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     border-left: 4px solid transparent;
     position: relative;
+    border-radius: 0 8px 8px 0;
+    margin: 2px 0;
 }
 
 .content-item:hover {
-    background: #f9fafb;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
     text-decoration: none;
     color: inherit;
+    transform: translateX(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .content-item.active {
-    background: rgba(99, 102, 241, 0.1);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.05) 100%);
     border-left-color: var(--primary-color);
     color: var(--primary-color);
+    box-shadow: 0 2px 12px rgba(99, 102, 241, 0.2);
+}
+
+.content-item.current {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%);
+    border-left-color: var(--warning-color);
+    color: var(--warning-color);
+    box-shadow: 0 2px 12px rgba(245, 158, 11, 0.3);
 }
 
 .content-item.completed {
-    background: rgba(16, 185, 129, 0.1);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
     border-left-color: var(--success-color);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
 .content-icon {
@@ -221,18 +384,32 @@
 }
 
 .content-item .content-icon {
-    background: #e5e7eb;
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
     color: #6b7280;
+    transition: all 0.3s ease;
+}
+
+.content-item:hover .content-icon {
+    background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+    transform: scale(1.05);
 }
 
 .content-item.active .content-icon {
-    background: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #5856eb 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.content-item.current .content-icon {
+    background: linear-gradient(135deg, var(--warning-color) 0%, #d97706 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
 }
 
 .content-item.completed .content-icon {
-    background: var(--success-color);
+    background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .content-details {
