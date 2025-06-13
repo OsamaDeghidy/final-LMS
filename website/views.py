@@ -103,7 +103,7 @@ def dashboard(request):
     teacher = None
     teacher_courses = []
     
-    if profile.status == 'Teacher':
+    if profile.status in ['Teacher', 'Admin']:
         # Force database refresh to get the latest courses
         from django.db import connection
         connection.close()
@@ -200,7 +200,7 @@ def dashboard(request):
         'total_courses': total_courses,
         'total_earnings': f'${total_earnings:.2f}',
         'teacher': teacher,
-        'courses': teacher_courses if profile.status == 'Teacher' else [],
+        'courses': teacher_courses if profile.status in ['Teacher', 'Admin'] else [],
         'teacher_courses': teacher_courses,  # Add this explicitly
     }
     

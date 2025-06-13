@@ -17,7 +17,7 @@ def assignment_list(request, course_id):
     assignments = Assignment.objects.filter(course=course).order_by('-created_at')
     
     # Check if user is teacher of the course, admin, or a student enrolled in the course
-    is_admin = request.user.is_authenticated and hasattr(request.user, 'profile') and request.user.profile.status == 'admin'
+    is_admin = request.user.is_authenticated and hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
     is_teacher = request.user.is_authenticated and hasattr(request.user, 'teacher') and course.teacher == request.user.teacher
     is_enrolled = request.user.is_authenticated and course.enrollments.filter(student=request.user).exists()
     
@@ -55,7 +55,7 @@ def create_assignment(request, course_id):
         if profile.status == 'Teacher':
             teacher = Teacher.objects.get(profile=profile)
             is_authorized = (course.teacher == teacher)
-        elif profile.status == 'admin' or request.user.is_superuser:
+        elif profile.status == 'Admin' or request.user.is_superuser:
             is_authorized = True
             is_admin = True
     except (Profile.DoesNotExist, Teacher.DoesNotExist):
@@ -135,7 +135,7 @@ def update_assignment(request, assignment_id):
         if profile.status == 'Teacher':
             teacher = Teacher.objects.get(profile=profile)
             is_authorized = (assignment.course.teacher == teacher)
-        elif profile.status == 'admin' or request.user.is_superuser:
+        elif profile.status == 'Admin' or request.user.is_superuser:
             is_authorized = True
     except (Profile.DoesNotExist, Teacher.DoesNotExist):
         if request.user.is_superuser:
@@ -212,7 +212,7 @@ def delete_assignment(request, assignment_id):
         if profile.status == 'Teacher':
             teacher = Teacher.objects.get(profile=profile)
             is_authorized = (assignment.course.teacher == teacher)
-        elif profile.status == 'admin' or request.user.is_superuser:
+        elif profile.status == 'Admin' or request.user.is_superuser:
             is_authorized = True
     except (Profile.DoesNotExist, Teacher.DoesNotExist):
         if request.user.is_superuser:
@@ -246,7 +246,7 @@ def assignment_detail(request, assignment_id):
     course = assignment.course
     
     # Check if user is teacher of the course, admin, superuser, or a student enrolled in the course
-    is_admin = request.user.is_authenticated and hasattr(request.user, 'profile') and request.user.profile.status == 'admin'
+    is_admin = request.user.is_authenticated and hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
     is_teacher = request.user.is_authenticated and hasattr(request.user, 'teacher') and course.teacher == request.user.teacher
     is_enrolled = request.user.is_authenticated and course.enrollments.filter(student=request.user).exists()
     
@@ -379,7 +379,7 @@ def grade_submission(request, submission_id):
         if profile.status == 'Teacher':
             teacher = Teacher.objects.get(profile=profile)
             is_authorized = (assignment.course.teacher == teacher)
-        elif profile.status == 'admin' or request.user.is_superuser:
+        elif profile.status == 'Admin' or request.user.is_superuser:
             is_authorized = True
     except (Profile.DoesNotExist, Teacher.DoesNotExist):
         if request.user.is_superuser:
@@ -443,7 +443,7 @@ def all_assignments(request):
         return redirect('login')
     
     # Check if user is admin or superuser
-    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'admin' or request.user.is_superuser
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin' or request.user.is_superuser
     
     # Initialize variables
     teaching_assignments = []

@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.utils import timezone
 import os
+
 class Profile(models.Model):
     name = models.CharField(max_length=2000, blank=True, null=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
@@ -37,6 +38,33 @@ class Profile(models.Model):
     def is_admin(self):
         return self.status == 'Admin' or self.user.is_superuser
 
+    def is_teacher_or_admin(self):
+        """
+        تحقق مما إذا كان المستخدم معلم أو أدمن (الأدمن له جميع صلاحيات المعلم)
+        """
+        return self.status in ['Teacher', 'Admin'] or self.user.is_superuser
+
+    def get_teacher_object(self):
+        """
+        الحصول على كائن المعلم (أو إنشاؤه للأدمن إذا لم يكن موجوداً)
+        """
+        if self.status == 'Teacher':
+            try:
+                return Teacher.objects.get(profile=self)
+            except Teacher.DoesNotExist:
+                return None
+        elif self.status == 'Admin' or self.user.is_superuser:
+            # إنشاء كائن معلم للأدمن إذا لم يكن موجوداً
+            teacher, created = Teacher.objects.get_or_create(
+                profile=self,
+                defaults={
+                    'bio': 'Administrator with full teacher permissions',
+                    'qualification': 'System Administrator'
+                }
+            )
+            return teacher
+        return None
+
 
 class Organization(models.Model):
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, null=True, blank=True)
@@ -48,7 +76,7 @@ class Organization(models.Model):
 
 
 class Teacher(models.Model):
-    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, null=True, blank=True)
+    profile = models.OneToOneField(Profile, on_delete=models.CASCADE, null=True, blank=True, related_name='teacher')
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True)
     department = models.CharField(max_length=2000, blank=True, null=True)
     qualification = models.CharField(max_length=2000, blank=True, null=True)
@@ -92,7 +120,7 @@ class TeacherApplication(models.Model):
     
     def approve(self):
         if self.status == 'pending':
-            from django.db import connection, transaction
+            from django.db import transaction
             import logging
             
             logger = logging.getLogger(__name__)
@@ -105,19 +133,13 @@ class TeacherApplication(models.Model):
                     profile = self.profile
                     logger.info(f"Current profile status before update: {profile.status}")
                     
-                    # 2. Update profile status directly using raw SQL to bypass any model save methods
-                    with connection.cursor() as cursor:
-                        cursor.execute(
-                            "UPDATE user_profile SET status = %s WHERE id = %s",
-                            ['Teacher', str(profile.id)]
-                        )
-                        logger.info(f"Executed direct SQL to update profile {profile.id} status to Teacher")
+                    # 2. Update profile status using Django ORM (simpler approach)
+                    profile.status = 'Teacher'
+                    profile.save(update_fields=['status'])
                     
-                    # 3. Refresh the profile from database
-                    profile.refresh_from_db(fields=['status'])
-                    logger.info(f"Profile status after direct SQL update: {profile.status}")
+                    logger.info(f"Updated profile {profile.id} status to Teacher")
                     
-                    # 4. Delete student profile if it exists
+                    # 3. Delete student profile if it exists
                     try:
                         student_count, _ = Student.objects.filter(profile=profile).delete()
                         if student_count > 0:
@@ -125,10 +147,10 @@ class TeacherApplication(models.Model):
                         else:
                             logger.info("No student profile found to delete")
                     except Exception as e:
-                        logger.error(f"Error deleting student profile: {str(e)}", exc_info=True)
-                        raise
+                        logger.error(f"Error deleting student profile: {str(e)}")
+                        # Don't fail the whole operation for this
                     
-                    # 5. Create or update Teacher profile
+                    # 4. Create or update Teacher profile
                     teacher, created = Teacher.objects.get_or_create(
                         profile=profile,
                         defaults={
@@ -144,15 +166,17 @@ class TeacherApplication(models.Model):
                     
                     logger.info(f"{'Created' if created else 'Updated'} teacher profile with ID: {teacher.id}")
                     
-                    # 6. Update the application status
+                    # 5. Update the application status
                     self.status = 'approved'
                     self.reviewed_at = timezone.now()
                     self.save(update_fields=['status', 'reviewed_at'])
                     
-                    # 7. Final verification
-                    profile.refresh_from_db(fields=['status'])
+                    # 6. Final verification
+                    profile.refresh_from_db()
+                    logger.info(f"Final profile status: {profile.status}")
+                    
                     if profile.status != 'Teacher':
-                        raise ValueError(f"Profile status still not updated after all operations. Status: {profile.status}")
+                        raise ValueError(f"Profile status not updated correctly. Current status: {profile.status}")
                     
                     logger.info(f"Successfully approved teacher application {self.id}")
                     return True
@@ -186,55 +210,50 @@ class TeacherApplication(models.Model):
 
 
 @receiver(post_save, sender=User)
-def create_or_update_user_profile(sender, instance, created, **kwargs):
+def create_user_profile(sender, instance, created, **kwargs):
     """
-    Signal handler to create or update user profile when a User is saved.
-    Automatically creates an admin profile for superusers.
+    Signal handler to create user profile when a new User is created.
+    Only triggers for newly created users to avoid duplicates.
     """
     if created:
-        if instance.is_superuser:
-            Profile.objects.create(
-                user=instance,
-                name=instance.get_full_name() or instance.username,
-                email=instance.email,
-                status='Admin'
-            )
-        else:
-            # Create a regular profile for non-superusers
-            Profile.objects.create(
-                user=instance,
-                name=instance.get_full_name() or instance.username,
-                email=instance.email
-            )
-    else:
-        # Update the profile if user is updated to superuser
-        if instance.is_superuser:
-            if hasattr(instance, 'profile'):
-                instance.profile.status = 'Admin'
-                instance.profile.save(update_fields=['status'])
-            else:
+        try:
+            # تحقق إضافي للتأكد من عدم وجود profile
+            if not hasattr(instance, 'profile') or not Profile.objects.filter(user=instance).exists():
+                status = 'Admin' if instance.is_superuser else 'Student'
                 Profile.objects.create(
                     user=instance,
                     name=instance.get_full_name() or instance.username,
                     email=instance.email,
-                    status='Admin'
+                    status=status
                 )
+        except Exception as e:
+            # تسجيل الخطأ دون إيقاف العملية
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error creating profile for user {instance.username}: {str(e)}")
 
 
 @receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
+def update_user_profile(sender, instance, created, **kwargs):
     """
-    Signal handler to update profile when user details change
+    Signal handler to update existing user profile when User is updated.
+    Only triggers for existing users.
     """
-    if hasattr(instance, 'profile'):
-        instance.profile.email = instance.email
-        instance.profile.name = instance.get_full_name() or instance.username
-        instance.profile.save(update_fields=['email', 'name'])
-    elif instance.is_superuser:
-        # If this is a superuser without a profile, create one
-        Profile.objects.create(
-            user=instance,
-            name=instance.get_full_name() or instance.username,
-            email=instance.email,
-            status='Admin'
-        )
+    if not created:
+        try:
+            if hasattr(instance, 'profile'):
+                profile = instance.profile
+                # تحديث البيانات الأساسية فقط
+                profile.email = instance.email
+                profile.name = instance.get_full_name() or instance.username
+                
+                # تحديث status للمستخدمين الفائقين
+                if instance.is_superuser and profile.status != 'Admin':
+                    profile.status = 'Admin'
+                
+                profile.save(update_fields=['email', 'name', 'status'])
+        except Exception as e:
+            # تسجيل الخطأ دون إيقاف العملية
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error updating profile for user {instance.username}: {str(e)}")

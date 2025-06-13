@@ -88,9 +88,9 @@ def teacher_courses(request):
         messages.error(request, 'لم يتم العثور على ملف تعريف المستخدم. يرجى التواصل مع مسؤول النظام.')
         return redirect('home')
     
-    # Check if user is a teacher
-    if profile.status != 'Teacher':
-        # User is not a teacher, redirect to dashboard
+    # Check if user is a teacher or admin
+    if profile.status not in ['Teacher', 'Admin']:
+        # User is not a teacher or admin, redirect to dashboard
         messages.error(request, 'ليس لديك صلاحية للوصول إلى هذه الصفحة')
         return redirect('dashboard')
         

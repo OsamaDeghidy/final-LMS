@@ -11,59 +11,72 @@ class TeacherApplicationAdmin(admin.ModelAdmin):
     actions = ['approve_applications', 'reject_applications']
     
     def approve_applications(self, request, queryset):
-        from django.db import transaction
+        approved_count = 0
+        failed_count = 0
         
-        for application in queryset:
-            if application.status == 'pending':
-                try:
-                    with transaction.atomic():
-                        # First, update the profile status directly
-                        profile = application.profile
-                        profile.status = 'Teacher'
-                        profile.save(update_fields=['status'])
-                        
-                        # Create or update the teacher profile
-                        teacher, created = Teacher.objects.get_or_create(
-                            profile=profile,
-                            defaults={
-                                'bio': application.bio,
-                                'qualification': application.specialization
-                            }
-                        )
-                        
-                        if not created:
-                            teacher.bio = application.bio
-                            teacher.qualification = application.specialization
-                            teacher.save(update_fields=['bio', 'qualification'])
-                        
-                        # Delete student profile if it exists
-                        Student.objects.filter(profile=profile).delete()
-                        
-                        # Update the application status
-                        application.status = 'approved'
-                        application.reviewed_at = timezone.now()
-                        application.save(update_fields=['status', 'reviewed_at'])
-                        
-                        self.message_user(request, f'تم قبول طلب {application.profile.user.username} بنجاح')
-                        
-                except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f"Error approving application {application.id}: {str(e)}", exc_info=True)
+        for application in queryset.filter(status='pending'):
+            try:
+                success = application.approve()
+                if success:
+                    approved_count += 1
+                    self.message_user(request, f'✅ تم قبول طلب {application.profile.user.username} بنجاح')
+                else:
+                    failed_count += 1
                     self.message_user(
                         request, 
-                        f'فشل في قبول طلب {application.profile.user.username}: {str(e)}', 
+                        f'❌ فشل في قبول طلب {application.profile.user.username}', 
                         level='ERROR'
                     )
+            except Exception as e:
+                failed_count += 1
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error approving application {application.id}: {str(e)}", exc_info=True)
+                self.message_user(
+                    request, 
+                    f'❌ فشل في قبول طلب {application.profile.user.username}: {str(e)}', 
+                    level='ERROR'
+                )
+        
+        # Summary message
+        if approved_count > 0:
+            self.message_user(request, f'تم قبول {approved_count} طلب بنجاح')
+        if failed_count > 0:
+            self.message_user(request, f'فشل في قبول {failed_count} طلب', level='ERROR')
+            
     approve_applications.short_description = 'قبول الطلبات المحددة'
     
     def reject_applications(self, request, queryset):
-        for application in queryset:
-            if application.status == 'pending':
-                if application.reject('تم الرفض من قبل المشرف'):
-                    self.message_user(request, f'تم رفض طلب {application.profile.user.username} بنجاح')
+        rejected_count = 0
+        failed_count = 0
+        
+        for application in queryset.filter(status='pending'):
+            try:
+                success = application.reject('تم الرفض من قبل المشرف')
+                if success:
+                    rejected_count += 1
+                    self.message_user(request, f'✅ تم رفض طلب {application.profile.user.username} بنجاح')
                 else:
-                    self.message_user(request, f'فشل في رفض طلب {application.profile.user.username}', level='ERROR')
+                    failed_count += 1
+                    self.message_user(
+                        request, 
+                        f'❌ فشل في رفض طلب {application.profile.user.username}', 
+                        level='ERROR'
+                    )
+            except Exception as e:
+                failed_count += 1
+                self.message_user(
+                    request, 
+                    f'❌ فشل في رفض طلب {application.profile.user.username}: {str(e)}', 
+                    level='ERROR'
+                )
+        
+        # Summary message
+        if rejected_count > 0:
+            self.message_user(request, f'تم رفض {rejected_count} طلب بنجاح')
+        if failed_count > 0:
+            self.message_user(request, f'فشل في رفض {failed_count} طلب', level='ERROR')
+            
     reject_applications.short_description = 'رفض الطلبات المحددة'
 
 # Register your models here.

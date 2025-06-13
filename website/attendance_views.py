@@ -21,7 +21,7 @@ def attendance_dashboard(request):
     """
     user = request.user
     is_teacher = hasattr(user, 'profile') and user.profile.status == 'Teacher'
-    is_admin = hasattr(user, 'profile') and user.profile.status == 'admin'
+    is_admin = hasattr(user, 'profile') and user.profile.status == 'Admin'
     
     if is_teacher or is_admin or user.is_superuser:
         # Get courses taught by this teacher
@@ -100,13 +100,14 @@ def course_attendance(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     user = request.user
     is_teacher = hasattr(user, 'profile') and user.profile.status == 'Teacher'
+    is_admin = hasattr(user, 'profile') and user.profile.status == 'Admin'
     
     # Check if user is authorized to view this course's attendance
-    if is_teacher and course.teacher.profile.user != user:
+    if (is_teacher or is_admin or user.is_superuser) and course.teacher.profile.user != user and not (is_admin or user.is_superuser):
         messages.error(request, 'ليس لديك صلاحية لعرض سجل الحضور لهذه الدورة')
         return redirect('attendance_dashboard')
     
-    if not is_teacher and user not in course.enroller_user.all():
+    if not (is_teacher or is_admin or user.is_superuser) and user not in course.enroller_user.all():
         messages.error(request, 'يجب أن تكون مسجلاً في الدورة لعرض سجل الحضور')
         return redirect('attendance_dashboard')
     
@@ -286,9 +287,10 @@ def attendance_report(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     user = request.user
     is_teacher = hasattr(user, 'profile') and user.profile.status == 'Teacher'
+    is_admin = hasattr(user, 'profile') and user.profile.status == 'Admin'
     
     # Check if user is authorized to view this report
-    if is_teacher and course.teacher.profile.user != user:
+    if (is_teacher or is_admin or user.is_superuser) and course.teacher.profile.user != user and not (is_admin or user.is_superuser):
         messages.error(request, 'ليس لديك صلاحية لعرض تقرير الحضور لهذه الدورة')
         return redirect('attendance_dashboard')
     
@@ -402,7 +404,7 @@ def student_details(request, course_id, student_id):
     user = request.user
     
     # Security check - only teachers of this course can view student details
-    if not (hasattr(user, 'profile') and user.profile.status == 'Teacher' and course.teacher.profile.user == user):
+    if not ((hasattr(user, 'profile') and (user.profile.status == 'Teacher' or user.profile.status == 'Admin') and course.teacher.profile.user == user) or user.is_superuser or (hasattr(user, 'profile') and user.profile.status == 'Admin')):
         return JsonResponse({'status': 'error', 'message': 'غير مصرح لك بعرض هذه البيانات'}, status=403)
     
     # Get attendance records for this student in this course
@@ -450,13 +452,14 @@ def print_attendance_report(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     user = request.user
     is_teacher = hasattr(user, 'profile') and user.profile.status == 'Teacher'
+    is_admin = hasattr(user, 'profile') and user.profile.status == 'Admin'
     
     # Check if user is authorized to view this course's attendance
-    if is_teacher and course.teacher.profile.user != user:
+    if (is_teacher or is_admin or user.is_superuser) and course.teacher.profile.user != user and not (is_admin or user.is_superuser):
         messages.error(request, 'ليس لديك صلاحية لعرض سجل الحضور لهذه الدورة')
         return redirect('attendance_dashboard')
     
-    if not is_teacher and user not in course.enroller_user.all():
+    if not (is_teacher or is_admin or user.is_superuser) and user not in course.enroller_user.all():
         messages.error(request, 'يجب أن تكون مسجلاً في الدورة لعرض سجل الحضور')
         return redirect('attendance_dashboard')
     

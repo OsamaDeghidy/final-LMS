@@ -86,11 +86,30 @@ def registerUser(request):
                     if not user.exists():
                         user=User.objects.create_user(username=email,email=email)
                         user.set_password(pwd)
-                        profile=Profile.objects.create(user=user,name=username,email=email,phone=phone,status='Student')
-                        student=Student.objects.create(profile=profile)
                         user.save()
-                        profile.save()
-                        student.save()
+                        
+                        # الحصول على Profile أو إنشاؤه إذا لم يتم إنشاؤه بواسطة signal
+                        try:
+                            profile = user.profile
+                        except Profile.DoesNotExist:
+                            # في حالة عدم وجود signal handler أو فشله
+                            profile = Profile.objects.create(
+                                user=user,
+                                name=username,
+                                email=email,
+                                phone=phone,
+                                status='Student'
+                            )
+                        else:
+                            # تحديث البيانات الإضافية للـ Profile الموجود
+                            profile.name = username
+                            profile.phone = phone
+                            profile.status = 'Student'
+                            profile.save()
+                        
+                        # إنشاء كائن Student
+                        student = Student.objects.create(profile=profile)
+                        
                         messages.success(request, 'Account created successfully. Please login.')
                         return redirect('login')
                     else:
@@ -215,7 +234,7 @@ def profile_detail(request, profile_id):
             if organization:
                 context['organization'] = organization
         
-        elif profile.status == 'Teacher':
+        elif profile.status in ['Teacher', 'Admin']:
             teacher = Teacher.objects.filter(profile=profile).first()
             if teacher:
                 context['teacher'] = teacher
