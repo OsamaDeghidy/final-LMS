@@ -222,12 +222,22 @@ def create_course(request):
                 course.image_course = request.FILES['image_course']
                 course.save()
                 
-            # Handle course PDFs
-            if 'syllabus_pdf' in request.FILES:
+            # Handle course PDFs and deletion flags
+            if request.POST.get('delete_syllabus_pdf') == '1':
+                if course.syllabus_pdf:
+                    course.syllabus_pdf.delete()
+                    course.syllabus_pdf = None
+                    course.save()
+            elif 'syllabus_pdf' in request.FILES:
                 course.syllabus_pdf = request.FILES['syllabus_pdf']
                 course.save()
                 
-            if 'materials_pdf' in request.FILES:
+            if request.POST.get('delete_materials_pdf') == '1':
+                if course.materials_pdf:
+                    course.materials_pdf.delete()
+                    course.materials_pdf = None
+                    course.save()
+            elif 'materials_pdf' in request.FILES:
                 course.materials_pdf = request.FILES['materials_pdf']
                 course.save()
             
@@ -524,6 +534,7 @@ def update_course(request, course_id):
             
             # Process modules from JSON data
             module_data = json.loads(request.POST.get('modules', '[]'))
+            logger.info(f"Processing {len(module_data)} modules for course {course.id}")
             
             # Track existing modules to identify which ones to delete
             existing_module_ids = set(Module.objects.filter(course=course).values_list('id', flat=True))
@@ -531,33 +542,48 @@ def update_course(request, course_id):
             
             for module in module_data:
                 module_id = module.get('id')
+                is_existing = module.get('is_existing', False)
+                
+                logger.info(f"Processing module ID: {module_id}, is_existing: {is_existing}")
                 
                 # Check if this is an existing module or a new one
-                if module_id and module_id.isdigit() and Module.objects.filter(id=module_id, course=course).exists():
+                if is_existing and module_id and module_id.isdigit() and Module.objects.filter(id=module_id, course=course).exists():
                     # Update existing module
                     existing_module = Module.objects.get(id=module_id)
                     existing_module.name = module.get('name')
-                    existing_module.description = module.get('description')
+                    existing_module.description = module.get('description', '')
                     existing_module.number = module.get('number')
                     existing_module.save()
                     
                     updated_module_ids.add(int(module_id))
+                    logger.info(f"Updated existing module {module_id}")
                     
-                    # Handle video update if provided (accept both naming schemes)
-                    video_key_old = f'module_{module_id}_video'
-                    video_key_new = f'module_videos_existing_{module_id}'
-                    if video_key_old in request.FILES or video_key_new in request.FILES:
-                        video_file = request.FILES.get(video_key_old) or request.FILES.get(video_key_new)
-                        existing_module.video = video_file
-                        existing_module.save()
+                    # Handle video update if provided
+                    video_keys = [
+                        f'module_videos_existing_{module_id}',
+                        f'module_video_existing_{module_id}',
+                        f'module_{module_id}_video'
+                    ]
+                    for video_key in video_keys:
+                        if video_key in request.FILES:
+                            video_file = request.FILES[video_key]
+                            existing_module.video = video_file
+                            existing_module.save()
+                            logger.info(f"Updated video for module {module_id}")
+                            break
                     
-                    # Handle PDF update if provided (accept both naming schemes)
-                    pdf_key_old = f'module_{module_id}_pdf'
-                    pdf_key_new = f'module_pdf_existing_{module_id}'
-                    if pdf_key_old in request.FILES or pdf_key_new in request.FILES:
-                        pdf_file = request.FILES.get(pdf_key_old) or request.FILES.get(pdf_key_new)
-                        existing_module.pdf = pdf_file
-                        existing_module.save()
+                    # Handle PDF update if provided
+                    pdf_keys = [
+                        f'module_pdf_existing_{module_id}',
+                        f'module_{module_id}_pdf'
+                    ]
+                    for pdf_key in pdf_keys:
+                        if pdf_key in request.FILES:
+                            pdf_file = request.FILES[pdf_key]
+                            existing_module.pdf = pdf_file
+                            existing_module.save()
+                            logger.info(f"Updated PDF for module {module_id}")
+                            break
                     
                     # Handle quiz update with questions/answers from JSON
                     if module.get('has_quiz'):
@@ -577,19 +603,19 @@ def update_course(request, course_id):
                         quiz.time_limit = quiz_data.get('time_limit', quiz.time_limit)
                         quiz.pass_mark = quiz_data.get('pass_mark', quiz.pass_mark)
                         quiz.save()
+                        
                         # Rebuild questions
                         Question.objects.filter(quiz=quiz).delete()
                         for q in quiz_data.get('questions', []):
                             q_type_map = {
-                                'mcq': 'multiple_choice',
+                                'multiple_choice': 'multiple_choice',
                                 'true_false': 'true_false',
                                 'short_answer': 'short_answer'
                             }
                             question_obj = Question.objects.create(
                                 quiz=quiz,
                                 text=q.get('text',''),
-                                question_type=q_type_map.get(q.get('type','mcq'),'multiple_choice'),
-                                points=q.get('points',1)
+                                question_type=q_type_map.get(q.get('type','multiple_choice'),'multiple_choice')
                             )
                             for ans in q.get('answers', []):
                                 Answer.objects.create(
@@ -597,15 +623,14 @@ def update_course(request, course_id):
                                     text=ans.get('text',''),
                                     is_correct=ans.get('is_correct', False)
                                 )
+                        logger.info(f"Updated quiz for module {module_id} with {len(quiz_data.get('questions', []))} questions")
                     else:
                         Quiz.objects.filter(module=existing_module).delete()
                         
                 else:
                     # Create new module
-                    module_id_key = module.get('id')
-                    if not module_id_key or not isinstance(module_id_key, str):
-                        continue
-                        
+                    logger.info(f"Creating new module with ID: {module_id}")
+                    
                     new_module = Module.objects.create(
                         course=course,
                         name=module.get('name'),
@@ -613,87 +638,105 @@ def update_course(request, course_id):
                         number=module.get('number', 1)
                     )
                     
-                    # Save module video with proper file handling
-                    video_key = f'module_{module_id_key}_video'
-                    video_title_key = f'video_title_{module_id_key}'
+                    logger.info(f"Created new module {new_module.id} for course {course.id}")
                     
-                    if video_key in request.FILES:
-                        video_file = request.FILES[video_key]
-                        video_title = request.POST.get(video_title_key, f"Video - {new_module.name}")
-                        
-                        # Ensure the file is actually a video
-                        if video_file.content_type.startswith('video/') or any(video_file.name.lower().endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.wmv', '.flv']):
-                            # Create video object
-                            video = Video.objects.create(
-                                module=new_module,
-                                name=video_title,
-                                file=video_file
-                            )
+                    # Save module video with proper file handling
+                    video_keys = [
+                        f'module_video_new_{module_id}',
+                        f'module_{module_id}_video'
+                    ]
+                    for video_key in video_keys:
+                        if video_key in request.FILES:
+                            video_file = request.FILES[video_key]
+                            # Ensure the file is actually a video
+                            if video_file.content_type and (video_file.content_type.startswith('video/') or 
+                                any(video_file.name.lower().endswith(ext) for ext in ['.mp4', '.avi', '.mov', '.wmv', '.flv'])):
+                                new_module.video = video_file
+                                new_module.save()
+                                logger.info(f"Added video to new module {new_module.id}")
+                            break
                     
                     # Handle PDF files
-                    pdf_key = f'module_{module_id_key}_pdf'
-                    if pdf_key in request.FILES:
-                        pdf_file = request.FILES[pdf_key]
-                        pdf_title = request.POST.get(f'pdf_title_{module_id_key}', f"PDF - {new_module.name}")
-                        
-                        # Create PDF object
-                        pdf = PDF.objects.create(
-                            module=new_module,
-                            title=pdf_title,
-                            file=pdf_file
-                        )
+                    pdf_keys = [
+                        f'module_pdf_new_{module_id}',
+                        f'module_{module_id}_pdf'
+                    ]
+                    for pdf_key in pdf_keys:
+                        if pdf_key in request.FILES:
+                            pdf_file = request.FILES[pdf_key]
+                            if pdf_file.content_type == 'application/pdf' or pdf_file.name.lower().endswith('.pdf'):
+                                new_module.pdf = pdf_file
+                                new_module.save()
+                                logger.info(f"Added PDF to new module {new_module.id}")
+                            break
+                    
+                    # Handle notes
+                    note_keys = [
+                        f'module_notes_new_{module_id}',
+                        f'module_{module_id}_notes'
+                    ]
+                    for note_key in note_keys:
+                        if note_key in request.POST:
+                            note_content = request.POST.get(note_key)
+                            if note_content and note_content.strip():
+                                # Add note content to module description
+                                if new_module.description:
+                                    new_module.description += f"\n\nملاحظات:\n{note_content}"
+                                else:
+                                    new_module.description = f"ملاحظات:\n{note_content}"
+                                new_module.save()
+                            break
                     
                     # Handle quiz if enabled
                     if module.get('has_quiz'):
-                        quiz_title = request.POST.get(f'quiz_title_new_{module_id_key}', f'اختبار {new_module.name}')
-                        quiz_description = request.POST.get(f'quiz_description_new_{module_id_key}', '')
-                        quiz_time_limit = request.POST.get(f'quiz_time_limit_new_{module_id_key}', 30)
-                        quiz_pass_mark = request.POST.get(f'quiz_pass_mark_new_{module_id_key}', 50)
+                        quiz_data = module.get('quiz', {})
                         
                         # Create quiz
                         quiz = Quiz.objects.create(
                             module=new_module,
-                            title=quiz_title,
-                            description=quiz_description,
-                            time_limit=quiz_time_limit,
-                            pass_mark=quiz_pass_mark
+                            title=quiz_data.get('title', f'اختبار {new_module.name}'),
+                            description=quiz_data.get('description', ''),
+                            time_limit=quiz_data.get('time_limit', 30),
+                            pass_mark=quiz_data.get('pass_mark', 50)
                         )
                         
-                        # Process questions
-                        for i in range(10):  # Assuming max 10 questions per quiz
-                            question_text_key = f'question_text_new_{module_id_key}_{i}'
-                            if question_text_key not in request.POST:
-                                continue
+                        # Process questions from JSON data
+                        questions = quiz_data.get('questions', [])
+                        for q in questions:
+                            if q.get('text'):
+                                q_type_map = {
+                                    'multiple_choice': 'multiple_choice',
+                                    'true_false': 'true_false', 
+                                    'short_answer': 'short_answer'
+                                }
                                 
-                            question_text = request.POST.get(question_text_key)
-                            question_type = request.POST.get(f'question_type_new_{module_id_key}_{i}', 'multiple_choice')
-                            
-                            # Create question
-                            question = Question.objects.create(
-                                quiz=quiz,
-                                text=question_text,
-                                question_type=question_type
-                            )
-                            
-                            # Process answers
-                            for j in range(10):  # Assuming max 10 answers per question
-                                answer_text_key = f'answer_text_new_{module_id_key}_{i}_{j}'
-                                if answer_text_key not in request.POST:
-                                    continue
-                                    
-                                answer_text = request.POST.get(answer_text_key)
-                                is_correct = request.POST.get(f'correct_answer_new_{module_id_key}_{i}') == str(j)
-                                
-                                # Create answer
-                                Answer.objects.create(
-                                    question=question,
-                                    text=answer_text,
-                                    is_correct=is_correct
+                                question_obj = Question.objects.create(
+                                    quiz=quiz,
+                                    text=q.get('text'),
+                                    question_type=q_type_map.get(q.get('type', 'multiple_choice'), 'multiple_choice')
                                 )
+                                
+                                # Process answers
+                                for ans in q.get('answers', []):
+                                    if ans.get('text'):
+                                        Answer.objects.create(
+                                            question=question_obj,
+                                            text=ans.get('text'),
+                                            is_correct=ans.get('is_correct', False)
+                                        )
+                        
+                        logger.info(f"Created quiz for new module {new_module.id} with {len(questions)} questions")
             
-            # Delete modules that were not updated or created
-            modules_to_delete = existing_module_ids - updated_module_ids
-            Module.objects.filter(id__in=modules_to_delete).delete()
+            # Delete modules that were not updated or created (and are marked for deletion)
+            for module_id in existing_module_ids:
+                delete_key = f'delete_module_{module_id}'
+                if request.POST.get(delete_key) == '1':
+                    try:
+                        module_to_delete = Module.objects.get(id=module_id, course=course)
+                        module_to_delete.delete()
+                        logger.info(f"Deleted module {module_id}")
+                    except Module.DoesNotExist:
+                        pass
             
             # Process tags
             tags_string = request.POST.get('tags', '')
@@ -701,15 +744,25 @@ def update_course(request, course_id):
                 tags = [tag.strip() for tag in tags_string.split(',') if tag.strip()]
                 course.tags.clear()
                 for tag in tags:
-                    tag_obj, created = Tag.objects.get_or_create(name=tag)
+                    tag_obj, created = Tags.objects.get_or_create(name=tag)
                     course.tags.add(tag_obj)
             
+            # Final validation and save
+            course.save()
+            
+            # Log successful update
+            logger.info(f"Successfully updated course {course.id} with {len(module_data)} modules")
+            
             # Return success response
-            return JsonResponse({
-                'success': True,
-                'message': 'تم تحديث الدورة بنجاح',
-                'redirect_url': reverse('course_detail', args=[course.id])
-            })
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'تم تحديث الدورة بنجاح',
+                    'redirect_url': reverse('course_detail', args=[course.id])
+                })
+            else:
+                messages.success(request, 'تم تحديث الدورة بنجاح')
+                return redirect('course_detail', course_id=course.id)
             
         except Exception as e:
             print(f"Error updating course: {e}")
@@ -1333,26 +1386,45 @@ def enroll_course(request, course_id):
 
 # File management
 @login_required
+@require_POST
 def delete_pdf(request, course_id, pdf_type):
-    course = get_object_or_404(Course, id=course_id)
-    
-    # Check if user is the course teacher
-    if request.user != course.teacher.profile.user:
-        messages.error(request, _('You do not have permission to delete files from this course.'))
-        return redirect('course')
-    
-    if pdf_type == 'syllabus':
-        if course.syllabus:
-            course.syllabus.delete()
-            course.syllabus = None
-    elif pdf_type == 'requirements':
-        if course.requirements_file:
-            course.requirements_file.delete()
-            course.requirements_file = None
-    
-    course.save()
-    messages.success(request, _('File deleted successfully.'))
-    return redirect('update_course', course_id=course_id)
+    try:
+        course = get_object_or_404(Course, id=course_id)
+        
+        # Check if user is the course teacher
+        if request.user != course.teacher.profile.user:
+            return JsonResponse({
+                'success': False,
+                'error': 'You do not have permission to delete files from this course.'
+            }, status=403)
+        
+        if pdf_type == 'syllabus_pdf':
+            if course.syllabus_pdf:
+                course.syllabus_pdf.delete()
+                course.syllabus_pdf = None
+                course.save()
+        elif pdf_type == 'materials_pdf':
+            if course.materials_pdf:
+                course.materials_pdf.delete()
+                course.materials_pdf = None
+                course.save()
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid PDF type'
+            }, status=400)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'File deleted successfully.'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error deleting PDF: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 @login_required
 def delete_module_pdf(request, module_id, pdf_type):

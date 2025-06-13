@@ -27,6 +27,28 @@ function handlePdfRemoval(pdfId) {
   }
 }
 
+// Function to show alert messages
+function showAlert(type, message) {
+    // Create alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Find a container to insert the alert
+    const container = document.querySelector('.card-body') || document.body;
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv && alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
 // Function to initialize add buttons for notes, video names, and questions
 function initializeAddButtons() {
   // Add note buttons
@@ -656,74 +678,127 @@ function initializePdfDeleteButtons() {
         const newModuleId = 'new_' + Date.now();
         moduleElement.id = `module_${newModuleId}`;
 
-        // Update dynamic ids/names inside the cloned module for uniqueness
-        moduleElement.querySelectorAll('[id]').forEach(el => {
-            if (el.id === 'has_quiz') {
-                el.id = `has_quiz_${newModuleId}`;
-            }
-        });
+        // Update module name input with correct naming
+        const moduleNameInput = moduleElement.querySelector('input[name="module_name"]');
+        if (moduleNameInput) {
+            moduleNameInput.name = `module_name_new_${newModuleId}`;
+            moduleNameInput.setAttribute('data-module-id', newModuleId);
+        }
+
+        // Update module description if exists
+        const moduleDescInput = moduleElement.querySelector('textarea[name="module_description"]');
+        if (moduleDescInput) {
+            moduleDescInput.name = `module_description_new_${newModuleId}`;
+        }
+
+        // Update video inputs
+        const moduleVideoInput = moduleElement.querySelector('input[name="module_video"]');
+        if (moduleVideoInput) {
+            moduleVideoInput.name = `module_video_new_${newModuleId}`;
+        }
+
+        const videoTitleInput = moduleElement.querySelector('input[name="video_title"]');
+        if (videoTitleInput) {
+            videoTitleInput.name = `video_title_new_${newModuleId}`;
+        }
+
+        // Update PDF inputs
+        const modulePdfInput = moduleElement.querySelector('input[name="module_pdf"]');
+        if (modulePdfInput) {
+            modulePdfInput.name = `module_pdf_new_${newModuleId}`;
+        }
+
+        // Update notes input
+        const moduleNotesInput = moduleElement.querySelector('textarea[name="module_notes"]');
+        if (moduleNotesInput) {
+            moduleNotesInput.name = `module_notes_new_${newModuleId}`;
+        }
+
+        // Update quiz toggle
+        const quizToggle = moduleElement.querySelector('.quiz-toggle');
+        if (quizToggle) {
+            quizToggle.id = `has_quiz_new_${newModuleId}`;
+            quizToggle.name = `has_quiz_new_${newModuleId}`;
+            quizToggle.setAttribute('data-module-id', newModuleId);
+        }
         
         // Update label 'for' attributes to point to new checkbox id
         moduleElement.querySelectorAll('label[for="has_quiz"]').forEach(label => {
-            label.setAttribute('for', `has_quiz_${newModuleId}`);
+            label.setAttribute('for', `has_quiz_new_${newModuleId}`);
         });
+        
+        // Update quiz section
+        const quizSection = moduleElement.querySelector('.quiz-section');
+        if (quizSection) {
+            quizSection.id = `quiz_section_new_${newModuleId}`;
+            quizSection.style.display = 'none'; // Initially hidden
+        }
+
+        // Update questions container
+        const questionsContainer = moduleElement.querySelector('.questions-container');
+        if (questionsContainer) {
+            questionsContainer.id = `questions_container_new_${newModuleId}`;
+        }
         
         // Add data-module-id attribute to dynamic action buttons
         moduleElement.querySelectorAll('.add-question-btn, .add-note-btn, .add-video-name-btn').forEach(btn => {
             btn.setAttribute('data-module-id', newModuleId);
         });
         
-        moduleElement.querySelectorAll('[name]').forEach(el => {
-            el.name = el.name.replace('module_', `module_${newModuleId}_`);
-        });
-        
         // Remove module button
         const removeBtn = moduleElement.querySelector('.remove-module-btn');
         if (removeBtn) {
-            removeBtn.addEventListener('click', () => moduleElement.remove());
+            removeBtn.addEventListener('click', () => {
+                if (confirm('هل أنت متأكد من حذف هذا الموديول؟')) {
+                    moduleElement.remove();
+                }
+            });
         }
         
         modulesContainer.appendChild(moduleElement);
         
         // Attach toggle handler for the newly added module
-        const quizToggle = moduleElement.querySelector('.quiz-toggle');
         if (quizToggle) {
-            quizToggle.addEventListener('change', (e) => toggleQuiz(moduleElement, e.target.checked));
-            // Ensure initial state
-            toggleQuiz(moduleElement, quizToggle.checked);
+            quizToggle.addEventListener('change', function() {
+                const quizSection = moduleElement.querySelector('.quiz-section');
+                if (quizSection) {
+                    quizSection.style.display = this.checked ? 'block' : 'none';
+                }
+            });
         }
         
-        // Re-init any listeners that rely on dynamic content (except quiz toggles which are handled above)
+        // Re-init any listeners that rely on dynamic content
         initializeDeleteHandlers();
+        initializeQuizToggles();
+        initializeAddButtons();
         
-        // Enhance new module quiz section to mirror existing modules
-        const quizToggleInput = moduleElement.querySelector('.quiz-toggle');
-        if (quizToggleInput) {
-            quizToggleInput.id = `has_quiz_${newModuleId}`;
-            quizToggleInput.name = `has_quiz_${newModuleId}`;
-        }
-        
-        const quizSectionElem = moduleElement.querySelector('.quiz-section');
-        if (quizSectionElem) {
-            quizSectionElem.id = `quiz_section_${newModuleId}`;
-        }
-        
-        const questionsContainerElem = moduleElement.querySelector('.questions-container');
-        if (questionsContainerElem) {
-            questionsContainerElem.id = `questions_container_${newModuleId}`;
-        }
+        console.log(`New module added: ${newModuleId}`);
     }
     // End of addNewModule
 
     // Function to add a new question
     function addNewQuestion(moduleId) {
-        const questionsContainer = document.getElementById(`questions_container_${moduleId}`);
-        if (!questionsContainer) return;
+        // Handle both existing and new module IDs
+        let questionsContainer;
+        
+        // Try different container ID patterns
+        questionsContainer = document.getElementById(`questions_container_${moduleId}`) ||
+                           document.getElementById(`questions_container_existing_${moduleId}`) ||
+                           document.getElementById(`questions_container_new_${moduleId}`);
+        
+        if (!questionsContainer) {
+            console.error(`Questions container not found for module: ${moduleId}`);
+            return;
+        }
     
         // Get the current number of questions
         const questionCount = questionsContainer.querySelectorAll('.question-card').length;
         const newQuestionNumber = questionCount + 1;
         const timestamp = Date.now();
+        
+        // Determine if this is a new or existing module
+        const isNewModule = moduleId.toString().startsWith('new_');
+        const namePrefix = isNewModule ? `new_${moduleId}` : moduleId;
         
         const questionHtml = `
         <div class="card mb-3 question-card" id="question_${moduleId}_${timestamp}" data-question-id="${timestamp}">
@@ -736,25 +811,25 @@ function initializePdfDeleteButtons() {
                 </div>
                 
                 <div class="mb-3">
-                    <input type="text" class="form-control question-text" name="question_text_${moduleId}_${timestamp}" placeholder="نص السؤال" required>
+                    <input type="text" class="form-control question-text" name="question_text_${namePrefix}_${timestamp}" placeholder="نص السؤال" required>
                 </div>
                 
                 <div class="mb-3">
-                    <select class="form-select question-type" name="question_type_${moduleId}_${timestamp}">
+                    <select class="form-select question-type question-type-select" name="question_type_${namePrefix}_${timestamp}">
                         <option value="multiple_choice">اختيار من متعدد</option>
                         <option value="true_false">صح أو خطأ</option>
                         <option value="short_answer">إجابة قصيرة</option>
                     </select>
                 </div>
                 
-                <div class="answers-container" id="answers_${moduleId}_${timestamp}">
+                <div class="answers-container" id="answers_${namePrefix}_${timestamp}">
                     <!-- Multiple Choice Answers -->
                     <div class="answer-item mb-2">
                         <div class="input-group">
                             <div class="input-group-text">
-                                <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${timestamp}" value="0" checked>
+                                <input class="form-check-input mt-0" type="radio" name="correct_answer_${namePrefix}_${timestamp}" value="0" checked>
                             </div>
-                            <input type="text" class="form-control" name="answer_text_${moduleId}_${timestamp}_0" placeholder="الإجابة 1" required>
+                            <input type="text" class="form-control" name="answer_text_${namePrefix}_${timestamp}[]" placeholder="الإجابة 1" required>
                             <button type="button" class="btn btn-outline-danger remove-answer-btn">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -778,12 +853,14 @@ function initializePdfDeleteButtons() {
             const removeBtn = newQuestion.querySelector('.remove-question-btn');
             if (removeBtn) {
                 removeBtn.addEventListener('click', function() {
-                    newQuestion.remove();
+                    if (confirm('هل أنت متأكد من حذف هذا السؤال؟')) {
+                        newQuestion.remove();
+                    }
                 });
             }
             
             // Add event listener to question type select
-            const typeSelect = newQuestion.querySelector('.question-type');
+            const typeSelect = newQuestion.querySelector('.question-type-select');
             if (typeSelect) {
                 typeSelect.addEventListener('change', function() {
                     const answersContainer = newQuestion.querySelector('.answers-container');
@@ -798,14 +875,14 @@ function initializePdfDeleteButtons() {
                             <div class="answer-item mb-2">
                                 <div class="input-group">
                                     <div class="input-group-text">
-                                        <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${timestamp}" value="0" checked>
+                                        <input class="form-check-input mt-0" type="radio" name="correct_answer_${namePrefix}_${timestamp}" value="0" checked>
                                     </div>
-                                    <input type="text" class="form-control" name="answer_text_${moduleId}_${timestamp}_0" placeholder="الإجابة 1" required>
+                                    <input type="text" class="form-control" name="answer_text_${namePrefix}_${timestamp}[]" placeholder="الإجابة 1" required>
                                     <button type="button" class="btn btn-outline-danger remove-answer-btn">
                                         <i class="fas fa-times"></i>
                                     </button>
-                                    </div>
                                 </div>
+                            </div>
                             `;
                             answersContainer.insertAdjacentHTML('beforeend', answerHtml);
                             
@@ -820,17 +897,17 @@ function initializePdfDeleteButtons() {
                             <div class="answer-item mb-2">
                                 <div class="input-group">
                                     <div class="input-group-text">
-                                        <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${timestamp}" value="0" checked>
+                                        <input class="form-check-input mt-0" type="radio" name="correct_answer_${namePrefix}_${timestamp}" value="0" checked>
                                     </div>
-                                    <input type="text" class="form-control" name="answer_text_${moduleId}_${timestamp}_0" value="صح" readonly>
+                                    <input type="text" class="form-control" name="answer_text_${namePrefix}_${timestamp}[]" value="صح" readonly>
                                 </div>
                             </div>
                             <div class="answer-item mb-2">
                                 <div class="input-group">
                                     <div class="input-group-text">
-                                        <input class="form-check-input mt-0" type="radio" name="correct_answer_${moduleId}_${timestamp}" value="1">
+                                        <input class="form-check-input mt-0" type="radio" name="correct_answer_${namePrefix}_${timestamp}" value="1">
                                     </div>
-                                    <input type="text" class="form-control" name="answer_text_${moduleId}_${timestamp}_1" value="خطأ" readonly>
+                                    <input type="text" class="form-control" name="answer_text_${namePrefix}_${timestamp}[]" value="خطأ" readonly>
                                 </div>
                             </div>
                             `;
@@ -844,9 +921,12 @@ function initializePdfDeleteButtons() {
                         } else if (this.value === 'short_answer') {
                             // Add short answer input
                             const answerHtml = `
-                            <div class="mb-3">
-                                <label class="form-label">الإجابة الصحيحة</label>
-                                <input type="text" class="form-control" name="answer_short_${moduleId}_${timestamp}" placeholder="أدخل الإجابة الصحيحة" required>
+                            <div class="answer-item mb-2">
+                                <div class="input-group">
+                                    <span class="input-group-text">الإجابة الصحيحة</span>
+                                    <input type="text" class="form-control" name="answer_text_${namePrefix}_${timestamp}[]" placeholder="أدخل الإجابة الصحيحة" required>
+                                    <input type="hidden" name="correct_answer_${namePrefix}_${timestamp}" value="0">
+                                </div>
                             </div>
                             `;
                             answersContainer.insertAdjacentHTML('beforeend', answerHtml);
@@ -888,12 +968,16 @@ function initializePdfDeleteButtons() {
             removeAnswerBtns.forEach(btn => {
                 btn.addEventListener('click', function() {
                     const answerItem = this.closest('.answer-item');
-                    if (answerItem) {
+                    if (answerItem && answersContainer.querySelectorAll('.answer-item').length > 1) {
                         answerItem.remove();
+                    } else {
+                        alert('يجب أن يحتوي السؤال على إجابة واحدة على الأقل');
                     }
                 });
             });
         }
+        
+        console.log(`New question added to module: ${moduleId}`);
     }
 
     // Function to add a new answer to a question
@@ -904,29 +988,32 @@ function initializePdfDeleteButtons() {
         const answerCount = answersContainer.querySelectorAll('.answer-item').length;
         const newAnswerNumber = answerCount;
         
-        // Check if this is an existing question by examining the container ID
-        const containerId = answersContainer.id;
-        console.log('Adding answer to container:', containerId);
+        // Check if we've reached the maximum number of answers
+        const MAX_ANSWERS = 6;
+        if (answerCount >= MAX_ANSWERS) {
+            alert(`لا يمكن إضافة أكثر من ${MAX_ANSWERS} إجابات`);
+            return;
+        }
+        
+        // Determine naming based on module type
+        const isNewModule = moduleId.toString().startsWith('new_');
+        const namePrefix = isNewModule ? `new_${moduleId}` : moduleId;
         
         let radioName, textName;
         
-        // Handle existing questions (from the database)
-        if (containerId.includes('answers_existing_question_')) {
+        // Handle existing questions vs new questions
+        if (answersContainer.id.includes('answers_existing_question_')) {
             // Format: answers_existing_question_123
-            const questionIdMatch = containerId.match(/answers_existing_question_(\d+)/);
+            const questionIdMatch = answersContainer.id.match(/answers_existing_question_(\d+)/);
             if (questionIdMatch) {
                 questionId = questionIdMatch[1];
-                console.log('Found existing question ID:', questionId);
-                
-                // Set the correct name attributes for existing questions
                 radioName = `correct_answer_existing_${questionId}`;
-                textName = `answer_text_existing_${questionId}_${newAnswerNumber}`;
+                textName = `answer_text_existing_${questionId}[]`;
             }
         } else {
             // This is a new question
-            // Use the provided moduleId and questionId
-            radioName = `correct_answer_${moduleId}_${questionId}`;
-            textName = `answer_text_${moduleId}_${questionId}_${newAnswerNumber}`;
+            radioName = `correct_answer_${namePrefix}_${questionId}`;
+            textName = `answer_text_${namePrefix}_${questionId}[]`;
         }
         
         console.log(`Creating new answer with radio name: ${radioName} and text name: ${textName}`);
@@ -954,7 +1041,19 @@ function initializePdfDeleteButtons() {
             const removeBtn = newAnswer.querySelector('.remove-answer-btn');
             if (removeBtn) {
                 removeBtn.addEventListener('click', function() {
-                    newAnswer.remove();
+                    // Don't remove if there's only one answer left
+                    if (answersContainer.querySelectorAll('.answer-item').length > 1) {
+                        newAnswer.remove();
+                        // Update radio button values
+                        answersContainer.querySelectorAll('.answer-item').forEach((item, index) => {
+                            const radio = item.querySelector('input[type="radio"]');
+                            if (radio) {
+                                radio.value = index;
+                            }
+                        });
+                    } else {
+                        alert('يجب أن يحتوي السؤال على إجابة واحدة على الأقل');
+                    }
                 });
             }
         }
@@ -1060,20 +1159,29 @@ function submitCourse() {
         // Determine module identifier and whether it's an existing module or a new one
         let moduleId = '';
         let isExisting = false;
+        let modulePrefix = '';
+        
         if (moduleCard.id.startsWith('existing_module_')) {
             moduleId = moduleCard.id.replace('existing_module_', '');
             isExisting = true;
-        } else if (moduleCard.id.startsWith('new_module_')) {
-            moduleId = moduleCard.id.replace('new_module_', '');
-            isExisting = false;
-        } else if (moduleCard.id.startsWith('module_')) { // Fallback/legacy pattern
+            modulePrefix = 'existing';
+        } else if (moduleCard.id.startsWith('module_new_') || moduleCard.id.startsWith('module_') && !moduleCard.id.match(/^module_\d+$/)) {
+            // Handle new modules
             moduleId = moduleCard.id.replace('module_', '');
-            isExisting = /^\d+$/.test(moduleId);
+            isExisting = false;
+            modulePrefix = 'new';
+        } else if (moduleCard.id.startsWith('module_') && moduleCard.id.match(/^module_\d+$/)) {
+            // Legacy existing modules
+            moduleId = moduleCard.id.replace('module_', '');
+            isExisting = true;
+            modulePrefix = 'existing';
         }
 
-        // Safely fetch inputs within the current module card
-        const nameInput = moduleCard.querySelector('input[name^="module_name_"]');
-        const descInput = moduleCard.querySelector('textarea[name^="module_description_"]');
+        console.log(`Processing module: ${moduleCard.id}, isExisting: ${isExisting}, moduleId: ${moduleId}`);
+
+        // Safely fetch inputs within the current module card with correct naming
+        const nameInput = moduleCard.querySelector(`input[name="module_name_${modulePrefix}_${moduleId}"], input[name="module_name_${moduleId}"]`);
+        const descInput = moduleCard.querySelector(`textarea[name="module_description_${modulePrefix}_${moduleId}"], textarea[name="module_description_${moduleId}"]`);
         const quizToggle = moduleCard.querySelector('.quiz-toggle');
 
         // Build module data object
@@ -1082,7 +1190,8 @@ function submitCourse() {
             name: nameInput ? nameInput.value : '',
             description: descInput ? descInput.value : '',
             number: index + 1,
-            has_quiz: quizToggle ? quizToggle.checked : false
+            has_quiz: quizToggle ? quizToggle.checked : false,
+            is_existing: isExisting
         };
 
         // Add quiz data if the module has a quiz
@@ -1090,10 +1199,10 @@ function submitCourse() {
             const quizSection = moduleCard.querySelector('.quiz-section');
             if (quizSection) {
                 const quizData = {
-                    title: (quizSection.querySelector('[name^="quiz_title_"]') || {}).value || '',
-                    description: (quizSection.querySelector('[name^="quiz_description_"]') || {}).value || '',
-                    pass_mark: (quizSection.querySelector('[name^="quiz_pass_mark_"]') || {}).value || '',
-                    time_limit: (quizSection.querySelector('[name^="quiz_time_limit_"]') || {}).value || '',
+                    title: (quizSection.querySelector(`[name^="quiz_title_"]`) || {}).value || `اختبار ${moduleData.name}`,
+                    description: (quizSection.querySelector(`[name^="quiz_description_"]`) || {}).value || '',
+                    pass_mark: (quizSection.querySelector(`[name^="quiz_pass_mark_"]`) || {}).value || '50',
+                    time_limit: (quizSection.querySelector(`[name^="quiz_time_limit_"]`) || {}).value || '30',
                     questions: []
                 };
 
@@ -1105,6 +1214,11 @@ function submitCourse() {
                     
                     const questionTypeSelect = questionCard.querySelector('select[name^="question_type"]');
                     const questionType = questionTypeSelect ? questionTypeSelect.value : 'multiple_choice';
+                    
+                    // Skip empty questions
+                    if (!questionText.trim()) {
+                        return;
+                    }
                     
                     const questionData = {
                         id: questionId,
@@ -1128,20 +1242,27 @@ function submitCourse() {
                     } else if (questionType === 'short_answer') {
                         const answerTextInput = questionCard.querySelector('input[name^="answer_text"]');
                         const answerText = answerTextInput ? answerTextInput.value : '';
-                        questionData.answers.push({ text: answerText, is_correct: true });
+                        if (answerText.trim()) {
+                            questionData.answers.push({ text: answerText, is_correct: true });
+                        }
                     } else {
                         const correctAnswer = getCheckedRadioValue();
                         questionCard.querySelectorAll('.answer-item').forEach((answerItem, index) => {
                             const answerTextInput = answerItem.querySelector('input[name^="answer_text"]');
                             const answerText = answerTextInput ? answerTextInput.value : '';
-                            questionData.answers.push({
-                                text: answerText,
-                                is_correct: correctAnswer ? index.toString() === correctAnswer : false
-                            });
+                            if (answerText.trim()) {
+                                questionData.answers.push({
+                                    text: answerText,
+                                    is_correct: correctAnswer ? index.toString() === correctAnswer : false
+                                });
+                            }
                         });
                     }
 
-                    quizData.questions.push(questionData);
+                    // Only add question if it has answers
+                    if (questionData.answers.length > 0) {
+                        quizData.questions.push(questionData);
+                    }
                 });
 
                 moduleData.quiz = quizData;
@@ -1150,6 +1271,8 @@ function submitCourse() {
         
         modules.push(moduleData);
     });
+    
+    console.log('Final modules data:', modules);
     
     // Add modules data as JSON to the form
     const modulesInput = document.getElementById('modules_data');
@@ -1167,62 +1290,25 @@ function submitCourse() {
     // Process module data before submission
     const moduleCards = document.querySelectorAll('.module-card');
     moduleCards.forEach(moduleCard => {
-        // Handle module deletion flags
-        const moduleId = moduleCard.id.replace('module_', '');
-        const deleteModuleInput = document.getElementById(`delete_module_${moduleId}`);
-        
-        if (deleteModuleInput && deleteModuleInput.value === '1') {
-            console.log(`Module ${moduleId} marked for deletion`);
-        }
-        
-        // Handle quiz sections
-        const isExisting = moduleId.match(/^\d+$/) !== null;
-        const quizToggleId = isExisting ? `has_quiz_existing_${moduleId}` : `has_quiz_${moduleId}`;
-        const quizToggle = document.getElementById(quizToggleId);
+        // Handle quiz sections - make them visible for form submission
         const quizSection = moduleCard.querySelector('.quiz-section');
-        
-        if (quizToggle && quizSection) {
+        if (quizSection) {
             // Important: Always make quiz sections visible during form submission
             // This ensures all form fields are included in the submission
-            // The server will check the toggle value to determine if the quiz should be saved
             quizSection.style.display = 'block';
-            console.log(`Ensuring quiz section for module ${moduleId} is visible for form submission`);
+            console.log(`Ensuring quiz section for module ${moduleCard.id} is visible for form submission`);
         }
     });
-    
-    // Ensure all form data is included by checking required fields
-    const form = document.getElementById('course-form');
-    const requiredFields = form.querySelectorAll('[required]');
-    let missingFields = false;
-    
-    requiredFields.forEach(field => {
-        if (!field.value.trim()) {
-            console.error(`Required field missing: ${field.name}`);
-            field.classList.add('is-invalid');
-            missingFields = true;
-        }
-    });
-    
-    if (missingFields) {
-        alert('يرجى ملء جميع الحقول المطلوبة');
-        return false;
-    }
     
     // Use FormData to ensure proper file upload
+    const form = document.getElementById('course-form');
     const formData = new FormData(form);
     
     // Add a flag to indicate this is a form submission
     formData.append('is_form_submit', 'true');
     
-    // Debug: Log all form data being submitted
-    console.log('Submitting form with the following data:');
-    for (let [key, value] of formData.entries()) {
-        if (typeof value !== 'object') { // Don't log file objects
-            console.log(`${key}: ${value}`);
-        } else {
-            console.log(`${key}: [File object]`);
-        }
-    }
+    // Debug: Log modules being submitted
+    console.log('Submitting modules data:', JSON.stringify(modules, null, 2));
     
     // Show loading indicator
     const submitBtn = document.getElementById('submit-course-btn');
