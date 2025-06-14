@@ -27,428 +27,92 @@
                     <!-- عرض المحتوى -->
                     <div id="dynamic-content-area">
                         {% if current_content %}
-                            {% if current_content.type == 'video' %}
-                            <!-- عرض الفيديو -->
-                            <div class="video-container">
-                                <video id="course-video" class="course-video" controls data-video-id="{{ current_content.content.id }}" data-course-id="{{ course.id }}">
-                                    <source src="{{ current_content.content.file.url }}" type="video/mp4">
-                                    متصفحك لا يدعم تشغيل الفيديو.
-                                </video>
-                            </div>
-                            {% csrf_token %}
+                            <!-- Module Content -->
+                            {% if current_content.type == 'module_video' %}
+                                {% include 'website/courses/components/_module_video.html' %}
                             
                             {% elif current_content.type == 'module_pdf' %}
-                            <!-- عرض ملف PDF للوحدة -->
-                            <div class="note-display-container" data-module-id="{{ current_content.content.id }}">
-                                {% if current_content.content.module_pdf %}
-                                <!-- عرض ملف PDF -->
-                                <div class="pdf-viewer-container">
-                                    <div class="pdf-controls">
-                                        <h4><i class="fas fa-file-pdf text-danger me-2"></i>ملف PDF - {{ current_content.content.name }}</h4>
-                                        <div class="pdf-actions">
-                                            <a href="{{ current_content.content.module_pdf.url }}" target="_blank" class="btn btn-primary btn-sm">
-                                                <i class="fas fa-eye me-2"></i>عرض في صفحة جديدة
-                                            </a>
-                                            <a href="{{ current_content.content.module_pdf.url }}" download class="btn btn-success btn-sm">
-                                                <i class="fas fa-download me-2"></i>تحميل الملف
-                                            </a>
-                                            <button type="button" class="btn btn-info btn-sm mark-pdf-read-btn" data-pdf-id="module_pdf_{{ current_content.content.id }}" data-course-id="{{ course.id }}">
-                                                <i class="fas fa-check-circle me-2"></i>تحديد كمقروء
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <!-- PDF Viewer with iframe -->
-                                    <div class="pdf-viewer">
-                                        <iframe src="{{ current_content.content.module_pdf.url }}" width="100%" height="600px" style="border: none;"></iframe>
-                                    </div>
-                                    <div class="pdf-info mt-3">
-                                        <p><i class="fas fa-info-circle me-2"></i>ملف PDF للوحدة: {{ current_content.content.name }}</p>
-                                    </div>
-                                </div>
-                                {% else %}
-                                <!-- لا يوجد ملف PDF -->
-                                <div class="pdf-placeholder">
-                                    <i class="fas fa-file-pdf fa-3x text-muted mb-3"></i>
-                                    <h4>لا يوجد ملف PDF متاح</h4>
-                                    <p class="text-muted">لم يتم إضافة ملف PDF لهذه الوحدة بعد</p>
-                                </div>
-                                {% endif %}
-                            </div>
+                                {% include 'website/courses/components/_module_pdf.html' %}
+                            
+                            {% elif current_content.type == 'module_note' %}
+                                {% include 'website/courses/components/_module_note.html' %}
+                            
+                            <!-- Regular Content -->
+                            {% elif current_content.type == 'video' %}
+                                {% include 'website/courses/components/_video.html' %}
                             
                             {% elif current_content.type == 'note' %}
-                            <!-- عرض ملف PDF أو النص -->
-                            <div class="note-display-container" data-note-id="{{ current_content.content.id }}">
-                                {% if current_content.content.file %}
-                                <!-- عرض ملف PDF -->
-                                <div class="pdf-viewer-container">
-                                    <div class="pdf-controls">
-                                        <h4><i class="fas fa-file-pdf text-danger me-2"></i>{{ current_content.content.description|truncatewords:8|default:"ملف PDF" }}</h4>
-                                        <div class="pdf-actions">
-                                            <a href="{{ current_content.content.file.url }}" target="_blank" class="btn btn-primary btn-sm">
-                                                <i class="fas fa-eye me-2"></i>عرض في صفحة جديدة
-                                            </a>
-                                            <a href="{{ current_content.content.file.url }}" download class="btn btn-success btn-sm">
-                                                <i class="fas fa-download me-2"></i>تحميل الملف
-                                            </a>
-                                            <button type="button" class="btn btn-info btn-sm mark-pdf-read-btn" data-note-id="{{ current_content.content.id }}" data-course-id="{{ course.id }}">
-                                                <i class="fas fa-check-circle me-2"></i>تحديد كمقروء
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <!-- PDF Viewer with iframe -->
-                                    <div class="pdf-viewer">
-                                        <iframe src="{{ current_content.content.file.url }}" width="100%" height="600px" style="border: none;"></iframe>
-                                    </div>
-                                    <div class="pdf-info mt-3">
-                                        <p><i class="fas fa-info-circle me-2"></i>{{ current_content.content.description|safe }}</p>
-                                    </div>
-                                </div>
-                                {% elif current_content.content.description %}
-                                <!-- عرض المحتوى النصي -->
-                                <div class="note-content-display">
-                                    <div class="note-header">
-                                        <h4><i class="fas fa-file-text me-2"></i>المحتوى النصي</h4>
-                                    </div>
-                                    <div class="note-text-content">
-                                        {{ current_content.content.description|safe }}
-                                    </div>
-                                </div>
-                                {% else %}
-                                <!-- لا يوجد محتوى -->
-                                <div class="pdf-placeholder">
-                                    <i class="fas fa-file-text fa-3x text-muted mb-3"></i>
-                                    <h4>لا يوجد محتوى متاح</h4>
-                                    <p class="text-muted">لم يتم إضافة محتوى لهذه الملاحظة بعد</p>
-                                </div>
-                                {% endif %}
-                            </div>
+                                {% include 'website/courses/components/_note_pdf.html' %}
                             
                             {% elif current_content.type == 'assignment' %}
-                            <!-- عرض الواجب -->
-                            <div class="assignment-display-container" data-assignment-id="{{ current_content.content.id }}">
-                                <div class="assignment-header">
-                                    <h3><i class="fas fa-tasks text-primary me-2"></i>{{ current_content.content.title }}</h3>
-                                    <div class="assignment-meta">
-                                        {% if current_content.content.due_date %}
-                                        <span class="due-date"><i class="far fa-calendar-alt me-1"></i> موعد التسليم: {{ current_content.content.due_date|date:"d/m/Y" }}</span>
-                                        {% endif %}
-                                        {% if current_content.content.points %}
-                                        <span class="points"><i class="fas fa-star me-1"></i> الدرجة: {{ current_content.content.points }} نقطة</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                
-                                <div class="assignment-content">
-                                    <div class="assignment-description">
-                                        {{ current_content.content.description|safe }}
-                                    </div>
-                                    
-                                    {% if current_content.content.file %}
-                                    <div class="assignment-file mt-4">
-                                        <h5><i class="fas fa-paperclip me-2"></i>ملف الواجب</h5>
-                                        <div class="file-download-box">
-                                            <div class="file-icon">
-                                                <i class="fas fa-file-pdf"></i>
-                                            </div>
-                                            <div class="file-info">
-                                                <div class="file-name">ملف الواجب</div>
-                                                <div class="file-actions">
-                                                    <a href="{{ current_content.content.file.url }}" target="_blank" class="btn btn-sm btn-primary">
-                                                        <i class="fas fa-eye me-1"></i> عرض
-                                                    </a>
-                                                    <a href="{{ current_content.content.file.url }}" download class="btn btn-sm btn-success">
-                                                        <i class="fas fa-download me-1"></i> تحميل
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-                                    
-                                    <div class="assignment-actions mt-4">
-                                        <a href="{% url 'assignment_detail' current_content.content.id %}" class="btn btn-primary">
-                                            <i class="fas fa-external-link-alt me-2"></i>فتح صفحة الواجب
-                                        </a>
-                                        <button type="button" class="btn btn-success mark-assignment-completed-btn" data-assignment-id="{{ current_content.content.id }}" data-course-id="{{ course.id }}" {% if current_content.content.id in completed_assignments %}disabled{% endif %}>
-                                            <i class="fas {% if current_content.content.id in completed_assignments %}fa-check-circle{% else %}fa-check{% endif %} me-2"></i>
-                                            {% if current_content.content.id in completed_assignments %}مكتمل{% else %}تحديد كمكتمل{% endif %}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                                {% include 'website/courses/components/_assignment.html' %}
                             
                             {% elif current_content.type == 'quiz' %}
-                            <!-- عرض الكويز -->
-                            <div class="quiz-display-container">
-                                <div class="quiz-header">
-                                    <h3><i class="fas fa-question-circle text-warning me-2"></i>{{ current_content.content.title }}</h3>
-                                    <p class="text-muted mb-4">{{ current_content.content.description }}</p>
-                                </div>
-                                
-                                {% if current_content.content.question_set.exists %}
-                                <div class="quiz-content">
-                                    <div class="quiz-info-bar">
-                                        <div class="row">
-                                            <div class="col-md-4">
-                                                <div class="quiz-stat">
-                                                    <i class="fas fa-question-circle me-2"></i>
-                                                    <span>{{ current_content.content.question_set.count }} سؤال</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="quiz-stat">
-                                                    <i class="far fa-clock me-2"></i>
-                                                    <span>{{ current_content.content.time_limit|default:"15" }} دقيقة</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="quiz-stat">
-                                                    <i class="fas fa-percentage me-2"></i>
-                                                    <span>{{ current_content.content.pass_mark|default:"60" }}% للنجاح</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="quiz-start-section">
-                                        <div class="quiz-instructions">
-                                            <h5><i class="fas fa-info-circle me-2"></i>تعليمات الاختبار:</h5>
-                                            <ul>
-                                                <li>يجب الإجابة على جميع الأسئلة</li>
-                                                <li>الوقت المحدد: {{ current_content.content.time_limit|default:"15" }} دقيقة</li>
-                                                <li>الدرجة المطلوبة للنجاح: {{ current_content.content.pass_mark|default:"60" }}%</li>
-                                                <li>يمكنك المراجعة قبل التسليم</li>
-                                            </ul>
-                                        </div>
-                                        
-                                        <div class="quiz-actions">
-                                            <button class="btn btn-warning btn-lg start-quiz-btn" data-quiz-id="{{ current_content.content.id }}">
-                                                <i class="fas fa-play me-2"></i>بدء الاختبار
-                                            </button>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Quiz Questions (Hidden Initially) -->
-                                    <div class="quiz-questions" id="quiz-questions-{{ current_content.content.id }}" style="display: none;">
-                                        <form id="quiz-form-{{ current_content.content.id }}" method="post" action="{% url 'submit_quiz' %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="quiz_id" value="{{ current_content.content.id }}">
-                                            
-                                            {% for question in current_content.content.question_set.all %}
-                                            <div class="question-card">
-                                                <div class="question-header">
-                                                    <h6>السؤال {{ forloop.counter }}</h6>
-                                                    <span class="question-points">{{ question.points|default:1 }} نقطة</span>
-                                                </div>
-                                                <div class="question-text">
-                                                    {{ question.text }}
-                                                </div>
-                                                <div class="question-answers">
-                                                    {% for answer in question.answer_set.all %}
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="radio" 
-                                                               name="question_{{ question.id }}" 
-                                                               value="{{ answer.id }}" 
-                                                               id="answer_{{ answer.id }}">
-                                                        <label class="form-check-label" for="answer_{{ answer.id }}">
-                                                            {{ answer.text }}
-                                                        </label>
-                                                    </div>
-                                                    {% endfor %}
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                            
-                                            <div class="quiz-submit-section">
-                                                <button type="submit" class="btn btn-success btn-lg">
-                                                    <i class="fas fa-check me-2"></i>تسليم الاختبار
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                                {% else %}
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    لا توجد أسئلة في هذا الاختبار بعد
-                                </div>
-                                {% endif %}
-                            </div>
-                            
-                            {% elif current_content.type == 'assignment' %}
-                            <!-- عرض الواجب -->
-                            <div class="assignment-container">
-                                <h3><i class="fas fa-tasks text-success me-2"></i>{{ current_content.content.title }}</h3>
-                                <p class="text-muted mb-4">{{ current_content.content.description|safe }}</p>
-                                
-                                <div class="assignment-info">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <p><i class="far fa-calendar-alt me-2"></i>تاريخ التسليم: {{ current_content.content.due_date|date:"d/m/Y"|default:"غير محدد" }}</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <p><i class="fas fa-star me-2"></i>الدرجة: {{ current_content.content.max_points|default:"غير محدد" }}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    {% if current_content.content.file %}
-                                    <div class="assignment-file mb-4">
-                                        <h5><i class="fas fa-file-alt me-2"></i>ملف الواجب:</h5>
-                                        <div class="d-flex gap-2 mt-2">
-                                            <a href="{{ current_content.content.file.url }}" target="_blank" class="btn btn-primary btn-sm">
-                                                <i class="fas fa-eye me-2"></i>عرض الملف
-                                            </a>
-                                            <a href="{{ current_content.content.file.url }}" download class="btn btn-success btn-sm">
-                                                <i class="fas fa-download me-2"></i>تحميل الملف
-                                            </a>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-                                    
-                                    <a href="{% url 'assignment_detail' current_content.content.id %}" class="btn btn-success">
-                                        <i class="fas fa-upload me-2"></i>عرض الواجب وتسليم الحل
-                                    </a>
-                                    
-                                    <button type="button" class="btn btn-info ms-2 mark-assignment-btn" data-assignment-id="{{ current_content.content.id }}" data-course-id="{{ course.id }}">
-                                        <i class="fas fa-check-circle me-2"></i>تحديد كمكتمل
-                                    </button>
-                                </div>
-                            </div>
-                            {% elif current_content.type == 'module_pdf' %}
-                            <!-- عرض ملف PDF للموديول -->
-                            <div class="note-display-container" data-module-id="{{ current_content.content.id }}">
-                                {% if current_content.content.module_pdf %}
-                                <!-- عرض ملف PDF -->
-                                <div class="pdf-viewer-container">
-                                    <div class="pdf-controls">
-                                        <h4><i class="fas fa-file-pdf text-danger me-2"></i>ملف PDF - {{ current_content.content.name }}</h4>
-                                        <div class="pdf-actions">
-                                            <a href="{{ current_content.content.module_pdf.url }}" target="_blank" class="btn btn-primary btn-sm">
-                                                <i class="fas fa-eye me-2"></i>عرض في صفحة جديدة
-                                            </a>
-                                            <a href="{{ current_content.content.module_pdf.url }}" download class="btn btn-success btn-sm">
-                                                <i class="fas fa-download me-2"></i>تحميل الملف
-                                            </a>
-                                            <button type="button" class="btn btn-info btn-sm mark-module-pdf-read-btn" data-module-id="{{ current_content.content.id }}" data-course-id="{{ course.id }}">
-                                                <i class="fas fa-check-circle me-2"></i>تحديد كمقروء
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <!-- PDF Viewer with iframe -->
-                                    <div class="pdf-viewer">
-                                        <iframe src="{{ current_content.content.module_pdf.url }}" width="100%" height="600px" style="border: none;"></iframe>
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </div>
+                                {% include 'website/courses/components/_quiz.html' %}
                             
                             {% elif current_content.type == 'exam' %}
-                            <!-- عرض الاختبار النهائي -->
-                            <div class="exam-container">
-                                <div class="exam-header">
-                                    <h3><i class="fas fa-graduation-cap text-primary me-2"></i>{{ current_content.content.title }}</h3>
-                                    <p class="text-muted mb-4">{{ current_content.content.description|safe }}</p>
-                                </div>
-                                
-                                <div class="exam-info-bar">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="exam-stat">
-                                                <i class="fas fa-question-circle me-2"></i>
-                                                <span>{{ current_content.content.questions.count }} سؤال</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="exam-stat">
-                                                <i class="far fa-clock me-2"></i>
-                                                <span>{{ current_content.content.time_limit|default:"30" }} دقيقة</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="exam-stat">
-                                                <i class="fas fa-percentage me-2"></i>
-                                                <span>{{ current_content.content.pass_mark|default:"70" }}% للنجاح</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="exam-content">
-                                    <div class="exam-description">
-                                        {{ current_content.content.description|safe }}
-                                    </div>
-                                    
-                                    <div class="exam-instructions mt-4">
-                                        <h5><i class="fas fa-info-circle me-2"></i>تعليمات الاختبار</h5>
-                                        <ul class="instruction-list">
-                                            <li>الاختبار يتكون من {{ current_content.content.questions.count }} سؤال.</li>
-                                            <li>مدة الاختبار {{ current_content.content.time_limit }} دقيقة.</li>
-                                            <li>يجب الحصول على {{ current_content.content.pass_mark }}% على الأقل للنجاح.</li>
-                                            <li>لا يمكنك العودة للأسئلة السابقة بعد الانتقال للسؤال التالي.</li>
-                                            <li>سيتم عرض نتيجتك فور الانتهاء من الاختبار.</li>
-                                        </ul>
-                                    </div>
-                                    
-                                    <div class="exam-actions mt-4">
-                                        <a href="{% url 'start_exam' current_content.content.id %}" class="btn btn-primary btn-lg">
-                                            <i class="fas fa-play-circle me-2"></i>بدء الاختبار
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
+                                {% include 'website/courses/components/_final_exam.html' %}
                             
                             {% else %}
-                            <!-- معلومات المحتوى -->
-                            <div class="content-header">
-                                <h1 class="content-title">
-                                    {% if current_content.type == 'video' %}
-                                        <i class="fas fa-play-circle text-primary me-2"></i>
-                                        {{ current_content.content.name }}
-                                    {% elif current_content.type == 'note' %}
-                                        <i class="fas fa-file-pdf text-danger me-2"></i>
-                                        {{ current_content.content.description|truncatewords:8|default:"ملاحظات" }}
-                                    {% elif current_content.type == 'quiz' %}
-                                        <i class="fas fa-question-circle text-warning me-2"></i>
-                                        {{ current_content.content.title }}
-                                    {% elif current_content.type == 'assignment' %}
-                                        <i class="fas fa-tasks text-success me-2"></i>
-                                        {{ current_content.content.title }}
-                                    {% elif current_content.type == 'module_pdf' %}
-                                        <i class="fas fa-file-pdf text-danger me-2"></i>
-                                        ملف PDF - {{ current_content.content.name }}
-                                    {% elif current_content.type == 'exam' %}
-                                        <i class="fas fa-graduation-cap text-primary me-2"></i>
-                                        {{ current_content.content.title }}
-                                    {% endif %}
-                                </h1>
-                                
-                                <div class="content-meta">
-                                    {% if current_content.type == 'video' %}
-                                        <span class="meta-badge">
-                                            <i class="far fa-clock"></i>
-                                            {{ current_content.content.duration|default:'10:00' }}
-                                        </span>
-                                        <span class="meta-badge">
-                                            <i class="fas fa-video"></i>
-                                            فيديو تعليمي
-                                        </span>
-                                    {% elif current_content.type == 'note' %}
-                                        <span class="meta-badge">
-                                            <i class="fas fa-file-pdf"></i>
-                                            مادة مكتوبة
-                                        </span>
-                                    {% elif current_content.type == 'quiz' %}
-                                        <span class="meta-badge">
-                                            <i class="far fa-clock"></i>
-                                            {{ current_content.content.time_limit|default:'15' }} دقيقة
-                                        </span>
-                                        <span class="meta-badge">
-                                            <i class="fas fa-question-circle"></i>
-                                            اختبار
-                                        </span>
+                                <!-- Default Content Header -->
+                                <div class="content-header">
+                                    <h1 class="content-title">
+                                        {% if current_content.type == 'video' %}
+                                            <i class="fas fa-play-circle text-primary me-2"></i>
+                                            {{ current_content.content.name }}
+                                        {% elif current_content.type == 'note' %}
+                                            <i class="fas fa-file-pdf text-danger me-2"></i>
+                                            {{ current_content.content.description|truncatewords:8|default:"ملاحظات" }}
+                                        {% elif current_content.type == 'quiz' %}
+                                            <i class="fas fa-question-circle text-warning me-2"></i>
+                                            {{ current_content.content.title }}
+                                        {% elif current_content.type == 'assignment' %}
+                                            <i class="fas fa-tasks text-success me-2"></i>
+                                            {{ current_content.content.title }}
+                                        {% elif current_content.type == 'module_pdf' %}
+                                            <i class="fas fa-file-pdf text-danger me-2"></i>
+                                            ملف PDF - {{ current_content.content.name }}
+                                        {% elif current_content.type == 'module_video' %}
+                                            <i class="fas fa-video text-primary me-2"></i>
+                                            {{ current_content.content.name }}
+                                        {% elif current_content.type == 'module_note' %}
+                                            <i class="fas fa-sticky-note text-warning me-2"></i>
+                                            {{ current_content.content.title }}
+                                        {% elif current_content.type == 'exam' %}
+                                            <i class="fas fa-graduation-cap text-primary me-2"></i>
+                                            {{ current_content.content.title }}
+                                        {% endif %}
+                                    </h1>
+                                    
+                                    {% if current_content.type not in 'module_video,module_pdf,module_note' %}
+                                        <div class="content-meta">
+                                            {% if current_content.type == 'video' %}
+                                                <span class="meta-badge">
+                                                    <i class="far fa-clock"></i>
+                                                    {{ current_content.content.duration|default:'10:00' }}
+                                                </span>
+                                                <span class="meta-badge">
+                                                    <i class="fas fa-video"></i>
+                                                    فيديو تعليمي
+                                                </span>
+                                            {% elif current_content.type == 'note' %}
+                                                <span class="meta-badge">
+                                                    <i class="fas fa-file-pdf"></i>
+                                                    مادة مكتوبة
+                                                </span>
+                                            {% elif current_content.type == 'quiz' %}
+                                                <span class="meta-badge">
+                                                    <i class="far fa-clock"></i>
+                                                    {{ current_content.content.time_limit|default:'15' }} دقيقة
+                                                </span>
+                                                <span class="meta-badge">
+                                                    <i class="fas fa-question-circle"></i>
+                                                    اختبار
+                                                </span>
+                                            {% endif %}
+                                        </div>
                                     {% endif %}
                                 </div>
-                            </div>
                             {% endif %}
                         {% else %}
                             <!-- الصفحة الرئيسية للكورس -->

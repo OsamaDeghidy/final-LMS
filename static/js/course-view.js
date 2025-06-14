@@ -550,30 +550,54 @@ function markContentViewed(contentType, contentId) {
     const csrfToken = getCookie('csrftoken');
     if (!csrfToken) return;
     
-    fetch(`/api/${contentType}/${contentId}/mark-viewed/`, {
+    // Map module content types to their API endpoints
+    const apiEndpoints = {
+        'module_video': `/api/video/${contentId}/mark-viewed/`,
+        'module_pdf': `/api/pdf/${contentId}/mark-viewed/`,
+        'module_note': `/api/note/${contentId}/mark-viewed/`,
+        'video': `/api/video/${contentId}/mark-viewed/`,
+        'note': `/api/note/${contentId}/mark-viewed/`,
+        'quiz': `/api/quiz/${contentId}/mark-viewed/`,
+        'assignment': `/api/assignment/${contentId}/mark-viewed/`
+    };
+    
+    const endpoint = apiEndpoints[contentType];
+    if (!endpoint) {
+        console.warn(`No API endpoint defined for content type: ${contentType}`);
+        return;
+    }
+    
+    fetch(endpoint, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({
-            content_type: contentType,
-            content_id: contentId
+            content_type: contentType.replace('module_', ''), // Remove 'module_' prefix for the API
+            content_id: contentId,
+            is_module_content: contentType.startsWith('module_') // Add flag for module content
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.status === 'success' || data.success) {
-            console.log('Content marked as viewed successfully');
+            console.log(`Content ${contentType} (${contentId}) marked as viewed successfully`);
             if (data.progress !== undefined) {
                 updateProgressBar(data.progress);
+                updateProgressBars(data.progress);
             }
             // Mark content as completed in UI
             markContentAsCompleted(contentType, contentId);
         }
     })
     .catch(error => {
-        console.error('Error marking content as viewed:', error);
+        console.error(`Error marking ${contentType} (${contentId}) as viewed:`, error);
     });
 }
 

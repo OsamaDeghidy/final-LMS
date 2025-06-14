@@ -122,18 +122,73 @@ def courseviewpage(request, course_id):
     next_content = None
     prev_content = None
     
-    if content_type == 'module_pdf' and content_id:
-        # Get the module with the PDF file
-        try:
-            module = Module.objects.get(id=content_id, course=course)
-            if module.module_pdf:
-                # Create content object for the module PDF
+    if content_type and content_id:
+        if content_type == 'module_pdf':
+            # Get the module with the PDF file
+            try:
+                module = Module.objects.get(id=content_id, course=course)
+                if module.pdf:  # Use module.pdf instead of module.module_pdf
+                    current_content = {
+                        'type': 'module_pdf',
+                        'content': module,  # Pass the module object which contains the PDF
+                        'module': module,   # Also pass the module for context
+                        'pdf_url': module.pdf.url if module.pdf else None,
+                        'pdf_title': module.name or f'Module {module.number} PDF'
+                    }
+            except Module.DoesNotExist:
+                messages.error(request, _('Module not found.'))
+                
+        elif content_type == 'module_video':
+            # Get the module's video
+            try:
+                module = Module.objects.get(id=content_id, course=course)
+                if module.video:  # Check if module has a video
+                    current_content = {
+                        'type': 'module_video',
+                        'content': module,  # Pass the module object which contains the video
+                        'module': module,   # Also pass the module for context
+                        'video_url': module.video.url if module.video else None,
+                        'video_title': module.name or f'Module {module.number} Video'
+                    }
+            except Module.DoesNotExist:
+                messages.error(request, _('Module not found.'))
+                
+        elif content_type == 'module_note':
+            # Get the module's note
+            try:
+                module = Module.objects.get(id=content_id, course=course)
+                if module.note:  # Check if module has a note
+                    current_content = {
+                        'type': 'module_note',
+                        'content': module,  # Pass the module object which contains the note
+                        'module': module,   # Also pass the module for context
+                        'note_content': module.note,
+                        'note_title': module.name or f'Module {module.number} Notes'
+                    }
+            except Module.DoesNotExist:
+                messages.error(request, _('Module not found.'))
+                
+        elif content_type == 'quiz' and content_id.isdigit():
+            # Get quiz
+            try:
+                quiz = Quiz.objects.get(id=content_id, module__course=course)
                 current_content = {
-                    'type': 'module_pdf',
-                    'content': module,
+                    'type': 'quiz',
+                    'content': quiz,
                 }
-        except Module.DoesNotExist:
-            messages.error(request, _('Module not found.'))
+            except Quiz.DoesNotExist:
+                messages.error(request, _('Quiz not found.'))
+                
+        elif content_type == 'assignment' and content_id.isdigit():
+            # Get assignment
+            try:
+                assignment = Assignment.objects.get(id=content_id, module__course=course)
+                current_content = {
+                    'type': 'assignment',
+                    'content': assignment,
+                }
+            except Assignment.DoesNotExist:
+                messages.error(request, _('Assignment not found.'))
     
     context = {
         'course': course,

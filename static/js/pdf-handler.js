@@ -110,13 +110,8 @@ function setupPdfMarkingButtons() {
 
 /**
  * Helper function to get cookie value by name
- * This ensures the function is available if not already defined
  */
 function getCookie(name) {
-    if (window.getCookie && typeof window.getCookie === 'function') {
-        return window.getCookie(name);
-    }
-    
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
         const cookies = document.cookie.split(';');

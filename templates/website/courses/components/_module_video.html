@@ -1,0 +1,116 @@
+<!-- Module Video Component -->
+<div class="video-display-container" data-module-id="{{ current_content.content.module.id }}">
+    {% if current_content.content.video_file %}
+    <div class="video-player-container">
+        <div class="video-header">
+            <h4><i class="fas fa-video text-primary me-2"></i>{{ current_content.content.name }}</h4>
+            <div class="video-actions">
+                <button type="button" class="btn btn-primary btn-sm mark-video-watched-btn" 
+                        data-video-id="{{ current_content.content.id }}"
+                        data-course-id="{{ course.id }}">
+                    <i class="fas fa-check-circle me-2"></i>تحديد كمشاهدة
+                </button>
+            </div>
+        </div>
+        
+        <!-- Video Player -->
+        <div class="video-player-wrapper">
+            <video id="module-video-{{ current_content.content.id }}" 
+                   class="video-js vjs-default-skin vjs-big-play-centered" 
+                   controls preload="auto" 
+                   width="100%" 
+                   data-setup='{"fluid": true}'>
+                <source src="{{ current_content.content.video_file.url }}" type="video/mp4">
+                <p class="vjs-no-js">
+                    To view this video please enable JavaScript, and consider upgrading to a
+                    web browser that <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+                </p>
+            </video>
+        </div>
+        
+        <!-- Video Info -->
+        <div class="video-info mt-3">
+            <div class="row">
+                <div class="col-md-8">
+                    <h5>عن الفيديو</h5>
+                    <p class="video-description">
+                        {{ current_content.content.description|default:"لا يوجد وصف متوفر" }}
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <div class="video-meta">
+                        <div class="meta-item">
+                            <i class="far fa-clock me-2"></i>
+                            <span>المدة: {{ current_content.content.duration|default:"غير محدد" }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <i class="far fa-calendar-alt me-2"></i>
+                            <span>تاريخ الإضافة: {{ current_content.content.created_at|date:"Y/m/d" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- No Video Available -->
+    <div class="video-placeholder text-center p-5 bg-light rounded">
+        <i class="fas fa-video-slash fa-3x text-muted mb-3"></i>
+        <h4>لا يوجد فيديو متاح</h4>
+        <p class="text-muted">لم يتم إضافة فيديو لهذه الوحدة بعد</p>
+    </div>
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+// Initialize video.js player when the document is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize video.js player
+    const videoPlayer = videojs('module-video-{{ current_content.content.id }}');
+    
+    // Track video progress
+    videoPlayer.on('timeupdate', function() {
+        const currentTime = videoPlayer.currentTime();
+        const duration = videoPlayer.duration();
+        const percentWatched = (currentTime / duration) * 100;
+        
+        // Mark as watched if 90% of the video has been watched
+        if (percentWatched >= 90) {
+            const videoId = '{{ current_content.content.id }}';
+            const courseId = '{{ course.id }}';
+            
+            // Mark as watched
+            fetch(`/courses/mark-content-viewed/video/${videoId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update UI to show video is watched
+                    const videoItem = document.querySelector(`[data-video-id="${videoId}"]`);
+                    if (videoItem) {
+                        videoItem.closest('.content-item').classList.add('completed');
+                    }
+                    
+                    // Update progress bars
+                    updateProgressBars(data.progress);
+                }
+            });
+        }
+    });
+    
+    // Clean up on unmount
+    return () => {
+        if (videoPlayer) {
+            videoPlayer.dispose();
+        }
+    };
+});
+</script>
+{% endblock %}

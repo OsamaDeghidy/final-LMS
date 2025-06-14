@@ -1,0 +1,104 @@
+<!-- Quiz Component -->
+<div class="quiz-display-container">
+    <div class="quiz-header">
+        <h3><i class="fas fa-question-circle text-warning me-2"></i>{{ current_content.content.title }}</h3>
+        <p class="text-muted mb-4">{{ current_content.content.description }}</p>
+    </div>
+
+    {% if current_content.content.questions.all %}
+        {% if current_content.content.attempts_allowed == 0 or user_attempts < current_content.content.attempts_allowed %}
+            <div class="quiz-content">
+                <div class="quiz-info-bar">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="quiz-stat">
+                                <i class="fas fa-question-circle text-primary me-2"></i>
+                                <span>{{ current_content.content.questions.count }} أسئلة</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="quiz-stat">
+                                <i class="fas fa-clock text-primary me-2"></i>
+                                <span>الوقت: {{ current_content.content.time_limit }} دقائق</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="quiz-stat">
+                                <i class="fas fa-trophy text-primary me-2"></i>
+                                <span>الدرجة المطلوبة: {{ current_content.content.passing_score }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if not quiz_started %}
+                <div class="quiz-start-panel text-center py-5">
+                    <h4 class="mb-4">هل أنت مستعد لبدء الاختبار؟</h4>
+                    <p class="text-muted mb-4">
+                        سيكون لديك {{ current_content.content.time_limit }} دقيقة للإجابة على {{ current_content.content.questions.count }} أسئلة.
+                        تأكد من أنك في مكان هادئ وجاهز للبدء.
+                    </p>
+                    <button type="button" class="btn btn-primary btn-lg start-quiz-btn" data-quiz-id="{{ current_content.content.id }}">
+                        <i class="fas fa-play me-2"></i>بدء الاختبار
+                    </button>
+                </div>
+                {% endif %}
+
+                <div class="quiz-questions" id="quiz-questions-{{ current_content.content.id }}" style="display: none;">
+                    <form id="quiz-form-{{ current_content.content.id }}" method="post" action="{% url 'submit_quiz' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="quiz_id" value="{{ current_content.content.id }}">
+                        
+                        <div class="quiz-timer mb-4">
+                            <div class="timer-display bg-light p-2 rounded text-center">
+                                <i class="fas fa-clock text-warning me-2"></i>
+                                <span id="quiz-timer-{{ current_content.content.id }}">{{ current_content.content.time_limit }}:00</span> متبقي
+                            </div>
+                        </div>
+                        
+                        <div class="questions-container">
+                            {% for question in current_content.content.questions.all %}
+                            <div class="question-card mb-4" id="question-{{ question.id }}">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">سؤال {{ forloop.counter }}: {{ question.text }}</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        {% for option in question.options_as_list %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" 
+                                                   name="question_{{ question.id }}" 
+                                                   id="q{{ question.id }}_option{{ forloop.counter }}" 
+                                                   value="{{ forloop.counter0 }}">
+                                            <label class="form-check-label" for="q{{ question.id }}_option{{ forloop.counter }}">
+                                                {{ option }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="quiz-actions text-center my-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane me-2"></i>تسليم الإجابات
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                لقد استنفذت العدد المسموح من المحاولات لهذا الاختبار.
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            لا توجد أسئلة في هذا الاختبار بعد
+        </div>
+    {% endif %}
+</div>

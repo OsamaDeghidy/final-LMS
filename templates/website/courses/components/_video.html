@@ -1,0 +1,29 @@
+<!-- Video Component -->
+<div class="video-container">
+    <video id="course-video" class="course-video" controls 
+           data-video-id="{{ current_content.content.id }}" 
+           data-course-id="{{ course.id }}">
+        <source src="{{ current_content.content.file.url }}" type="video/mp4">
+        متصفحك لا يدعم تشغيل الفيديو.
+    </video>
+</div>
+{% csrf_token %}
+
+<!-- Video Controls and Progress Tracking -->
+<div class="video-controls mt-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="video-progress">
+            <div class="progress" style="height: 5px;">
+                <div class="progress-bar bg-primary video-progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+            <small class="text-muted video-progress-text">0% مكتمل</small>
+        </div>
+        <div>
+            <button type="button" class="btn btn-sm btn-outline-primary mark-as-completed" 
+                    data-content-type="video" 
+                    data-content-id="{{ current_content.content.id }}">
+                <i class="fas fa-check-circle me-1"></i> تم المشاهدة
+            </button>
+        </div>
+    </div>
+</div>
