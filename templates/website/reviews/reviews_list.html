@@ -1,0 +1,287 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}التقييمات{% endblock %}
+
+{% block dashboard_content %}
+<div class="col-md-9">
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0 py-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0" style="color: #2a5a7c;">
+          <i class="fas fa-star me-2"></i>
+          {% if profile.status == 'Student' %}
+            التقييمات في دوراتي
+          {% else %}
+            التقييمات على دوراتي
+          {% endif %}
+        </h4>
+        <div class="d-flex gap-2">
+          <a href="{% url 'user_reviews' %}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-user me-1"></i> تقييماتي فقط
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card-body">
+      {% if profile.status == 'Teacher' or profile.status == 'Admin' %}
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="stat-card">
+            <div class="stat-icon bg-warning">
+              <i class="fas fa-star"></i>
+            </div>
+            <div class="stat-content">
+              <h3>{{ total_reviews }}</h3>
+              <p>إجمالي التقييمات</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card">
+            <div class="stat-icon bg-success">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-content">
+              <h3>{{ avg_rating }}</h3>
+              <p>متوسط التقييم</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card">
+            <div class="stat-icon bg-info">
+              <i class="fas fa-thumbs-up"></i>
+            </div>
+            <div class="stat-content">
+              <h3>{{ user_total_reviews }}</h3>
+              <p>تقييماتي</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if course_reviews.object_list %}
+        <div class="reviews-list">
+          {% for review in course_reviews.object_list %}
+          <div class="review-item card mb-3 border-start border-4" style="border-left-color: #ffc107 !important;">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="d-flex align-items-center">
+                  <div class="avatar-circle me-3">
+                    {{ review.user.first_name|default:review.user.username|slice:":1"|upper }}
+                  </div>
+                  <div>
+                    <h6 class="mb-1">{{ review.user.get_full_name|default:review.user.username }}</h6>
+                    <div class="text-muted small">
+                      <i class="fas fa-book me-1"></i>
+                      <a href="{% url 'courseviewpage' review.course.id %}" class="text-decoration-none">
+                        {{ review.course.name }}
+                      </a>
+                      <span class="mx-2">•</span>
+                      <i class="fas fa-clock me-1"></i>
+                      {{ review.created_at|timesince }} مضت
+                    </div>
+                  </div>
+                </div>
+                <div class="rating-display">
+                  {% for i in "12345"|make_list %}
+                    {% if forloop.counter <= review.rating %}
+                      <i class="fas fa-star text-warning"></i>
+                    {% else %}
+                      <i class="far fa-star text-muted"></i>
+                    {% endif %}
+                  {% endfor %}
+                  <span class="ms-2 text-muted">{{ review.rating }}/5</span>
+                </div>
+              </div>
+              
+              {% if review.review_text %}
+              <div class="review-content mb-3">
+                {{ review.review_text|safe|truncatewords:50 }}
+              </div>
+              {% endif %}
+              
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                  تم التقييم في {{ review.created_at|date:"d/m/Y" }}
+                </div>
+                <a href="{% url 'courseviewpage' review.course.id %}" class="btn btn-sm btn-primary">
+                  <i class="fas fa-eye me-1"></i> عرض الدورة
+                </a>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if course_reviews.has_other_pages %}
+        <nav aria-label="Page navigation">
+          <ul class="pagination justify-content-center">
+            {% if course_reviews.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ course_reviews.previous_page_number }}">السابق</a>
+            </li>
+            {% endif %}
+            
+            {% for num in course_reviews.paginator.page_range %}
+              {% if course_reviews.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+              {% elif num > course_reviews.number|add:'-3' and num < course_reviews.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+              </li>
+              {% endif %}
+            {% endfor %}
+            
+            {% if course_reviews.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ course_reviews.next_page_number }}">التالي</a>
+            </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+        
+      {% else %}
+        <div class="text-center py-5">
+          <i class="fas fa-star fa-3x text-muted mb-3"></i>
+          <h5 class="text-muted">لا توجد تقييمات بعد</h5>
+          <p class="text-muted">
+            {% if profile.status == 'Student' %}
+              ابدأ بتقييم الدورات التي التحقت بها
+            {% else %}
+              لا توجد تقييمات على دوراتك بعد
+            {% endif %}
+          </p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- My Reviews Section for Students -->
+  {% if profile.status == 'Student' and user_reviews %}
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="mb-0" style="color: #2a5a7c;">
+        <i class="fas fa-user-edit me-2"></i> تقييماتي الأخيرة
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        {% for review in user_reviews|slice:":4" %}
+        <div class="col-md-6 mb-3">
+          <div class="card border-0 bg-light">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="card-title mb-1">{{ review.course.name|truncatechars:30 }}</h6>
+                <div class="rating-display">
+                  {% for i in "12345"|make_list %}
+                    {% if forloop.counter <= review.rating %}
+                      <i class="fas fa-star text-warning"></i>
+                    {% else %}
+                      <i class="far fa-star text-muted"></i>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+              {% if review.review_text %}
+              <p class="card-text small text-muted">
+                {{ review.review_text|safe|truncatewords:15 }}
+              </p>
+              {% endif %}
+              <div class="text-muted small">
+                {{ review.created_at|date:"d/m/Y" }}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% if user_reviews.count > 4 %}
+      <div class="text-center">
+        <a href="{% url 'user_reviews' %}" class="btn btn-outline-primary">
+          عرض جميع تقييماتي ({{ user_reviews.count }})
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.stat-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  border: 1px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stat-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+}
+
+.stat-content h3 {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin: 0;
+  color: #2a5a7c;
+}
+
+.stat-content p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #2a5a7c;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.review-item:hover {
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.review-content {
+  line-height: 1.6;
+  color: #495057;
+}
+
+.rating-display {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.rating-display i {
+  font-size: 0.9rem;
+}
+</style>
+{% endblock %} 

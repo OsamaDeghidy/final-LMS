@@ -18,7 +18,7 @@ from .models import (
     Review, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt, 
     ContentProgress, Article, UserProgress, ModuleProgress, CourseProgress,
     Comment, SubComment, CommentLike, SubCommentLike, Exam, ExamQuestion, ExamAnswer,
-    QuizAttempt, QuizUserAnswer
+    QuizAttempt, QuizUserAnswer, CourseReview, ReviewReply
 )
 from user.models import Profile, Student, Organization, Teacher
 from .utils_course import searchCourses, update_enrollment_progress, mark_content_completed, get_completed_content_ids, get_user_course_progress, get_user_enrolled_courses, ensure_course_has_module
@@ -2667,3 +2667,133 @@ def render_reply_html(reply, user):
         'user': user,
         'course': reply.comment.course
     })
+
+@login_required
+def discussions_list(request):
+    """View all discussions/comments for the current user"""
+    profile = request.user.profile
+    
+    if profile.status == 'Student':
+        # Get comments from courses the student is enrolled in
+        enrolled_courses = Enrollment.objects.filter(student=request.user).values_list('course_id', flat=True)
+        comments = Comment.objects.filter(course_id__in=enrolled_courses, is_active=True).select_related('user', 'course').prefetch_related('replies').order_by('-created_at')
+        
+        # Get user's own comments
+        user_comments = Comment.objects.filter(user=request.user, is_active=True).select_related('course').prefetch_related('replies').order_by('-created_at')
+        
+    elif profile.status in ['Teacher', 'Admin']:
+        # Get comments from teacher's courses
+        teacher_courses = Course.objects.filter(teacher__profile__user=request.user).values_list('id', flat=True)
+        comments = Comment.objects.filter(course_id__in=teacher_courses, is_active=True).select_related('user', 'course').prefetch_related('replies').order_by('-created_at')
+        
+        # Get user's own comments
+        user_comments = Comment.objects.filter(user=request.user, is_active=True).select_related('course').prefetch_related('replies').order_by('-created_at')
+    else:
+        comments = Comment.objects.none()
+        user_comments = Comment.objects.none()
+    
+    # Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(comments, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'comments': page_obj,
+        'user_comments': user_comments[:5],  # Show recent 5 user comments
+        'profile': profile,
+        'total_comments': comments.count(),
+    }
+    
+    return render(request, 'website/discussions/discussions_list.html', context)
+
+
+@login_required
+def reviews_list(request):
+    """View all reviews for the current user"""
+    profile = request.user.profile
+    
+    if profile.status == 'Student':
+        # Get user's reviews
+        user_reviews = CourseReview.objects.filter(user=request.user).select_related('course').order_by('-created_at')
+        # Get reviews on courses the student is enrolled in (for reading)
+        enrolled_courses = Enrollment.objects.filter(student=request.user).values_list('course_id', flat=True)
+        course_reviews = CourseReview.objects.filter(course_id__in=enrolled_courses).select_related('user', 'course').order_by('-created_at')
+        
+    elif profile.status in ['Teacher', 'Admin']:
+        # Get reviews on teacher's courses
+        teacher_courses = Course.objects.filter(teacher__profile__user=request.user).values_list('id', flat=True)
+        course_reviews = CourseReview.objects.filter(course_id__in=teacher_courses).select_related('user', 'course').order_by('-created_at')
+        # Get user's own reviews (if teacher also takes courses)
+        user_reviews = CourseReview.objects.filter(user=request.user).select_related('course').order_by('-created_at')
+    else:
+        user_reviews = CourseReview.objects.none()
+        course_reviews = CourseReview.objects.none()
+    
+    # Pagination for course reviews
+    from django.core.paginator import Paginator
+    paginator = Paginator(course_reviews, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Calculate average rating for teacher's courses
+    avg_rating = 0
+    if profile.status in ['Teacher', 'Admin'] and course_reviews.exists():
+        from django.db.models import Avg
+        avg_rating = course_reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+    
+    context = {
+        'course_reviews': page_obj,
+        'user_reviews': user_reviews,
+        'profile': profile,
+        'total_reviews': course_reviews.count(),
+        'avg_rating': round(avg_rating, 1),
+        'user_total_reviews': user_reviews.count(),
+    }
+    
+    return render(request, 'website/reviews/reviews_list.html', context)
+
+
+@login_required
+def user_discussions(request):
+    """View user's own discussions/comments"""
+    user_comments = Comment.objects.filter(user=request.user, is_active=True).select_related('course').prefetch_related('replies').order_by('-created_at')
+    
+    # Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(user_comments, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'comments': page_obj,
+        'total_comments': user_comments.count(),
+        'profile': request.user.profile,
+    }
+    
+    return render(request, 'website/discussions/user_discussions.html', context)
+
+
+@login_required
+def user_reviews(request):
+    """View user's own reviews"""
+    user_reviews = CourseReview.objects.filter(user=request.user).select_related('course').order_by('-created_at')
+    
+    # Pagination
+    from django.core.paginator import Paginator
+    paginator = Paginator(user_reviews, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Calculate user's average rating
+    from django.db.models import Avg
+    avg_rating = user_reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+    
+    context = {
+        'reviews': page_obj,
+        'total_reviews': user_reviews.count(),
+        'avg_rating': round(avg_rating, 1),
+        'profile': request.user.profile,
+    }
+    
+    return render(request, 'website/reviews/user_reviews.html', context)

@@ -74,4 +74,10 @@ urlpatterns = [
     path('comment/<int:comment_id>/reply/', views_course.add_comment_reply, name='add_comment_reply'),
     path('comment/<int:comment_id>/like/', views_course.like_comment, name='like_comment'),
     path('subcomment/<int:subcomment_id>/like/', views_course.like_subcomment, name='like_subcomment'),
+    
+    # New URLs for discussions and reviews pages
+    path('discussions/', views_course.discussions_list, name='discussions_list'),
+    path('my-discussions/', views_course.user_discussions, name='user_discussions'),
+    path('reviews/', views_course.reviews_list, name='reviews_list'), 
+    path('my-reviews/', views_course.user_reviews, name='user_reviews'),
 ]

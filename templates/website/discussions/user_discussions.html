@@ -1,0 +1,240 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}مناقشاتي{% endblock %}
+
+{% block dashboard_content %}
+<div class="col-md-9">
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0 py-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <h4 class="mb-0" style="color: #2a5a7c;">
+          <i class="fas fa-user-comments me-2"></i> مناقشاتي
+        </h4>
+        <div class="d-flex gap-2">
+          <a href="{% url 'discussions_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> جميع المناقشات
+          </a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card-body">
+      <div class="row mb-4">
+        <div class="col-md-4">
+          <div class="stat-card">
+            <div class="stat-icon bg-primary">
+              <i class="fas fa-comments"></i>
+            </div>
+            <div class="stat-content">
+              <h3>{{ total_comments }}</h3>
+              <p>إجمالي مناقشاتي</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {% if comments.object_list %}
+        <div class="discussions-list">
+          {% for comment in comments.object_list %}
+          <div class="discussion-item card mb-3 border-start border-4" style="border-left-color: #28a745 !important;">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="d-flex align-items-center">
+                  <div class="avatar-circle me-3">
+                    {{ comment.user.first_name|default:comment.user.username|slice:":1"|upper }}
+                  </div>
+                  <div>
+                    <h6 class="mb-1">أنت</h6>
+                    <div class="text-muted small">
+                      <i class="fas fa-book me-1"></i>
+                      <a href="{% url 'courseviewpage' comment.course.id %}" class="text-decoration-none">
+                        {{ comment.course.name }}
+                      </a>
+                      <span class="mx-2">•</span>
+                      <i class="fas fa-clock me-1"></i>
+                      {{ comment.created_at|timesince }} مضت
+                    </div>
+                  </div>
+                </div>
+                <div class="text-muted small">
+                  {% if comment.replies.count %}
+                    <i class="fas fa-reply me-1"></i>
+                    {{ comment.replies.count }} رد
+                  {% endif %}
+                </div>
+              </div>
+              
+              <div class="comment-content mb-3">
+                {{ comment.content|linebreaks }}
+              </div>
+              
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex gap-3">
+                  <div class="text-muted small">
+                    <i class="far fa-heart me-1"></i>
+                    {{ comment.likes.count }} إعجاب
+                  </div>
+                  {% if comment.replies.count %}
+                  <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#replies-{{ comment.id }}">
+                    <i class="fas fa-reply me-1"></i>
+                    عرض الردود ({{ comment.replies.count }})
+                  </button>
+                  {% endif %}
+                </div>
+                <a href="{% url 'courseviewpage' comment.course.id %}" class="btn btn-sm btn-primary">
+                  <i class="fas fa-eye me-1"></i> عرض الدورة
+                </a>
+              </div>
+              
+              {% if comment.replies.count %}
+              <div class="collapse mt-3" id="replies-{{ comment.id }}">
+                <div class="border-start border-2 ps-3" style="border-left-color: #e9ecef !important;">
+                  <h6 class="text-muted mb-2">الردود على تعليقك:</h6>
+                  {% for reply in comment.replies.all %}
+                  <div class="reply-item mb-2 p-3 bg-light rounded">
+                    <div class="d-flex align-items-center mb-2">
+                      <div class="avatar-circle-sm me-2">
+                        {{ reply.user.first_name|default:reply.user.username|slice:":1"|upper }}
+                      </div>
+                      <strong class="me-2">{{ reply.user.get_full_name|default:reply.user.username }}</strong>
+                      {% if reply.user == comment.course.teacher.profile.user %}
+                        <span class="badge bg-warning text-dark me-2">
+                          <i class="fas fa-chalkboard-teacher"></i> مدرس
+                        </span>
+                      {% endif %}
+                      <span class="text-muted small">{{ reply.created_at|timesince }} مضت</span>
+                    </div>
+                    <div>{{ reply.content|linebreaks }}</div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if comments.has_other_pages %}
+        <nav aria-label="Page navigation">
+          <ul class="pagination justify-content-center">
+            {% if comments.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ comments.previous_page_number }}">السابق</a>
+            </li>
+            {% endif %}
+            
+            {% for num in comments.paginator.page_range %}
+              {% if comments.number == num %}
+              <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+              </li>
+              {% elif num > comments.number|add:'-3' and num < comments.number|add:'3' %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+              </li>
+              {% endif %}
+            {% endfor %}
+            
+            {% if comments.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ comments.next_page_number }}">التالي</a>
+            </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+        
+      {% else %}
+        <div class="text-center py-5">
+          <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+          <h5 class="text-muted">لم تشارك في أي مناقشات بعد</h5>
+          <p class="text-muted">ابدأ بالمشاركة في المناقشات في دوراتك لتظهر هنا</p>
+          <a href="{% url 'my_courses' %}" class="btn btn-primary">
+            <i class="fas fa-book me-1"></i> عرض دوراتي
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+.stat-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  border: 1px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stat-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+}
+
+.stat-content h3 {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin: 0;
+  color: #2a5a7c;
+}
+
+.stat-content p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #28a745;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.avatar-circle-sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #6c757d;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+.discussion-item:hover {
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.comment-content {
+  line-height: 1.6;
+  color: #495057;
+}
+
+.reply-item {
+  border-left: 3px solid #dee2e6;
+}
+</style>
+{% endblock %} 
