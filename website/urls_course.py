@@ -50,4 +50,28 @@ urlpatterns = [
     path('cart/', views_course.view_cart, name='view_cart'),
     path('cart/remove/<int:course_id>/', views_course.remove_from_cart, name='remove_from_cart'),
     path('checkout/', views_course.checkout, name='checkout'),
+    
+    # Progress and certificate management
+    path('course/<int:course_id>/complete/', views_course.complete_course, name='complete_course'),
+    path('course/<int:course_id>/recalculate_progress/', views_course.recalculate_progress, name='recalculate_progress'),
+    path('course/<int:course_id>/generate_certificate/', views_course.generate_certificate, name='generate_certificate'),
+    path('certificate/<int:certificate_id>/download/', views_course.download_certificate, name='download_certificate'),
+    
+    # Analytics and statistics
+    path('course/<int:course_id>/statistics/', views_course.course_statistics, name='course_statistics'),
+    
+    # Search and recommendations
+    path('search/', views_course.search_courses, name='search_courses'),
+    path('course/<int:course_id>/recommendations/', views_course.course_recommendations, name='course_recommendations'),
+    
+    # Wishlist functionality
+    path('course/<int:course_id>/add-to-wishlist/', views_course.add_to_wishlist, name='add_to_wishlist'),
+    path('course/<int:course_id>/remove-from-wishlist/', views_course.remove_from_wishlist, name='remove_from_wishlist'),
+    path('wishlist/', views_course.view_wishlist, name='view_wishlist'),
+    
+    # Discussion system
+    path('course/<int:course_id>/add-comment/', views_course.add_course_comment, name='add_course_comment'),
+    path('comment/<int:comment_id>/reply/', views_course.add_comment_reply, name='add_comment_reply'),
+    path('comment/<int:comment_id>/like/', views_course.like_comment, name='like_comment'),
+    path('subcomment/<int:subcomment_id>/like/', views_course.like_subcomment, name='like_subcomment'),
 ]

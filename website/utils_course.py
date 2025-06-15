@@ -33,7 +33,7 @@ def searchCourses(request):
 def update_enrollment_progress(enrollment):
     """
     Updates the progress of a student's enrollment in a course
-    Uses the ContentProgress model for tracking completion of course materials
+    Enhanced to work with new module-based content system
     """
     try:
         course = enrollment.course
@@ -42,73 +42,63 @@ def update_enrollment_progress(enrollment):
         print(f"[DEBUG] Updating progress for {student.username} in course {course.name}")
         
         # Count total content items in the course
-        total_notes = Notes.objects.filter(module__course=course).count()
+        total_content = 0
         
-        # Count module PDFs and additional materials
-        modules_with_pdf = Module.objects.filter(course=course, module_pdf__isnull=False).count()
-        modules_with_additional = Module.objects.filter(course=course, additional_materials__isnull=False).count()
-        total_notes += modules_with_pdf + modules_with_additional
+        # Count module-based content
+        modules = course.module_set.all()
+        for module in modules:
+            # Count videos
+            if module.video:
+                total_content += 1
+            # Count PDFs
+            if module.pdf:
+                total_content += 1
+            # Count notes
+            if module.note:
+                total_content += 1
+            # Count module quizzes
+            total_content += module.module_quizzes.filter(is_active=True).count()
+            # Count module assignments
+            total_content += module.module_assignments.filter(is_active=True).count()
         
-        total_quizzes = Quiz.objects.filter(module__course=course).count()
-        total_assignments = Assignment.objects.filter(module__course=course).count()
+        # Add course-level quizzes and assignments
+        total_content += course.course_quizzes.filter(is_active=True).count()
+        total_content += course.assignments.filter(is_active=True).count()
         
-        total_content_items = total_notes + total_quizzes + total_assignments
+        print(f"[DEBUG] Total content items: {total_content}")
         
-        print(f"[DEBUG] Content counts - Notes: {total_notes}, Quizzes: {total_quizzes}, "
-              f"Assignments: {total_assignments}")
-        print(f"[DEBUG] Total content items: {total_content_items}")
-        
-        if total_content_items == 0:
-            enrollment.progress = 0.0  # Set to 0 when no content
-            enrollment.status = 'in_progress'
-            enrollment.save(update_fields=['progress', 'status'])
+        if total_content == 0:
+            enrollment.progress = 0.0
+            enrollment.save(update_fields=['progress'])
             return 0.0
         
-        # Get all content item IDs for this course
-        note_ids = list(Notes.objects.filter(module__course=course).values_list('id', flat=True))
-        quiz_ids = list(Quiz.objects.filter(module__course=course).values_list('id', flat=True))
-        assignment_ids = list(Assignment.objects.filter(module__course=course).values_list('id', flat=True))
-        
-        # Count completed items using ContentProgress
+        # Count completed items
         completed_count = ContentProgress.objects.filter(
             user=student,
-            completed=True,
-            content_id__in=note_ids + quiz_ids + assignment_ids
+            course=course,
+            completed=True
         ).count()
         
-        print(f"[DEBUG] Completed items from ContentProgress: {completed_count}")
+        print(f"[DEBUG] Completed items: {completed_count}")
         
         # Calculate progress percentage
-        progress = (completed_count / total_content_items * 100) if total_content_items > 0 else 0
+        progress = (completed_count / total_content * 100) if total_content > 0 else 0
         progress = round(progress, 2)
         
-        # Update enrollment status based on progress
-        if progress >= 100:
-            status = 'completed'
-        elif progress > 0:
-            status = 'in_progress'
-        else:
-            status = 'not_started'
-        
-        # Save the updated progress and status
+        # Update enrollment
         enrollment.progress = progress
-        enrollment.status = status
         enrollment.last_accessed = timezone.now()
         
-        # Mark as completed if 90% or higher
-        if progress >= 90 or status == 'completed':
+        # Update status based on progress
+        if progress >= 95:
             enrollment.status = 'completed'
-            if progress < 100:
-                enrollment.progress = 100.0  # Round up to 100% when completed
+        elif progress > 0:
+            enrollment.status = 'active'
+        else:
+            enrollment.status = 'active'
         
-        enrollment.save(update_fields=['progress', 'status', 'last_accessed'])
+        enrollment.save(update_fields=['progress', 'last_accessed', 'status'])
         print(f"[DEBUG] Final progress saved: {enrollment.progress}%")
-        
-        # Update course progress if needed
-        try:
-            update_course_progress(student, course)
-        except Exception as e:
-            print(f"[ERROR] Error updating course progress: {e}")
         
         return enrollment.progress
         
@@ -122,42 +112,126 @@ def update_enrollment_progress(enrollment):
 def mark_content_completed(user, course, content_type, content_id):
     """
     Mark a specific content item as completed
+    Enhanced to support all content types including module-based content
     """
-    progress_item, created = ContentProgress.objects.get_or_create(
-        user=user,
-        course=course,
-        content_type=content_type,
-        content_id=str(content_id),
-        defaults={'completed': True}
-    )
-    
-    if not created and not progress_item.completed:
-        progress_item.completed = True
-        progress_item.save(update_fields=['completed'])
-    
-    print(f"[DEBUG] Marked {content_type} {content_id} as completed for {user.username}")
-    
-    # Update enrollment progress
     try:
-        enrollment = Enrollment.objects.get(student=user, course=course)
-        return update_enrollment_progress(enrollment)
-    except Enrollment.DoesNotExist:
+        # Ensure content_id is a string for storage
+        content_id_str = str(content_id)
+        
+        # Create or update content progress
+        progress_item, created = ContentProgress.objects.get_or_create(
+            user=user,
+            course=course,
+            content_type=content_type,
+            content_id=content_id_str,
+            defaults={
+                'completed': True,
+                'completion_date': timezone.now(),
+                'last_accessed': timezone.now()
+            }
+        )
+        
+        if not created and not progress_item.completed:
+            progress_item.completed = True
+            progress_item.completion_date = timezone.now()
+            progress_item.last_accessed = timezone.now()
+            progress_item.save(update_fields=['completed', 'completion_date', 'last_accessed'])
+        
+        print(f"[DEBUG] Marked {content_type} {content_id} as completed for {user.username}")
+        
+        # Update enrollment progress
+        try:
+            enrollment = Enrollment.objects.get(student=user, course=course)
+            return update_enrollment_progress(enrollment)
+        except Enrollment.DoesNotExist:
+            print(f"[WARNING] No enrollment found for {user.username} in course {course.name}")
+            return 0
+            
+    except Exception as e:
+        print(f"[ERROR] Error marking content completed: {e}")
+        import traceback
+        traceback.print_exc()
         return 0
 
 
 def get_completed_content_ids(user, course, content_type):
     """
     Get list of completed content IDs for a specific type
+    Enhanced to support module-based content tracking
     """
-    completed_ids = ContentProgress.objects.filter(
-        user=user,
-        course=course,
-        content_type=content_type,
-        completed=True
-    ).values_list('content_id', flat=True)
+    completed_items = []
     
-    # Convert to integers for compatibility
-    return [int(content_id) for content_id in completed_ids if content_id.isdigit()]
+    if content_type == 'video':
+        # Get completed module videos
+        video_progress = ContentProgress.objects.filter(
+            user=user,
+            course=course,
+            content_type='video',
+            completed=True
+        ).values_list('content_id', flat=True)
+        
+        # Convert module_video_X format to content IDs
+        for item in video_progress:
+            if item.startswith('module_video_'):
+                module_id = item.replace('module_video_', '')
+                if module_id.isdigit():
+                    completed_items.append(item)
+    
+    elif content_type == 'pdf':
+        # Get completed module PDFs
+        pdf_progress = ContentProgress.objects.filter(
+            user=user,
+            course=course,
+            content_type='pdf',
+            completed=True
+        ).values_list('content_id', flat=True)
+        
+        for item in pdf_progress:
+            if item.startswith('module_pdf_'):
+                module_id = item.replace('module_pdf_', '')
+                if module_id.isdigit():
+                    completed_items.append(item)
+    
+    elif content_type == 'note':
+        # Get completed module notes
+        note_progress = ContentProgress.objects.filter(
+            user=user,
+            course=course,
+            content_type='note',
+            completed=True
+        ).values_list('content_id', flat=True)
+        
+        for item in note_progress:
+            if item.startswith('module_note_'):
+                module_id = item.replace('module_note_', '')
+                if module_id.isdigit():
+                    completed_items.append(item)
+    
+    elif content_type == 'quiz':
+        # Get completed quizzes (both module and course level)
+        quiz_progress = ContentProgress.objects.filter(
+            user=user,
+            course=course,
+            content_type='quiz',
+            completed=True
+        ).values_list('content_id', flat=True)
+        
+        # Convert to integers
+        completed_items = [int(item) for item in quiz_progress if item.isdigit()]
+    
+    elif content_type == 'assignment':
+        # Get completed assignments (both module and course level)
+        assignment_progress = ContentProgress.objects.filter(
+            user=user,
+            course=course,
+            content_type='assignment',
+            completed=True
+        ).values_list('content_id', flat=True)
+        
+        # Convert to integers
+        completed_items = [int(item) for item in assignment_progress if item.isdigit()]
+    
+    return completed_items
 
 
 def get_user_course_progress(user, course):
@@ -203,3 +277,88 @@ def ensure_course_has_module(course):
         )
         return default_module
     return None
+
+
+def get_course_content_statistics(course):
+    """
+    Get comprehensive statistics about course content
+    """
+    stats = {
+        'total_modules': 0,
+        'total_videos': 0,
+        'total_pdfs': 0,
+        'total_notes': 0,
+        'total_quizzes': 0,
+        'total_assignments': 0,
+        'total_exams': 0,
+        'total_content': 0
+    }
+    
+    # Count modules
+    modules = course.module_set.all()
+    stats['total_modules'] = modules.count()
+    
+    # Count module content
+    for module in modules:
+        if module.video:
+            stats['total_videos'] += 1
+        if module.pdf:
+            stats['total_pdfs'] += 1
+        if module.note:
+            stats['total_notes'] += 1
+        
+        # Module quizzes and assignments
+        stats['total_quizzes'] += module.module_quizzes.filter(is_active=True).count()
+        stats['total_assignments'] += module.module_assignments.filter(is_active=True).count()
+        stats['total_exams'] += module.module_exams.filter(is_active=True).count() if hasattr(module, 'module_exams') else 0
+    
+    # Course-level content
+    stats['total_quizzes'] += course.course_quizzes.filter(is_active=True).count()
+    stats['total_assignments'] += course.assignments.filter(is_active=True).count()
+    stats['total_exams'] += course.exams.filter(is_active=True).count() if hasattr(course, 'exams') else 0
+    
+    # Total content
+    stats['total_content'] = (stats['total_videos'] + stats['total_pdfs'] + 
+                             stats['total_notes'] + stats['total_quizzes'] + 
+                             stats['total_assignments'] + stats['total_exams'])
+    
+    return stats
+
+
+def get_user_course_progress_detailed(user, course):
+    """
+    Get detailed progress information for a user in a course
+    """
+    try:
+        enrollment = Enrollment.objects.get(student=user, course=course)
+        
+        # Get content statistics
+        stats = get_course_content_statistics(course)
+        
+        # Get completed content counts by type
+        completed_videos = len(get_completed_content_ids(user, course, 'video'))
+        completed_pdfs = len(get_completed_content_ids(user, course, 'pdf'))
+        completed_notes = len(get_completed_content_ids(user, course, 'note'))
+        completed_quizzes = len(get_completed_content_ids(user, course, 'quiz'))
+        completed_assignments = len(get_completed_content_ids(user, course, 'assignment'))
+        
+        total_completed = (completed_videos + completed_pdfs + completed_notes + 
+                          completed_quizzes + completed_assignments)
+        
+        return {
+            'enrollment': enrollment,
+            'progress_percentage': enrollment.progress,
+            'total_content': stats['total_content'],
+            'completed_content': total_completed,
+            'stats': stats,
+            'completed_by_type': {
+                'videos': completed_videos,
+                'pdfs': completed_pdfs,
+                'notes': completed_notes,
+                'quizzes': completed_quizzes,
+                'assignments': completed_assignments,
+            }
+        }
+        
+    except Enrollment.DoesNotExist:
+        return None

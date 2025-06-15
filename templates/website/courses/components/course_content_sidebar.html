@@ -87,25 +87,31 @@
                     <!-- محتوى الوحدة المرتب -->
                     {% for item in module.get_ordered_content %}
                         {% if item.type == 'video' %}
-                        <a href="{% url 'courseviewpage' course.id %}?content_type=module_video&content_id={{ module.id }}" 
-                           class="content-item {% if current_content and current_content.type == 'module_video' and current_content.content.id == module.id %}active current{% endif %}"
-                           data-content-type="module_video" data-content-id="{{ module.id }}">
+                        <a href="{% url 'courseviewpage' course.id %}?content_type=video&content_id={{ item.id }}" 
+                           class="content-item {% if current_content and current_content.type == 'module_video' and current_content.content.id == item.id %}active current{% endif %}"
+                           data-content-type="video" data-content-id="{{ item.id }}">
                             <div class="content-icon">
                                 <i class="fas fa-play"></i>
                             </div>
                             <div class="content-details">
                                 <div class="content-name">{{ item.name }}</div>
                                 <div class="content-info">
-                                    <span><i class="far fa-clock"></i> {{ item.duration|default:'10:00' }} دقيقة</span>
+                                    <span><i class="far fa-clock"></i> 
+                                        {% if item.duration %}
+                                            {{ item.duration }} دقيقة
+                                        {% else %}
+                                            --:--
+                                        {% endif %}
+                                    </span>
                                     <span><i class="fas fa-video"></i> فيديو</span>
                                 </div>
                             </div>
                         </a>
                         
                         {% elif item.type == 'pdf' %}
-                        <a href="{% url 'courseviewpage' course.id %}?content_type=module_pdf&content_id={{ module.id }}" 
-                           class="content-item {% if current_content and current_content.type == 'module_pdf' and current_content.content.id == module.id %}active current{% endif %}"
-                           data-content-type="module_pdf" data-content-id="{{ module.id }}">
+                        <a href="{% url 'courseviewpage' course.id %}?content_type=pdf&content_id={{ item.id }}" 
+                           class="content-item {% if current_content and current_content.type == 'module_pdf' and current_content.content.id == item.id %}active current{% endif %}"
+                           data-content-type="pdf" data-content-id="{{ item.id }}">
                             <div class="content-icon">
                                 <i class="fas fa-file-pdf"></i>
                             </div>
@@ -118,9 +124,9 @@
                         </a>
                         
                         {% elif item.type == 'note' %}
-                        <a href="{% url 'courseviewpage' course.id %}?content_type=module_note&content_id={{ module.id }}" 
-                           class="content-item {% if current_content and current_content.type == 'module_note' and current_content.content.id == module.id %}active current{% endif %}"
-                           data-content-type="module_note" data-content-id="{{ module.id }}">
+                        <a href="{% url 'courseviewpage' course.id %}?content_type=note&content_id={{ item.id }}" 
+                           class="content-item {% if current_content and current_content.type == 'module_note' and current_content.content.id == item.id %}active current{% endif %}"
+                           data-content-type="note" data-content-id="{{ item.id }}">
                             <div class="content-icon">
                                 <i class="fas fa-sticky-note"></i>
                             </div>
@@ -142,7 +148,7 @@
                             <div class="content-details">
                                 <div class="content-name">{{ item.name }}</div>
                                 <div class="content-info">
-                                    <span><i class="fas fa-question-circle"></i> {{ item.questions_count }} سؤال</span>
+                                    <span><i class="fas fa-question-circle"></i> {{ item.questions_count|default:'0' }} سؤال</span>
                                     {% if item.time_limit %}
                                         <span><i class="far fa-clock"></i> {{ item.time_limit }} دقيقة</span>
                                     {% endif %}
@@ -275,54 +281,49 @@
             </div>
             {% endif %}
             
-            <!-- ملفات الدورة -->
-            {% if course.syllabus_pdf or course.materials_pdf %}
-            <div class="module-item course-files-section">
-                <button class="module-header" onclick="toggleModule('course-files')">
+            <!-- الاختبار النهائي -->
+            {% if course.final_exam %}
+            <div class="module-item final-exam-section">
+                <button class="module-header" onclick="toggleModule('final-exam')">
                     <div class="module-title-section">
-                        <i class="fas fa-chevron-down toggle-icon" id="icon-course-files"></i>
+                        <i class="fas fa-chevron-down toggle-icon" id="icon-final-exam"></i>
                         <h5 class="module-title">
-                            <i class="fas fa-file-pdf me-2 text-danger"></i>
-                            ملفات الدورة
+                            <i class="fas fa-graduation-cap me-2 text-success"></i>
+                            الاختبار النهائي
                         </h5>
                     </div>
                     <div class="module-meta">
-                        {% if course.syllabus_pdf %}1{% endif %}{% if course.materials_pdf %}{% if course.syllabus_pdf %}+{% endif %}1{% endif %} ملف
+                        <span class="badge bg-success">نهائي</span>
                     </div>
                 </button>
                 
-                <div class="module-content" id="course-files">
-                    {% if course.syllabus_pdf %}
-                    <a href="{% url 'courseviewpage' course.id %}?content_type=note&content_id=course_syllabus_{{ course.id }}" 
-                       class="content-item {% if current_content and current_content.type == 'note' and current_content.content.id == 'course_syllabus_'|add:course.id|stringformat:"s" %}active current{% endif %}"
-                       data-content-type="note" data-content-id="course_syllabus_{{ course.id }}">
+                <div class="module-content" id="final-exam">
+                    <a href="{% url 'courseviewpage' course.id %}?content_type=final_exam&content_id={{ course.final_exam.id }}" 
+                       class="content-item {% if current_content and current_content.type == 'final_exam' and current_content.content.id == course.final_exam.id %}active current{% endif %}"
+                       data-content-type="final_exam" data-content-id="{{ course.final_exam.id }}">
                         <div class="content-icon">
-                            <i class="fas fa-file-pdf"></i>
+                            <i class="fas fa-graduation-cap text-success"></i>
                         </div>
                         <div class="content-details">
-                            <div class="content-name">منهج الدورة</div>
+                            <div class="content-name">{{ course.final_exam.title }}</div>
                             <div class="content-info">
-                                <span><i class="fas fa-file-pdf"></i> ملف PDF</span>
+                                <span><i class="fas fa-question-circle"></i> {{ course.final_exam.questions.count }} سؤال</span>
+                                {% if course.final_exam.time_limit %}
+                                <span><i class="fas fa-clock"></i> {{ course.final_exam.time_limit }} دقيقة</span>
+                                {% endif %}
+                                <span><i class="fas fa-trophy"></i> {{ course.final_exam.pass_mark }}% للنجاح</span>
                             </div>
                         </div>
-                    </a>
-                    {% endif %}
-                    
-                    {% if course.materials_pdf %}
-                    <a href="{% url 'courseviewpage' course.id %}?content_type=note&content_id=course_materials_{{ course.id }}" 
-                       class="content-item {% if current_content and current_content.type == 'note' and current_content.content.id == 'course_materials_'|add:course.id|stringformat:"s" %}active current{% endif %}"
-                       data-content-type="note" data-content-id="course_materials_{{ course.id }}">
-                        <div class="content-icon">
-                            <i class="fas fa-file-pdf"></i>
-                        </div>
-                        <div class="content-details">
-                            <div class="content-name">مواد إضافية</div>
-                            <div class="content-info">
-                                <span><i class="fas fa-file-pdf"></i> ملف PDF</span>
-                            </div>
+                        <div class="content-status">
+                            {% if user.is_authenticated %}
+                                {% if course.final_exam in user.completed_final_exams.all %}
+                                    <i class="fas fa-check-circle text-success" title="مكتمل"></i>
+                                {% else %}
+                                    <i class="fas fa-circle text-muted" title="غير مكتمل"></i>
+                                {% endif %}
+                            {% endif %}
                         </div>
                     </a>
-                    {% endif %}
                 </div>
             </div>
             {% endif %}

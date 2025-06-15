@@ -184,31 +184,34 @@ class Module(models.Model):
         if self.video:
             content_items.append({
                 'type': 'video',
-                'id': f'module_video_{self.id}',
+                'id': self.id,  # استخدام ID الوحدة مباشرة
                 'name': f'فيديو: {self.name}',
                 'duration': self.video_duration if self.video_duration else 0,
                 'url': self.video.url,
-                'order': 1
+                'order': 1,
+                'module_id': self.id
             })
         
         # 2. Add PDF if exists
         if self.pdf:
             content_items.append({
                 'type': 'pdf',
-                'id': f'module_pdf_{self.id}',
+                'id': self.id,  # استخدام ID الوحدة مباشرة
                 'name': f'ملف PDF: {self.name}',
                 'url': self.pdf.url,
-                'order': 2
+                'order': 2,
+                'module_id': self.id
             })
         
         # 3. Add notes if exists
         if self.note:
             content_items.append({
                 'type': 'note',
-                'id': f'module_note_{self.id}',
+                'id': self.id,  # استخدام ID الوحدة مباشرة
                 'name': f'ملاحظات: {self.name}',
                 'content': self.note,
-                'order': 3
+                'order': 3,
+                'module_id': self.id
             })
         
         # 4. Add quizzes related to this module
@@ -221,7 +224,9 @@ class Module(models.Model):
                 'description': quiz.description,
                 'time_limit': quiz.time_limit,
                 'questions_count': quiz.questions.count(),
-                'order': 4
+                'order': 4,
+                'module_id': self.id,
+                'quiz_object': quiz
             })
         
         # 5. Add assignments related to this module
@@ -234,7 +239,9 @@ class Module(models.Model):
                 'description': assignment.description,
                 'due_date': assignment.due_date,
                 'points': assignment.points,
-                'order': 5
+                'order': 5,
+                'module_id': self.id,
+                'assignment_object': assignment
             })
         
         # Sort by order and return
@@ -1151,6 +1158,74 @@ class ContentProgress(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.course.name} - {self.content_type} {self.content_id}"
+
+
+class Comment(models.Model):
+    """Comments on courses for discussion"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='course_comments', verbose_name='المستخدم')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='comments', verbose_name='الدورة')
+    content = models.TextField(verbose_name='محتوى التعليق')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    likes = models.ManyToManyField(User, blank=True, related_name='liked_comments', through='CommentLike')
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'تعليق'
+        verbose_name_plural = 'التعليقات'
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.course.name}"
+
+
+class SubComment(models.Model):
+    """Replies to comments"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comment_replies', verbose_name='المستخدم')
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='replies', verbose_name='التعليق الأصلي')
+    content = models.TextField(verbose_name='محتوى الرد')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    likes = models.ManyToManyField(User, blank=True, related_name='liked_subcomments', through='SubCommentLike')
+    
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'رد'
+        verbose_name_plural = 'الردود'
+    
+    def __str__(self):
+        return f"{self.user.username} - رد على: {self.comment}"
+
+
+class CommentLike(models.Model):
+    """Like system for comments"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('user', 'comment')
+        verbose_name = 'إعجاب بالتعليق'
+        verbose_name_plural = 'إعجابات التعليقات'
+    
+    def __str__(self):
+        return f"{self.user.username} likes {self.comment}"
+
+
+class SubCommentLike(models.Model):
+    """Like system for sub-comments"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    subcomment = models.ForeignKey(SubComment, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('user', 'subcomment')
+        verbose_name = 'إعجاب بالرد'
+        verbose_name_plural = 'إعجابات الردود'
+    
+    def __str__(self):
+        return f"{self.user.username} likes {self.subcomment}"
 
 
 

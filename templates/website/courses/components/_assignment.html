@@ -4,7 +4,7 @@
         <h3><i class="fas fa-tasks text-primary me-2"></i>{{ current_content.content.title }}</h3>
         <div class="assignment-meta">
             {% if current_content.content.due_date %}
-            <span class="badge bg-{{ current_content.content.due_date|time_until_due }}">
+            <span class="badge bg-warning">
                 <i class="far fa-calendar-alt me-1"></i>
                 موعد التسليم: {{ current_content.content.due_date|date:"Y/m/d H:i" }}
             </span>
@@ -31,8 +31,8 @@
             <h5><i class="fas fa-paperclip me-2"></i>الملفات المرفقة</h5>
             <div class="list-group">
                 <a href="{{ current_content.content.attachment.url }}" class="list-group-item list-group-item-action" download>
-                    <i class="fas fa-file-{{ current_content.content.attachment|file_icon }} text-primary me-2"></i>
-                    {{ current_content.content.attachment.name|basename }}
+                    <i class="fas fa-file text-primary me-2"></i>
+                    {{ current_content.content.attachment.name }}
                     <span class="badge bg-light text-dark ms-2">{{ current_content.content.attachment.size|filesizeformat }}</span>
                 </a>
             </div>
@@ -42,16 +42,16 @@
         <div class="submission-section">
             <h5 class="mb-3">تسليم الواجب</h5>
             
-            {% if user_submission %}
+            {% if current_content.user_submission %}
                 <div class="alert alert-info">
                     <i class="fas fa-check-circle me-2"></i>
-                    لقد قمت بتسليم هذا الواجب في {{ user_submission.submitted_at|date:"Y/m/d H:i" }}
-                    {% if user_submission.grade %}
+                    لقد قمت بتسليم هذا الواجب في {{ current_content.user_submission.submitted_at|date:"Y/m/d H:i" }}
+                    {% if current_content.user_submission.grade %}
                         <br>
-                        <strong>الدرجة: </strong> {{ user_submission.grade }}/{{ current_content.content.points }}
-                        {% if user_submission.feedback %}
+                        <strong>الدرجة: </strong> {{ current_content.user_submission.grade }}/{{ current_content.content.points }}
+                        {% if current_content.user_submission.feedback %}
                             <br>
-                            <strong>ملاحظات المدرس: </strong> {{ user_submission.feedback }}
+                            <strong>ملاحظات المدرس: </strong> {{ current_content.user_submission.feedback }}
                         {% endif %}
                     {% else %}
                         <br>
@@ -59,28 +59,28 @@
                     {% endif %}
                 </div>
                 
-                {% if user_submission.answer_file %}
+                {% if current_content.user_submission.answer_file %}
                 <div class="submitted-file mb-3">
                     <strong>الملف المقدم: </strong>
-                    <a href="{{ user_submission.answer_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <a href="{{ current_content.user_submission.answer_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
                         <i class="fas fa-eye me-1"></i>عرض الملف
                     </a>
-                    <a href="{{ user_submission.answer_file.url }}" download class="btn btn-sm btn-outline-secondary">
+                    <a href="{{ current_content.user_submission.answer_file.url }}" download class="btn btn-sm btn-outline-secondary">
                         <i class="fas fa-download me-1"></i>تحميل
                     </a>
                 </div>
                 {% endif %}
                 
-                {% if user_submission.answer_text %}
+                {% if current_content.user_submission.answer_text %}
                 <div class="submitted-text mb-3">
                     <h6>إجابتك النصية:</h6>
                     <div class="p-3 bg-light rounded">
-                        {{ user_submission.answer_text|linebreaksbr }}
+                        {{ current_content.user_submission.answer_text|linebreaksbr }}
                     </div>
                 </div>
                 {% endif %}
                 
-                {% if not user_submission.grade and current_content.content.allow_resubmission %}
+                {% if not current_content.user_submission.grade and current_content.content.allow_resubmission %}
                 <button type="button" class="btn btn-outline-primary" id="show-resubmission-form">
                     <i class="fas fa-redo me-1"></i>إعادة تسليم الواجب
                 </button>
@@ -88,15 +88,15 @@
                 
             {% endif %}
 
-            {% if not user_submission or (user_submission and current_content.content.allow_resubmission) %}
-            <div class="submission-form {% if user_submission and not user_submission.grade %}d-none{% endif %}" id="submission-form">
+            {% if not current_content.user_submission or current_content.content.allow_resubmission %}
+            <div class="submission-form {% if current_content.user_submission and not current_content.user_submission.grade %}d-none{% endif %}" id="submission-form">
                 <form method="post" enctype="multipart/form-data" action="{% url 'submit_assignment' current_content.content.id %}">
                     {% csrf_token %}
                     
                     <div class="mb-3">
                         <label for="answer_text" class="form-label">إجابتك النصية (اختياري)</label>
                         <textarea class="form-control" id="answer_text" name="answer_text" rows="5" 
-                                 placeholder="اكتب إجابتك هنا...">{% if user_submission %}{{ user_submission.answer_text }}{% endif %}</textarea>
+                                 placeholder="اكتب إجابتك هنا...">{% if current_content.user_submission %}{{ current_content.user_submission.answer_text }}{% endif %}</textarea>
                     </div>
                     
                     <div class="mb-3">
@@ -111,6 +111,11 @@
                         </button>
                     </div>
                 </form>
+            </div>
+            {% else %}
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle me-2"></i>
+                تم تسليم الواجب بنجاح ولا يُسمح بإعادة التسليم
             </div>
             {% endif %}
         </div>

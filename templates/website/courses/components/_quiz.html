@@ -5,96 +5,96 @@
         <p class="text-muted mb-4">{{ current_content.content.description }}</p>
     </div>
 
-    {% if current_content.content.questions.all %}
-        {% if current_content.content.attempts_allowed == 0 or user_attempts < current_content.content.attempts_allowed %}
-            <div class="quiz-content">
-                <div class="quiz-info-bar">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="quiz-stat">
-                                <i class="fas fa-question-circle text-primary me-2"></i>
-                                <span>{{ current_content.content.questions.count }} أسئلة</span>
-                            </div>
+    {% if current_content.content.questions.exists %}
+        <div class="quiz-content">
+            <div class="quiz-info-bar">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="quiz-stat">
+                            <i class="fas fa-question-circle text-primary me-2"></i>
+                            <span>{{ current_content.content.questions.count }} أسئلة</span>
                         </div>
-                        <div class="col-md-4">
-                            <div class="quiz-stat">
-                                <i class="fas fa-clock text-primary me-2"></i>
-                                <span>الوقت: {{ current_content.content.time_limit }} دقائق</span>
-                            </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="quiz-stat">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            <span>الوقت: {{ current_content.content.time_limit|default:"غير محدد" }} دقائق</span>
                         </div>
-                        <div class="col-md-4">
-                            <div class="quiz-stat">
-                                <i class="fas fa-trophy text-primary me-2"></i>
-                                <span>الدرجة المطلوبة: {{ current_content.content.passing_score }}%</span>
-                            </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="quiz-stat">
+                            <i class="fas fa-trophy text-primary me-2"></i>
+                            <span>الدرجة المطلوبة: {{ current_content.content.pass_mark|default:"60" }}%</span>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {% if not quiz_started %}
-                <div class="quiz-start-panel text-center py-5">
-                    <h4 class="mb-4">هل أنت مستعد لبدء الاختبار؟</h4>
-                    <p class="text-muted mb-4">
-                        سيكون لديك {{ current_content.content.time_limit }} دقيقة للإجابة على {{ current_content.content.questions.count }} أسئلة.
-                        تأكد من أنك في مكان هادئ وجاهز للبدء.
-                    </p>
-                    <button type="button" class="btn btn-primary btn-lg start-quiz-btn" data-quiz-id="{{ current_content.content.id }}">
-                        <i class="fas fa-play me-2"></i>بدء الاختبار
-                    </button>
-                </div>
-                {% endif %}
+            <div class="quiz-start-panel text-center py-5">
+                <h4 class="mb-4">هل أنت مستعد لبدء الاختبار؟</h4>
+                <p class="text-muted mb-4">
+                    {% if current_content.content.time_limit %}
+                    سيكون لديك {{ current_content.content.time_limit }} دقيقة للإجابة على {{ current_content.content.questions.count }} أسئلة.
+                    {% endif %}
+                    تأكد من أنك في مكان هادئ وجاهز للبدء.
+                </p>
+                <button type="button" class="btn btn-primary btn-lg start-quiz-btn" data-quiz-id="{{ current_content.content.id }}">
+                    <i class="fas fa-play me-2"></i>بدء الاختبار
+                </button>
+            </div>
 
-                <div class="quiz-questions" id="quiz-questions-{{ current_content.content.id }}" style="display: none;">
-                    <form id="quiz-form-{{ current_content.content.id }}" method="post" action="{% url 'submit_quiz' %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="quiz_id" value="{{ current_content.content.id }}">
-                        
-                        <div class="quiz-timer mb-4">
-                            <div class="timer-display bg-light p-2 rounded text-center">
-                                <i class="fas fa-clock text-warning me-2"></i>
-                                <span id="quiz-timer-{{ current_content.content.id }}">{{ current_content.content.time_limit }}:00</span> متبقي
-                            </div>
+            <div class="quiz-questions" id="quiz-questions-{{ current_content.content.id }}" style="display: none;">
+                <form id="quiz-form-{{ current_content.content.id }}" method="post" action="{% url 'submit_quiz' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="quiz_id" value="{{ current_content.content.id }}">
+                    
+                    {% if current_content.content.time_limit %}
+                    <div class="quiz-timer mb-4">
+                        <div class="timer-display bg-light p-2 rounded text-center">
+                            <i class="fas fa-clock text-warning me-2"></i>
+                            <span id="quiz-timer-{{ current_content.content.id }}">{{ current_content.content.time_limit }}:00</span> متبقي
                         </div>
-                        
-                        <div class="questions-container">
-                            {% for question in current_content.content.questions.all %}
-                            <div class="question-card mb-4" id="question-{{ question.id }}">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h5 class="mb-0">سؤال {{ forloop.counter }}: {{ question.text }}</h5>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="questions-container">
+                        {% for question in current_content.content.questions.all %}
+                        <div class="question-card mb-4" id="question-{{ question.id }}">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">سؤال {{ forloop.counter }}: {{ question.text }}</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% for answer in question.answers.all %}
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" 
+                                               name="question_{{ question.id }}" 
+                                               id="q{{ question.id }}_answer{{ answer.id }}" 
+                                               value="{{ answer.id }}">
+                                        <label class="form-check-label" for="q{{ question.id }}_answer{{ answer.id }}">
+                                            {{ answer.text }}
+                                        </label>
                                     </div>
-                                    <div class="card-body">
-                                        {% for option in question.options_as_list %}
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="radio" 
-                                                   name="question_{{ question.id }}" 
-                                                   id="q{{ question.id }}_option{{ forloop.counter }}" 
-                                                   value="{{ forloop.counter0 }}">
-                                            <label class="form-check-label" for="q{{ question.id }}_option{{ forloop.counter }}">
-                                                {{ option }}
-                                            </label>
-                                        </div>
-                                        {% endfor %}
+                                    {% empty %}
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        لا توجد خيارات متاحة لهذا السؤال
                                     </div>
+                                    {% endfor %}
                                 </div>
                             </div>
-                            {% endfor %}
                         </div>
-                        
-                        <div class="quiz-actions text-center my-4">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-paper-plane me-2"></i>تسليم الإجابات
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="quiz-actions text-center my-4">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-paper-plane me-2"></i>تسليم الإجابات
+                        </button>
+                    </div>
+                </form>
             </div>
-        {% else %}
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                لقد استنفذت العدد المسموح من المحاولات لهذا الاختبار.
-            </div>
-        {% endif %}
+        </div>
     {% else %}
         <div class="alert alert-info">
             <i class="fas fa-info-circle me-2"></i>
@@ -102,3 +102,50 @@
         </div>
     {% endif %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startBtn = document.querySelector('.start-quiz-btn');
+    if (startBtn) {
+        startBtn.addEventListener('click', function() {
+            const quizId = this.dataset.quizId;
+            const questionsDiv = document.getElementById('quiz-questions-' + quizId);
+            
+            // Hide start panel and show questions
+            this.closest('.quiz-start-panel').style.display = 'none';
+            questionsDiv.style.display = 'block';
+            
+            // Start timer if time limit exists
+            const timerElement = document.getElementById('quiz-timer-' + quizId);
+            if (timerElement) {
+                {% if current_content.content.time_limit %}
+                const timeLimit = {{ current_content.content.time_limit }};
+                if (timeLimit > 0) {
+                    startQuizTimer(quizId, timeLimit);
+                }
+                {% endif %}
+            }
+        });
+    }
+});
+
+function startQuizTimer(quizId, timeLimit) {
+    let timeLeft = timeLimit * 60; // Convert to seconds
+    const timerElement = document.getElementById('quiz-timer-' + quizId);
+    
+    const timer = setInterval(function() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        
+        timerElement.textContent = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            // Auto submit quiz
+            document.getElementById('quiz-form-' + quizId).submit();
+        }
+        
+        timeLeft--;
+    }, 1000);
+}
+</script>

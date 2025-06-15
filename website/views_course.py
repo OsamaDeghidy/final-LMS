@@ -16,7 +16,9 @@ from django.db.models import Avg
 from .models import (
     Category, Course, Module, Tags, Quiz, Question, Answer, Enrollment, 
     Review, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt, 
-    ContentProgress, Article, UserProgress, ModuleProgress, CourseProgress
+    ContentProgress, Article, UserProgress, ModuleProgress, CourseProgress,
+    Comment, SubComment, CommentLike, SubCommentLike, Exam, ExamQuestion, ExamAnswer,
+    QuizAttempt, QuizUserAnswer
 )
 from user.models import Profile, Student, Organization, Teacher
 from .utils_course import searchCourses, update_enrollment_progress, mark_content_completed, get_completed_content_ids, get_user_course_progress, get_user_enrolled_courses, ensure_course_has_module
@@ -98,8 +100,11 @@ def courseviewpage(request, course_id):
         messages.error(request, _('You are not enrolled in this course.'))
         return redirect('course_detail', course_id=course_id)
     
-    # Get all modules for this course
-    modules = Module.objects.filter(course=course).order_by('number')
+    # Get all modules for this course with prefetch for better performance
+    modules = Module.objects.filter(course=course).prefetch_related(
+        'module_quizzes__questions',
+        'module_assignments'
+    ).order_by('number')
     
     # Update last accessed time
     enrollment.last_accessed = timezone.now()
@@ -110,9 +115,51 @@ def courseviewpage(request, course_id):
     completed_notes = get_completed_content_ids(request.user, course, 'note')
     completed_assignments = get_completed_content_ids(request.user, course, 'assignment')
     completed_quizzes = get_completed_content_ids(request.user, course, 'quiz')
-    
-    # Get completed PDF files (now properly tracking them)
     completed_pdfs = get_completed_content_ids(request.user, course, 'pdf')
+    
+    # Calculate comprehensive statistics
+    total_videos = 0
+    total_notes = 0
+    total_pdfs = 0
+    total_quizzes = 0
+    assignments_count = 0
+    
+    # Count module-level content
+    for module in modules:
+        if module.video:
+            total_videos += 1
+        if module.pdf:
+            total_pdfs += 1
+        if module.note:
+            total_notes += 1
+        # Count active quizzes and assignments for this module
+        total_quizzes += module.module_quizzes.filter(is_active=True).count()
+        assignments_count += module.module_assignments.filter(is_active=True).count()
+    
+    # Add course-level quizzes and assignments
+    course_quizzes = course.course_quizzes.filter(is_active=True)
+    course_assignments = course.assignments.filter(is_active=True)
+    
+    total_quizzes += course_quizzes.count()
+    assignments_count += course_assignments.count()
+    
+    # Calculate total reading materials (PDFs + Notes)
+    total_reading = total_pdfs + total_notes
+    
+    # Calculate progress more accurately
+    total_content = total_videos + total_reading + total_quizzes + assignments_count
+    completed_content = (len(completed_videos) + len(completed_notes) + 
+                        len(completed_pdfs) + len(completed_quizzes) + 
+                        len(completed_assignments))
+    
+    if total_content > 0:
+        progress = (completed_content / total_content) * 100
+    else:
+        progress = 0
+    
+    # Update enrollment progress
+    enrollment.progress = progress
+    enrollment.save(update_fields=['progress'])
     
     # Check if specific content is requested via URL parameters
     content_type = request.GET.get('content_type')
@@ -121,87 +168,279 @@ def courseviewpage(request, course_id):
     current_content = None
     next_content = None
     prev_content = None
+    first_available_content = None
     
     if content_type and content_id:
-        if content_type == 'module_pdf':
-            # Get the module with the PDF file
-            try:
-                module = Module.objects.get(id=content_id, course=course)
-                if module.pdf:  # Use module.pdf instead of module.module_pdf
+        try:
+            if content_type == 'module_pdf' or content_type == 'pdf':
+                # Get the module with the PDF file
+                module = Module.objects.get(id=int(content_id), course=course)
+                if module.pdf:
                     current_content = {
                         'type': 'module_pdf',
-                        'content': module,  # Pass the module object which contains the PDF
-                        'module': module,   # Also pass the module for context
-                        'pdf_url': module.pdf.url if module.pdf else None,
-                        'pdf_title': module.name or f'Module {module.number} PDF'
+                        'content': module,
+                        'module': module,
+                        'pdf_url': module.pdf.url,
+                        'pdf_title': module.name or f'الوحدة {module.number} - PDF'
                     }
-            except Module.DoesNotExist:
-                messages.error(request, _('Module not found.'))
-                
-        elif content_type == 'module_video':
-            # Get the module's video
-            try:
-                module = Module.objects.get(id=content_id, course=course)
-                if module.video:  # Check if module has a video
+                else:
+                    messages.error(request, _('PDF file not found for this module.'))
+                    
+            elif content_type == 'module_video' or content_type == 'video':
+                # Get the module's video
+                module = Module.objects.get(id=int(content_id), course=course)
+                if module.video:
                     current_content = {
                         'type': 'module_video',
-                        'content': module,  # Pass the module object which contains the video
-                        'module': module,   # Also pass the module for context
-                        'video_url': module.video.url if module.video else None,
-                        'video_title': module.name or f'Module {module.number} Video'
+                        'content': module,
+                        'module': module,
+                        'video_url': module.video.url,
+                        'video_title': module.name or f'الوحدة {module.number} - فيديو'
                     }
-            except Module.DoesNotExist:
-                messages.error(request, _('Module not found.'))
-                
-        elif content_type == 'module_note':
-            # Get the module's note
-            try:
-                module = Module.objects.get(id=content_id, course=course)
-                if module.note:  # Check if module has a note
+                else:
+                    messages.error(request, _('Video file not found for this module.'))
+                    
+            elif content_type == 'module_note' or content_type == 'note':
+                # Get the module's note
+                module = Module.objects.get(id=int(content_id), course=course)
+                if module.note:
                     current_content = {
                         'type': 'module_note',
-                        'content': module,  # Pass the module object which contains the note
-                        'module': module,   # Also pass the module for context
+                        'content': module,
+                        'module': module,
                         'note_content': module.note,
-                        'note_title': module.name or f'Module {module.number} Notes'
+                        'note_title': module.name or f'الوحدة {module.number} - ملاحظات'
                     }
-            except Module.DoesNotExist:
-                messages.error(request, _('Module not found.'))
+                else:
+                    messages.error(request, _('Notes not found for this module.'))
+                    
+            elif content_type == 'quiz':
+                # Get the quiz
+                quiz = Quiz.objects.get(id=int(content_id), is_active=True)
+                # Check if user has attempts
+                user_attempts = QuizAttempt.objects.filter(user=request.user, quiz=quiz).order_by('-attempt_number')
+                quiz_started = user_attempts.exists()
                 
-        elif content_type == 'quiz' and content_id.isdigit():
-            # Get quiz
-            try:
-                quiz = Quiz.objects.get(id=content_id, module__course=course)
                 current_content = {
                     'type': 'quiz',
                     'content': quiz,
+                    'quiz': quiz,
+                    'questions': quiz.questions.all().order_by('order'),
+                    'user_attempts': user_attempts,
+                    'quiz_started': quiz_started
                 }
-            except Quiz.DoesNotExist:
-                messages.error(request, _('Quiz not found.'))
                 
-        elif content_type == 'assignment' and content_id.isdigit():
-            # Get assignment
-            try:
-                assignment = Assignment.objects.get(id=content_id, module__course=course)
+            elif content_type == 'assignment':
+                # Get the assignment
+                assignment = Assignment.objects.get(id=int(content_id), course=course, is_active=True)
+                # Get user's submission if exists
+                user_submission = None
+                if assignment:
+                    try:
+                        user_submission = AssignmentSubmission.objects.get(
+                            assignment=assignment,
+                            user=request.user
+                        )
+                    except AssignmentSubmission.DoesNotExist:
+                        pass
+                
                 current_content = {
                     'type': 'assignment',
                     'content': assignment,
+                    'assignment': assignment,
+                    'user_submission': user_submission
                 }
-            except Assignment.DoesNotExist:
-                messages.error(request, _('Assignment not found.'))
+                
+            elif content_type == 'final_exam':
+                # Get the final exam
+                exam = Exam.objects.get(id=int(content_id), course=course, is_active=True)
+                # Check if user has attempts
+                user_attempts = exam.attempts.filter(user=request.user).order_by('-attempt_number')
+                
+                current_content = {
+                    'type': 'final_exam',
+                    'content': exam,
+                    'exam': exam,
+                    'user_attempts': user_attempts,
+                    'questions': exam.questions.all().order_by('order')
+                }
+                
+        except (ValueError, Module.DoesNotExist, Quiz.DoesNotExist, 
+                Assignment.DoesNotExist, Exam.DoesNotExist) as e:
+            messages.error(request, _('Content not found.'))
+            return redirect('courseviewpage', course_id=course_id)
+    
+    # Build navigation for next/previous content
+    if current_content:
+        # Get all content items in order
+        all_content = []
+        
+        for module in modules:
+            # Add video content
+            if module.video:
+                all_content.append({
+                    'type': 'module_video',
+                    'content': module,
+                    'url': f"?content_type=module_video&content_id={module.id}",
+                    'title': f'فيديو: {module.name}'
+                })
+            
+            # Add PDF content
+            if module.pdf:
+                all_content.append({
+                    'type': 'module_pdf', 
+                    'content': module,
+                    'url': f"?content_type=module_pdf&content_id={module.id}",
+                    'title': f'PDF: {module.name}'
+                })
+            
+            # Add notes content
+            if module.note:
+                all_content.append({
+                    'type': 'module_note',
+                    'content': module,
+                    'url': f"?content_type=module_note&content_id={module.id}",
+                    'title': f'ملاحظات: {module.name}'
+                })
+            
+            # Add module quizzes
+            for quiz in module.module_quizzes.filter(is_active=True).order_by('created_at'):
+                all_content.append({
+                    'type': 'quiz',
+                    'content': quiz,
+                    'url': f"?content_type=quiz&content_id={quiz.id}",
+                    'title': quiz.title or f'اختبار: {module.name}'
+                })
+            
+            # Add module assignments
+            for assignment in module.module_assignments.filter(is_active=True).order_by('created_at'):
+                all_content.append({
+                    'type': 'assignment',
+                    'content': assignment,
+                    'url': f"?content_type=assignment&content_id={assignment.id}",
+                    'title': assignment.title
+                })
+        
+        # Add course-level quizzes
+        for quiz in course_quizzes.order_by('created_at'):
+            all_content.append({
+                'type': 'quiz',
+                'content': quiz,
+                'url': f"?content_type=quiz&content_id={quiz.id}",
+                'title': quiz.title or 'اختبار الدورة'
+            })
+        
+        # Add course-level assignments
+        for assignment in course_assignments.order_by('created_at'):
+            all_content.append({
+                'type': 'assignment',
+                'content': assignment,
+                'url': f"?content_type=assignment&content_id={assignment.id}",
+                'title': assignment.title
+            })
+        
+        # Find current position and set next/prev
+        current_index = -1
+        for i, item in enumerate(all_content):
+            if (item['type'] == current_content['type'] and 
+                item['content'].id == current_content['content'].id):
+                current_index = i
+                break
+        
+        if current_index >= 0:
+            if current_index > 0:
+                prev_content = all_content[current_index - 1]
+            if current_index < len(all_content) - 1:
+                next_content = all_content[current_index + 1]
+    
+    # Set first available content as current if no content is specified
+    first_available_content = None
+    if not current_content and modules.exists():
+        # Look for first video
+        for module in modules:
+            if module.video:
+                current_content = {
+                    'type': 'module_video',
+                    'content': module,
+                    'module': module,
+                    'video_url': module.video.url,
+                    'video_title': module.name or f'الوحدة {module.number} - فيديو'
+                }
+                break
+        
+        # If no video, look for first PDF
+        if not current_content:
+            for module in modules:
+                if module.pdf:
+                    current_content = {
+                        'type': 'module_pdf',
+                        'content': module,
+                        'module': module,
+                        'pdf_url': module.pdf.url,
+                        'pdf_title': module.name or f'الوحدة {module.number} - PDF'
+                    }
+                    break
+        
+        # If no PDF, look for first note
+        if not current_content:
+            for module in modules:
+                if module.note:
+                    current_content = {
+                        'type': 'module_note',
+                        'content': module,
+                        'module': module,
+                        'note_content': module.note,
+                        'note_title': module.name or f'الوحدة {module.number} - ملاحظات'
+                    }
+                    break
+    
+    # Get comments for discussion section
+    comments = Comment.objects.filter(course=course, is_active=True).select_related('user').prefetch_related(
+        'replies__user', 
+        'likes',
+        'replies__likes'
+    ).order_by('-created_at')
+    
+    # Prepare context with comprehensive data
+    # Get course comments
+    comments = Comment.objects.filter(course=course).select_related('user').prefetch_related(
+        'replies__user', 'likes', 'replies__likes'
+    ).order_by('-created_at')
     
     context = {
         'course': course,
         'modules': modules,
         'enrollment': enrollment,
+        'is_enrolled': True,
         'completed_videos': completed_videos,
         'completed_notes': completed_notes,
         'completed_assignments': completed_assignments,
         'completed_quizzes': completed_quizzes,
-        'completed_pdfs': completed_pdfs,  # Now properly tracking PDF completion
+        'completed_pdfs': completed_pdfs,
         'current_content': current_content,
         'next_content': next_content,
         'prev_content': prev_content,
+        'progress': progress,
+        'total_videos': total_videos,
+        'total_notes': total_reading,  # Combined reading materials
+        'total_quizzes': total_quizzes,
+        'assignments_count': assignments_count,
+        'total_content': total_content,
+        'completed_content': completed_content,
+        'comments': comments,
+        # Additional statistics for better display
+        'course_quizzes': course_quizzes,
+        'course_assignments': course_assignments,
+        'enrollment_date': enrollment.enrollment_date,
+        'last_accessed': enrollment.last_accessed,
+        # Discussion section
+        'comments': comments,
+        'first_available_content': first_available_content,
+        # Add missing context variables
+        'user_submission': current_content.get('user_submission') if current_content and current_content.get('type') == 'assignment' else None,
+        'user_attempt': current_content.get('user_attempts')[0] if current_content and current_content.get('type') == 'final_exam' and current_content.get('user_attempts') else None,
+        'quiz_started': current_content.get('quiz_started', False) if current_content and current_content.get('type') == 'quiz' else False,
+        'user_attempts': len(current_content.get('user_attempts', [])) if current_content and current_content.get('type') == 'quiz' else 0
     }
     
     return render(request, 'website/courses/courseviewpage.html', context)
@@ -693,7 +932,7 @@ def update_course(request, course_id):
                         logger.info(f"Updated quiz for module {module_id} with {len(quiz_data.get('questions', []))} questions")
                     else:
                         Quiz.objects.filter(module=existing_module).delete()
-                        
+                    
                 else:
                     # Create new module
                     logger.info(f"Creating new module with ID: {module_id}")
@@ -1349,24 +1588,60 @@ def update_quiz(request, quiz_id):
 @require_POST
 def submit_quiz(request):
     try:
-        data = json.loads(request.body)
-        quiz_id = data.get('quiz_id')
-        answers = data.get('answers', {})
+        # Handle both JSON and form data
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            quiz_id = data.get('quiz_id')
+            answers = data.get('answers', {})
+        else:
+            quiz_id = request.POST.get('quiz_id')
+            answers = {}
+            for key, value in request.POST.items():
+                if key.startswith('question_'):
+                    question_id = key.replace('question_', '')
+                    answers[question_id] = value
         
         quiz = get_object_or_404(Quiz, id=quiz_id)
+        
+        # Get course - check if quiz has course directly or via module
         course = quiz.course
+        if not course and quiz.module:
+            course = quiz.module.course
+        
+        if not course:
+            raise ValueError("Quiz is not associated with any course")
         
         # Calculate score
-        total_questions = quiz.question_set.count()
+        total_questions = quiz.questions.count()
+        if total_questions == 0:
+            raise ValueError("Quiz has no questions")
+        
         correct_answers = 0
+        
+        # Create quiz attempt
+        attempt = QuizAttempt.objects.create(
+            user=request.user,
+            quiz=quiz,
+            attempt_number=QuizAttempt.objects.filter(user=request.user, quiz=quiz).count() + 1
+        )
         
         for question_id, answer_id in answers.items():
             try:
                 question = Question.objects.get(id=question_id, quiz=quiz)
                 selected_answer = Answer.objects.get(id=answer_id, question=question)
                 
-                if selected_answer.is_correct:
+                is_correct = selected_answer.is_correct
+                if is_correct:
                     correct_answers += 1
+                
+                # Record user answer
+                QuizUserAnswer.objects.create(
+                    attempt=attempt,
+                    question=question,
+                    selected_answer=selected_answer,
+                    is_correct=is_correct,
+                    points_earned=question.points if is_correct else 0
+                )
             except (Question.DoesNotExist, Answer.DoesNotExist):
                 pass
         
@@ -1376,15 +1651,13 @@ def submit_quiz(request):
             score = 0
         
         # Check if passed
-        passed = score >= quiz.passing_score
+        passed = score >= quiz.pass_mark
         
-        # Record attempt
-        attempt = UserExamAttempt.objects.create(
-            user=request.user,
-            exam=quiz,
-            score=score,
-            passed=passed
-        )
+        # Update attempt with final score and status
+        attempt.score = score
+        attempt.passed = passed
+        attempt.end_time = timezone.now()
+        attempt.save()
         
         # If passed, mark as completed in ContentProgress
         if passed:
@@ -1397,21 +1670,40 @@ def submit_quiz(request):
         except Enrollment.DoesNotExist:
             progress = 0
         
-        return JsonResponse({
-            'status': 'success',
-            'score': score,
-            'passed': passed,
-            'passing_score': quiz.passing_score,
-            'correct_answers': correct_answers,
-            'total_questions': total_questions,
-            'progress': progress
-        })
+        # Handle different request types (AJAX vs form)
+        if request.content_type == 'application/json':
+            return JsonResponse({
+                'status': 'success',
+                'score': score,
+                'passed': passed,
+                'passing_score': quiz.pass_mark,
+                'correct_answers': correct_answers,
+                'total_questions': total_questions,
+                'progress': progress
+            })
+        else:
+            messages.success(request, f'تم تسليم الاختبار بنجاح! نتيجتك: {score:.1f}%')
+            return redirect('courseviewpage', course_id=course.id)
+            
     except Exception as e:
         logger.error(f"Error submitting quiz: {e}")
-        return JsonResponse({
-            'status': 'error',
-            'message': str(e)
-        }, status=500)
+        if request.content_type == 'application/json':
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e)
+            }, status=500)
+        else:
+            messages.error(request, f'حدث خطأ أثناء تسليم الاختبار: {str(e)}')
+            # Try to get course safely
+            try:
+                if 'quiz' in locals():
+                    course = quiz.course or (quiz.module.course if quiz.module else None)
+                    if course:
+                        return redirect('courseviewpage', course_id=course.id)
+                # If we can't find a course, redirect to dashboard
+                return redirect('dashboard')
+            except:
+                return redirect('dashboard')
 
 @login_required
 def delete_quiz(request, quiz_id):
@@ -1929,3 +2221,191 @@ def view_wishlist(request):
     }
     
     return render(request, 'website/wishlist.html', context)
+
+# Discussion system views
+@login_required
+@require_POST
+def add_course_comment(request, course_id):
+    """Add a new comment to a course"""
+    course = get_object_or_404(Course, id=course_id)
+    comment_text = request.POST.get('comment_text', '').strip()
+    
+    if not comment_text:
+        return JsonResponse({
+            'success': False,
+            'message': 'نص التعليق مطلوب'
+        })
+    
+    # Check if user is enrolled in the course
+    if not Enrollment.objects.filter(course=course, student=request.user).exists():
+        return JsonResponse({
+            'success': False,
+            'message': 'يجب أن تكون مسجلاً في الدورة لإضافة تعليق'
+        })
+    
+    try:
+        comment = Comment.objects.create(
+            user=request.user,
+            course=course,
+            content=comment_text
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إضافة التعليق بنجاح',
+            'comment_id': comment.id,
+            'comment_html': render_comment_html(comment, request.user)
+        })
+    except Exception as e:
+        logger.error(f"Error adding comment: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'حدث خطأ أثناء إضافة التعليق'
+        })
+
+
+@login_required
+@require_POST
+def add_comment_reply(request, comment_id):
+    """Add a reply to a comment"""
+    comment = get_object_or_404(Comment, id=comment_id, is_active=True)
+    reply_text = request.POST.get('reply_text', '').strip()
+    
+    if not reply_text:
+        return JsonResponse({
+            'success': False,
+            'message': 'نص الرد مطلوب'
+        })
+    
+    # Check if user is enrolled in the course
+    if not Enrollment.objects.filter(course=comment.course, student=request.user).exists():
+        return JsonResponse({
+            'success': False,
+            'message': 'يجب أن تكون مسجلاً في الدورة لإضافة رد'
+        })
+    
+    try:
+        reply = SubComment.objects.create(
+            user=request.user,
+            comment=comment,
+            content=reply_text
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'تم إضافة الرد بنجاح',
+            'reply_id': reply.id,
+            'reply_html': render_reply_html(reply, request.user)
+        })
+    except Exception as e:
+        logger.error(f"Error adding reply: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'حدث خطأ أثناء إضافة الرد'
+        })
+
+
+@login_required
+@require_POST
+def like_comment(request, comment_id):
+    """Like or unlike a comment"""
+    comment = get_object_or_404(Comment, id=comment_id, is_active=True)
+    
+    # Check if user is enrolled in the course
+    if not Enrollment.objects.filter(course=comment.course, student=request.user).exists():
+        return JsonResponse({
+            'success': False,
+            'message': 'يجب أن تكون مسجلاً في الدورة'
+        })
+    
+    try:
+        like, created = CommentLike.objects.get_or_create(
+            user=request.user,
+            comment=comment
+        )
+        
+        if created:
+            liked = True
+            message = 'تم الإعجاب بالتعليق'
+        else:
+            like.delete()
+            liked = False
+            message = 'تم إلغاء الإعجاب'
+        
+        likes_count = comment.likes.count()
+        
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'liked': liked,
+            'likes_count': likes_count
+        })
+    except Exception as e:
+        logger.error(f"Error liking comment: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'حدث خطأ'
+        })
+
+
+@login_required
+@require_POST
+def like_subcomment(request, subcomment_id):
+    """Like or unlike a sub-comment"""
+    subcomment = get_object_or_404(SubComment, id=subcomment_id, is_active=True)
+    
+    # Check if user is enrolled in the course
+    if not Enrollment.objects.filter(course=subcomment.comment.course, student=request.user).exists():
+        return JsonResponse({
+            'success': False,
+            'message': 'يجب أن تكون مسجلاً في الدورة'
+        })
+    
+    try:
+        like, created = SubCommentLike.objects.get_or_create(
+            user=request.user,
+            subcomment=subcomment
+        )
+        
+        if created:
+            liked = True
+            message = 'تم الإعجاب بالرد'
+        else:
+            like.delete()
+            liked = False
+            message = 'تم إلغاء الإعجاب'
+        
+        likes_count = subcomment.likes.count()
+        
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'liked': liked,
+            'likes_count': likes_count
+        })
+    except Exception as e:
+        logger.error(f"Error liking subcomment: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'حدث خطأ'
+        })
+
+
+def render_comment_html(comment, user):
+    """Render HTML for a single comment"""
+    from django.template.loader import render_to_string
+    return render_to_string('website/courses/components/_comment_item.html', {
+        'comment': comment,
+        'user': user,
+        'course': comment.course
+    })
+
+
+def render_reply_html(reply, user):
+    """Render HTML for a single reply"""
+    from django.template.loader import render_to_string
+    return render_to_string('website/courses/components/_reply_item.html', {
+        'reply': reply,
+        'user': user,
+        'course': reply.comment.course
+    })

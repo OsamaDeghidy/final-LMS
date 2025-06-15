@@ -727,8 +727,13 @@ function updateProgress() {
 }
 
 function calculateAndUpdateProgress() {
-    // Use data from the page instead of template loops
-    const totalItems = parseInt('{{ total_videos|default:0 }}') + parseInt('{{ total_notes|default:0 }}') + parseInt('{{ total_quizzes|default:0 }}');
+    // Count total items from DOM elements
+    const totalVideos = document.querySelectorAll('.content-item[data-content-type="module_video"], .content-item[data-content-type="video"]').length;
+    const totalNotes = document.querySelectorAll('.content-item[data-content-type="module_pdf"], .content-item[data-content-type="module_note"], .content-item[data-content-type="note"]').length;
+    const totalQuizzes = document.querySelectorAll('.content-item[data-content-type="quiz"]').length;
+    const totalAssignments = document.querySelectorAll('.content-item[data-content-type="assignment"]').length;
+    
+    const totalItems = totalVideos + totalNotes + totalQuizzes + totalAssignments;
     
     if (totalItems === 0) {
         updateProgressBars(0);
@@ -736,18 +741,24 @@ function calculateAndUpdateProgress() {
     }
     
     // Get completed items from page data
-    const completedVideos = document.querySelectorAll('.content-item.completed[data-content-type="video"]').length;
-    const completedPdfs = document.querySelectorAll('.content-item.completed[data-content-type="note"]').length;
+    const completedVideos = document.querySelectorAll('.content-item.completed[data-content-type="module_video"], .content-item.completed[data-content-type="video"]').length;
+    const completedNotes = document.querySelectorAll('.content-item.completed[data-content-type="module_pdf"], .content-item.completed[data-content-type="module_note"], .content-item.completed[data-content-type="note"]').length;
     const completedQuizzes = document.querySelectorAll('.content-item.completed[data-content-type="quiz"]').length;
+    const completedAssignments = document.querySelectorAll('.content-item.completed[data-content-type="assignment"]').length;
     
-    const completedItems = completedVideos + completedPdfs + completedQuizzes;
+    const completedItems = completedVideos + completedNotes + completedQuizzes + completedAssignments;
     const progressPercentage = Math.round((completedItems / totalItems) * 100);
     
     console.log('Progress calculation:', {
         totalItems,
+        totalVideos,
+        totalNotes,
+        totalQuizzes,
+        totalAssignments,
         completedVideos,
-        completedPdfs, 
+        completedNotes, 
         completedQuizzes,
+        completedAssignments,
         completedItems,
         progressPercentage
     });
@@ -915,6 +926,24 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Update progress every 30 seconds
     setInterval(calculateAndUpdateProgress, 30000);
+    
+    // Handle content loading for first visit
+    if (window.location.pathname.includes('/courseviewpage/') && 
+        (!window.location.search || window.location.search === '?')) {
+        // Check if there's content available and redirect to first content
+        const firstContentItem = document.querySelector('.content-item:not(.completed)') || 
+                                document.querySelector('.content-item');
+        if (firstContentItem) {
+            const contentType = firstContentItem.getAttribute('data-content-type');
+            const contentId = firstContentItem.getAttribute('data-content-id');
+            if (contentType && contentId) {
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('content_type', contentType);
+                currentUrl.searchParams.set('content_id', contentId);
+                window.location.href = currentUrl.toString();
+            }
+        }
+    }
 });
 
 // Course Completion Function

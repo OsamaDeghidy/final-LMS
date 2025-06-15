@@ -1,0 +1,599 @@
+{% load static %}
+
+<div class="discussion-section">
+    <div class="section-header">
+        <h3>
+            <i class="fas fa-comments"></i>
+            المناقشة والتعليقات
+            {% if comments.count %}
+                <span class="badge">{{ comments.count }}</span>
+            {% endif %}
+        </h3>
+    </div>
+    
+    <div class="discussion-content">
+        <!-- Comment Form -->
+        {% if user.is_authenticated %}
+        <div class="comment-form">
+            <form id="comment-form" action="#" method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <textarea 
+                        id="comment_text" 
+                        name="comment_text" 
+                        class="form-control" 
+                        rows="3" 
+                        placeholder="شاركنا رأيك أو اطرح سؤالاً..." 
+                        required
+                    ></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                        إرسال
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <div class="auth-notice">
+            <i class="fas fa-info-circle"></i>
+            <span>يجب <a href="{% url 'login' %}">تسجيل الدخول</a> لإضافة تعليق</span>
+        </div>
+        {% endif %}
+        
+        <!-- Comments List -->
+        <div class="comments-section">
+            {% if comments.exists %}
+                <div class="comments-header">
+                    <h4>
+                        <i class="fas fa-comment-dots"></i>
+                        التعليقات ({{ comments.count }})
+                    </h4>
+                    <div class="comments-sort">
+                        <select id="sort-comments" class="form-select">
+                            <option value="newest">الأحدث</option>
+                            <option value="oldest">الأقدم</option>
+                            <option value="most_liked">الأكثر إعجاباً</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="comments-list">
+                    {% for comment in comments %}
+                    <div class="comment-item" data-comment-id="{{ comment.id }}">
+                        <div class="comment-header">
+                            <div class="comment-avatar">
+                                <div class="avatar">
+                                    {{ comment.user.first_name|default:comment.user.username|slice:":1"|upper }}
+                                </div>
+                            </div>
+                            <div class="comment-info">
+                                <div class="comment-author">
+                                    {{ comment.user.get_full_name|default:comment.user.username }}
+                                    {% if course.teacher and comment.user == course.teacher.profile.user %}
+                                        <span class="badge-teacher">
+                                            <i class="fas fa-chalkboard-teacher"></i>
+                                            مدرس
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="comment-meta">
+                                    <span class="comment-date" title="{{ comment.created_at }}">
+                                        <i class="far fa-clock"></i>
+                                        {{ comment.created_at|timesince }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="comment-body">
+                            {{ comment.content|linebreaks }}
+                        </div>
+                        
+                        <div class="comment-footer">
+                            <button class="btn-like" 
+                                    data-comment-id="{{ comment.id }}" 
+                                    {% if not user.is_authenticated %}disabled{% endif %}>
+                                <i class="far fa-heart"></i>
+                                <span>{{ comment.likes.count }}</span>
+                            </button>
+                            
+                            {% if user.is_authenticated %}
+                            <button class="btn-reply" data-comment-id="{{ comment.id }}">
+                                <i class="fas fa-reply"></i>
+                                <span>رد</span>
+                                {% if comment.replies.count %}
+                                    <span class="reply-count">{{ comment.replies.count }}</span>
+                                {% endif %}
+                            </button>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Reply Form -->
+                        {% if user.is_authenticated %}
+                        <div class="reply-form" id="reply-form-{{ comment.id }}" style="display: none;">
+                            <form class="reply-form-inner" action="#" method="post">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <textarea 
+                                        name="reply_text" 
+                                        class="form-control" 
+                                        rows="2" 
+                                        placeholder="اكتب ردك هنا..." 
+                                        required
+                                    ></textarea>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-reply"></i> إرسال
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light cancel-reply">
+                                        إلغاء
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Replies -->
+                        {% if comment.replies.exists %}
+                        <div class="replies">
+                            <button class="replies-toggle" data-comment-id="{{ comment.id }}">
+                                <i class="fas fa-chevron-down"></i>
+                                <span>عرض الردود ({{ comment.replies.count }})</span>
+                            </button>
+                            
+                            <div class="replies-list" id="replies-{{ comment.id }}">
+                                {% for reply in comment.replies.all %}
+                                <div class="reply-item" data-reply-id="{{ reply.id }}">
+                                    <div class="comment-header">
+                                        <div class="comment-avatar">
+                                            <div class="avatar">
+                                                {{ reply.user.first_name|default:reply.user.username|slice:":1"|upper }}
+                                            </div>
+                                        </div>
+                                        <div class="comment-info">
+                                            <div class="comment-author">
+                                                {{ reply.user.get_full_name|default:reply.user.username }}
+                                                {% if course.teacher and reply.user == course.teacher.profile.user %}
+                                                    <span class="badge-teacher">
+                                                        <i class="fas fa-chalkboard-teacher"></i>
+                                                        مدرس
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="comment-meta">
+                                                <span class="comment-date" title="{{ reply.created_at }}">
+                                                    <i class="far fa-clock"></i>
+                                                    {{ reply.created_at|timesince }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="comment-body">
+                                        {{ reply.content|linebreaks }}
+                                    </div>
+                                    
+                                    <div class="comment-footer">
+                                        <button class="btn-like" 
+                                                data-comment-id="{{ reply.id }}" 
+                                                data-is-subcomment="true"
+                                                {% if not user.is_authenticated %}disabled{% endif %}>
+                                            <i class="far fa-heart"></i>
+                                            <span>{{ reply.likes.count }}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                
+            {% else %}
+                <div class="no-comments">
+                    <i class="fas fa-comments"></i>
+                    <h4>لا توجد تعليقات حتى الآن</h4>
+                    <p>كن أول من يعلق على هذه الدورة</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Discussion Rules -->
+        <div class="discussion-rules">
+            <h5><i class="fas fa-info-circle"></i> قواعد المناقشة</h5>
+            <ul>
+                <li>كن محترماً في تعليقاتك</li>
+                <li>تجنب المحتوى المسيء أو غير اللائق</li>
+                <li>استخدم لغة واضحة ومفهومة</li>
+                <li>ساعد زملاءك في التعلم</li>
+                <li>اطرح أسئلة مفيدة</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Discussion Section */
+.discussion-section {
+    margin-top: 2rem;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border: 1px solid #e9ecef;
+}
+
+.section-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.section-header h3 {
+    font-size: 1.2rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #2c3e50;
+}
+
+.section-header .badge {
+    background: #3b82f6;
+    color: white;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.discussion-content {
+    padding: 1.5rem;
+}
+
+/* Comment Form */
+.comment-form {
+    margin-bottom: 1.5rem;
+}
+
+.comment-form .form-control {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 0.95rem;
+    min-height: 100px;
+    margin-bottom: 0.75rem;
+}
+
+.comment-form .form-control:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    border: none;
+    padding: 0.5rem 1.25rem;
+    border-radius: 6px;
+    color: white;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+/* Auth Notice */
+.auth-notice {
+    background: #f1f5f9;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.auth-notice a {
+    color: #3b82f6;
+    font-weight: 500;
+}
+
+/* Comments Header */
+.comments-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.comments-header h4 {
+    font-size: 1.1rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #2c3e50;
+}
+
+.comments-sort {
+    position: relative;
+}
+
+.form-select {
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 0.375rem 1.75rem 0.375rem 0.75rem;
+    font-size: 0.9rem;
+    color: #64748b;
+    background-color: #fff;
+    cursor: pointer;
+}
+
+/* Comment Item */
+.comment-item {
+    padding: 1rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.comment-header {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.comment-avatar .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #3b82f6;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.comment-info {
+    flex: 1;
+}
+
+.comment-author {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.badge-teacher {
+    background: linear-gradient(135deg, #f59e0b, #e67e22);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.comment-meta {
+    font-size: 0.8rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.comment-body {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #475569;
+    margin-bottom: 0.75rem;
+    padding-right: 0.5rem;
+}
+
+.comment-footer {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-like, .btn-reply {
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.btn-like:hover, .btn-reply:hover {
+    background: #f1f5f9;
+    color: #3b82f6;
+}
+
+.btn-like:disabled, .btn-reply:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-like.liked {
+    color: #ef4444;
+}
+
+.reply-count {
+    background: #f1f5f9;
+    padding: 0.1rem 0.4rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Reply Form */
+.reply-form {
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.reply-form .form-control {
+    min-height: 80px;
+    margin-bottom: 0.5rem;
+}
+
+.reply-form .form-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.btn-light {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    color: #64748b;
+}
+
+/* Replies */
+.replies {
+    margin-top: 0.75rem;
+    margin-right: 2rem;
+}
+
+.replies-toggle {
+    background: none;
+    border: none;
+    color: #3b82f6;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0;
+    margin-bottom: 0.5rem;
+}
+
+.replies-list {
+    display: none;
+    margin-top: 0.5rem;
+}
+
+.reply-item {
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.reply-item .comment-avatar .avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.8rem;
+}
+
+/* No Comments */
+.no-comments {
+    text-align: center;
+    padding: 2rem 0;
+    color: #64748b;
+}
+
+.no-comments i {
+    font-size: 1.5rem;
+    color: #cbd5e1;
+    margin-bottom: 0.75rem;
+}
+
+.no-comments h4 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    color: #475569;
+}
+
+.no-comments p {
+    font-size: 0.9rem;
+}
+
+/* Discussion Rules */
+.discussion-rules {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.discussion-rules h5 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #475569;
+}
+
+.discussion-rules ul {
+    margin: 0;
+    padding-right: 1rem;
+    list-style-type: none;
+}
+
+.discussion-rules li {
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+    position: relative;
+    padding-right: 1rem;
+}
+
+.discussion-rules li:before {
+    content: "•";
+    position: absolute;
+    right: 0;
+    color: #94a3b8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .discussion-content {
+        padding: 1rem;
+    }
+    
+    .comments-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .comment-item {
+        padding: 0.75rem 0;
+    }
+    
+    .replies {
+        margin-right: 1rem;
+    }
+}
+</style>
