@@ -41,12 +41,13 @@
             </div>
             
             <!-- Create Meeting Button -->
+            {% if request.user.is_superuser or request.user.is_staff %}
             <div class="text-end mb-3">
                 <a href="{% url 'meeting_create' %}" class="btn btn-success">
                     <i class="fas fa-plus-circle"></i> إنشاء اجتماع جديد
                 </a>
             </div>
-            
+            {% endif %}
             <!-- Meetings List -->
             <div class="row">
                 {% if page_obj %}

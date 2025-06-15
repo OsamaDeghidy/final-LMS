@@ -1581,4 +1581,80 @@ class MeetingChat(models.Model):
         return f"{self.user.username}: {self.message[:50]}"
 
 
+class CertificateTemplate(models.Model):
+    """Certificate template settings for admins and teachers"""
+    TEMPLATE_STYLE_CHOICES = [
+        ('modern', 'تصميم حديث'),
+        ('classic', 'تصميم كلاسيكي'),
+        ('elegant', 'تصميم أنيق'),
+        ('professional', 'تصميم مهني'),
+    ]
+    
+    COLOR_CHOICES = [
+        ('#2a5a7c', 'أزرق'),
+        ('#28a745', 'أخضر'),
+        ('#dc3545', 'أحمر'),
+        ('#ffc107', 'أصفر'),
+        ('#6f42c1', 'بنفسجي'),
+        ('#fd7e14', 'برتقالي'),
+    ]
+    
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="منشئ القالب")
+    template_name = models.CharField(max_length=255, verbose_name="اسم القالب")
+    template_style = models.CharField(max_length=20, choices=TEMPLATE_STYLE_CHOICES, default='modern', verbose_name="نمط الشهادة")
+    primary_color = models.CharField(max_length=7, choices=COLOR_CHOICES, default='#2a5a7c', verbose_name="اللون الأساسي")
+    institution_name = models.CharField(max_length=255, verbose_name="اسم المؤسسة")
+    institution_logo = models.ImageField(upload_to='certificate_templates/logos/', null=True, blank=True, verbose_name="شعار المؤسسة")
+    signature_name = models.CharField(max_length=255, verbose_name="اسم الموقع")
+    signature_title = models.CharField(max_length=255, verbose_name="منصب الموقع")
+    signature_image = models.ImageField(upload_to='certificate_templates/signatures/', null=True, blank=True, verbose_name="صورة التوقيع")
+    certificate_text = models.TextField(
+        default="هذا يشهد بأن {student_name} قد أكمل بنجاح دورة {course_name} بتاريخ {completion_date}",
+        verbose_name="نص الشهادة",
+        help_text="يمكنك استخدام المتغيرات: {student_name}, {course_name}, {completion_date}, {institution_name}"
+    )
+    include_qr_code = models.BooleanField(default=True, verbose_name="إضافة رمز QR للتحقق")
+    include_grade = models.BooleanField(default=False, verbose_name="إضافة الدرجة في الشهادة")
+    is_default = models.BooleanField(default=False, verbose_name="القالب الافتراضي")
+    is_active = models.BooleanField(default=True, verbose_name="نشط")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الإنشاء")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث")
+    
+    class Meta:
+        verbose_name = "قالب الشهادة"
+        verbose_name_plural = "قوالب الشهادات"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.template_name} - {self.created_by.username}"
+    
+    def save(self, *args, **kwargs):
+        # إذا تم تعيين هذا كافتراضي، يجب إزالة الافتراضي من الآخرين
+        if self.is_default:
+            CertificateTemplate.objects.filter(is_default=True).update(is_default=False)
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_default_template(cls):
+        """الحصول على القالب الافتراضي"""
+        try:
+            return cls.objects.filter(is_default=True, is_active=True).first()
+        except cls.DoesNotExist:
+            return None
+    
+    def format_certificate_text(self, student_name, course_name, completion_date, grade=None):
+        """تنسيق نص الشهادة مع البيانات الفعلية"""
+        formatted_text = self.certificate_text.format(
+            student_name=student_name,
+            course_name=course_name,
+            completion_date=completion_date,
+            institution_name=self.institution_name
+        )
+        
+        if self.include_grade and grade:
+            formatted_text += f" بدرجة {grade}"
+            
+        return formatted_text
+
+
 

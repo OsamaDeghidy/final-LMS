@@ -111,4 +111,9 @@ from . import meeting_urls
 
 urlpatterns += meeting_urls.urlpatterns
 
+# Include settings URLs
+from . import urls_settings
+
+urlpatterns += urls_settings.urlpatterns
+
 # Course URLs are included in the main URL patterns above

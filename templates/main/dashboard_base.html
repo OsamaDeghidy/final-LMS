@@ -100,9 +100,9 @@
                 <a href="{% url 'meeting_list' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-calendar-alt text-muted me-2" style="padding-left: 5px;"></i> اجتماعاتي
                 </a>
-                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                <!-- <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-heart text-muted me-2" style="padding-left: 5px;"></i> قائمتي المفضلة
-                </a>
+                </a> -->
                 <a href="{% url 'discussions_list' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-comments text-muted me-2" style="padding-left: 5px;"></i> المناقشات
                 </a>
@@ -193,7 +193,7 @@
             </div>
             <div class="card-body p-0">
               <div class="list-group list-group-flush rounded">
-                <a href="#" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
+                <a href="{% url 'settings' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">
                   <i class="fas fa-sliders-h text-muted me-2"style="padding-left: 5px;"></i> الإعدادات
                 </a>
                 <a href="{% url 'logout' %}" class="list-group-item list-group-item-action border-0 d-flex align-items-center py-3 hover-effect">

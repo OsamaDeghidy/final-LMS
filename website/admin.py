@@ -10,6 +10,7 @@ from .models import (
     QuizUserAnswer, Meeting, Participant, Notification, BookCategory, Review,
     Book, Article, Cart, CartItem, ContentProgress
 )
+from .models import CertificateTemplate  # Import separately to avoid duplication
 
 # Register your models here
 admin.site.register(Category)
@@ -98,4 +99,15 @@ class ArticleAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
 
 admin.site.register(Article, ArticleAdmin)
+
+# Certificate Template Admin
+class CertificateTemplateAdmin(admin.ModelAdmin):
+    list_display = ('template_name', 'created_by', 'template_style', 'primary_color', 'is_default', 'is_active', 'created_at')
+    list_filter = ('template_style', 'is_default', 'is_active', 'created_at')
+    search_fields = ('template_name', 'institution_name', 'created_by__username')
+    date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at', 'updated_at')
+
+admin.site.register(CertificateTemplate, CertificateTemplateAdmin)
 

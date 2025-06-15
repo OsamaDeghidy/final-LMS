@@ -25,7 +25,7 @@
                         <img src="{% if article.author.profile.image %}{{ article.author.profile.image.url }}{% else %}{% static 'img/user-placeholder.jpg' %}{% endif %}" 
                              class="rounded-circle me-2" alt="{{ article.author.username }}" width="40" height="40">
                         <div>
-                            <div class="fw-bold">{{ article.author.get_full_name|default:article.author.username }}</div>
+                            <div class="fw-bold">{{ article.author.get_full_name|default:article.author.username|default:"كاتب" }}</div>
                             <div class="text-muted small">{{ article.author.profile.title|default:"كاتب" }}</div>
                         </div>
                     </div>
@@ -199,7 +199,7 @@
             </div>
             
             <!-- Create Article Button (for authenticated users) -->
-            {% if user.is_authenticated %}
+            {% if request.user.is_superuser or request.user.is_staff %}
             <div class="d-grid gap-2 mb-4">
                 <a href="{% url 'create_article' %}" class="btn btn-success">
                     <i class="fas fa-plus-circle me-2"></i> إنشاء مقالة جديدة

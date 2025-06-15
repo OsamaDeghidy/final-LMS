@@ -1,0 +1,687 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block title %}الإعدادات{% endblock %}
+
+{% block dashboard_content %}
+<div class="col-lg-9">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+            <h4 class="mb-0 text-dark">
+                <i class="fas fa-cog me-2"></i>
+                الإعدادات
+            </h4>
+        </div>
+        
+        <div class="card-body p-0">
+            <!-- Navigation Tabs -->
+            <nav class="nav nav-tabs border-bottom" id="settingsTab" role="tablist">
+                <button class="nav-link active fw-bold" id="password-tab" data-bs-toggle="tab" data-bs-target="#password" type="button" role="tab">
+                    <i class="fas fa-key me-2"></i>
+                    تغيير كلمة المرور
+                </button>
+                <button class="nav-link fw-bold" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">
+                    <i class="fas fa-user-edit me-2"></i>
+                    تحديث الملف الشخصي
+                </button>
+                {% if show_certificate_tab %}
+                <button class="nav-link fw-bold" id="certificate-tab" data-bs-toggle="tab" data-bs-target="#certificate" type="button" role="tab">
+                    <i class="fas fa-certificate me-2"></i>
+                    قوالب الشهادات
+                </button>
+                {% endif %}
+            </nav>
+
+            <div class="tab-content p-4" id="settingsTabContent">
+                <!-- Password Change Tab -->
+                <div class="tab-pane fade show active" id="password" role="tabpanel">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-3">
+                                <i class="fas fa-lock text-primary me-2"></i>
+                                تغيير كلمة المرور
+                            </h5>
+                            <p class="text-muted mb-4">يرجى إدخال كلمة المرور الحالية والجديدة لتحديث حسابك</p>
+                            
+                            <form id="passwordForm" method="post">
+                                {% csrf_token %}
+                                <div class="mb-3">
+                                    <label for="{{ password_form.old_password.id_for_label }}" class="form-label">
+                                        {{ password_form.old_password.label }}
+                                    </label>
+                                    {{ password_form.old_password }}
+                                    <div class="invalid-feedback" id="old_password-error"></div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ password_form.new_password1.id_for_label }}" class="form-label">
+                                        {{ password_form.new_password1.label }}
+                                    </label>
+                                    {{ password_form.new_password1 }}
+                                    <div class="invalid-feedback" id="new_password1-error"></div>
+                                    <div class="form-text">كلمة المرور يجب أن تكون قوية وتحتوي على 8 أحرف على الأقل</div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label for="{{ password_form.new_password2.id_for_label }}" class="form-label">
+                                        {{ password_form.new_password2.label }}
+                                    </label>
+                                    {{ password_form.new_password2 }}
+                                    <div class="invalid-feedback" id="new_password2-error"></div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-save me-2"></i>
+                                    حفظ كلمة المرور الجديدة
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Update Tab -->
+                <div class="tab-pane fade" id="profile" role="tabpanel">
+                    <h5 class="mb-3">
+                        <i class="fas fa-user text-primary me-2"></i>
+                        تحديث الملف الشخصي
+                    </h5>
+                    <p class="text-muted mb-4">قم بتحديث معلوماتك الشخصية وروابط مواقع التواصل الاجتماعي</p>
+                    
+                    <form id="profileForm" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ profile_form.name.id_for_label }}" class="form-label">
+                                        {{ profile_form.name.label }}
+                                    </label>
+                                    {{ profile_form.name }}
+                                    <div class="invalid-feedback" id="name-error"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ profile_form.email.id_for_label }}" class="form-label">
+                                        {{ profile_form.email.label }}
+                                    </label>
+                                    {{ profile_form.email }}
+                                    <div class="invalid-feedback" id="email-error"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ profile_form.phone.id_for_label }}" class="form-label">
+                                        {{ profile_form.phone.label }}
+                                    </label>
+                                    {{ profile_form.phone }}
+                                    <div class="invalid-feedback" id="phone-error"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ profile_form.image_profile.id_for_label }}" class="form-label">
+                                        {{ profile_form.image_profile.label }}
+                                    </label>
+                                    {{ profile_form.image_profile }}
+                                    <div class="invalid-feedback" id="image_profile-error"></div>
+                                    {% if profile.image_profile %}
+                                    <div class="mt-2">
+                                        <img src="{{ profile.image_profile.url }}" alt="Profile" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ profile_form.shortBio.id_for_label }}" class="form-label">
+                                {{ profile_form.shortBio.label }}
+                            </label>
+                            {{ profile_form.shortBio }}
+                            <div class="invalid-feedback" id="shortBio-error"></div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="{{ profile_form.detail.id_for_label }}" class="form-label">
+                                {{ profile_form.detail.label }}
+                            </label>
+                            {{ profile_form.detail }}
+                            <div class="invalid-feedback" id="detail-error"></div>
+                        </div>
+                        
+                        <!-- Social Media Links -->
+                        <h6 class="mb-3">
+                            <i class="fas fa-share-alt text-primary me-2"></i>
+                            روابط مواقع التواصل الاجتماعي
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ profile_form.github.id_for_label }}" class="form-label">
+                                        <i class="fab fa-github me-1"></i>
+                                        {{ profile_form.github.label }}
+                                    </label>
+                                    {{ profile_form.github }}
+                                    <div class="invalid-feedback" id="github-error"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ profile_form.linkedin.id_for_label }}" class="form-label">
+                                        <i class="fab fa-linkedin me-1"></i>
+                                        {{ profile_form.linkedin.label }}
+                                    </label>
+                                    {{ profile_form.linkedin }}
+                                    <div class="invalid-feedback" id="linkedin-error"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ profile_form.twitter.id_for_label }}" class="form-label">
+                                        <i class="fab fa-twitter me-1"></i>
+                                        {{ profile_form.twitter.label }}
+                                    </label>
+                                    {{ profile_form.twitter }}
+                                    <div class="invalid-feedback" id="twitter-error"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ profile_form.facebook.id_for_label }}" class="form-label">
+                                        <i class="fab fa-facebook me-1"></i>
+                                        {{ profile_form.facebook.label }}
+                                    </label>
+                                    {{ profile_form.facebook }}
+                                    <div class="invalid-feedback" id="facebook-error"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ profile_form.instagram.id_for_label }}" class="form-label">
+                                        <i class="fab fa-instagram me-1"></i>
+                                        {{ profile_form.instagram.label }}
+                                    </label>
+                                    {{ profile_form.instagram }}
+                                    <div class="invalid-feedback" id="instagram-error"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ profile_form.youtube.id_for_label }}" class="form-label">
+                                        <i class="fab fa-youtube me-1"></i>
+                                        {{ profile_form.youtube.label }}
+                                    </label>
+                                    {{ profile_form.youtube }}
+                                    <div class="invalid-feedback" id="youtube-error"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-2"></i>
+                            حفظ التغييرات
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Certificate Templates Tab -->
+                {% if show_certificate_tab %}
+                <div class="tab-pane fade" id="certificate" role="tabpanel">
+                    <h5 class="mb-3">
+                        <i class="fas fa-certificate text-primary me-2"></i>
+                        إدارة قوالب الشهادات
+                    </h5>
+                    <p class="text-muted mb-4">قم بإنشاء وإدارة قوالب الشهادات التي سيتم استخدامها عند إكمال الطلاب للدورات</p>
+                    
+                    <!-- Create New Template -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-plus me-2"></i>
+                                إنشاء قالب جديد
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="certificateForm" method="post" enctype="multipart/form-data">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ certificate_form.template_style.id_for_label }}" class="form-label">
+                                                {{ certificate_form.template_style.label }}
+                                            </label>
+                                            {{ certificate_form.template_style }}
+                                            <div class="invalid-feedback" id="template_style-error"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ certificate_form.primary_color.id_for_label }}" class="form-label">
+                                                {{ certificate_form.primary_color.label }}
+                                            </label>
+                                            {{ certificate_form.primary_color }}
+                                            <div class="invalid-feedback" id="primary_color-error"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ certificate_form.institution_name.id_for_label }}" class="form-label">
+                                                {{ certificate_form.institution_name.label }}
+                                            </label>
+                                            {{ certificate_form.institution_name }}
+                                            <div class="invalid-feedback" id="institution_name-error"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ certificate_form.institution_logo.id_for_label }}" class="form-label">
+                                                {{ certificate_form.institution_logo.label }}
+                                            </label>
+                                            {{ certificate_form.institution_logo }}
+                                            <div class="invalid-feedback" id="institution_logo-error"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ certificate_form.signature_name.id_for_label }}" class="form-label">
+                                                {{ certificate_form.signature_name.label }}
+                                            </label>
+                                            {{ certificate_form.signature_name }}
+                                            <div class="invalid-feedback" id="signature_name-error"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ certificate_form.signature_title.id_for_label }}" class="form-label">
+                                                {{ certificate_form.signature_title.label }}
+                                            </label>
+                                            {{ certificate_form.signature_title }}
+                                            <div class="invalid-feedback" id="signature_title-error"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ certificate_form.signature_image.id_for_label }}" class="form-label">
+                                        {{ certificate_form.signature_image.label }}
+                                    </label>
+                                    {{ certificate_form.signature_image }}
+                                    <div class="invalid-feedback" id="signature_image-error"></div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ certificate_form.certificate_text.id_for_label }}" class="form-label">
+                                        {{ certificate_form.certificate_text.label }}
+                                    </label>
+                                    {{ certificate_form.certificate_text }}
+                                    <div class="invalid-feedback" id="certificate_text-error"></div>
+                                    <div class="form-text">{{ certificate_form.certificate_text.help_text }}</div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-3">
+                                            {{ certificate_form.include_qr_code }}
+                                            <label class="form-check-label" for="{{ certificate_form.include_qr_code.id_for_label }}">
+                                                {{ certificate_form.include_qr_code.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check mb-3">
+                                            {{ certificate_form.include_grade }}
+                                            <label class="form-check-label" for="{{ certificate_form.include_grade.id_for_label }}">
+                                                {{ certificate_form.include_grade.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-2"></i>
+                                    حفظ القالب
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Existing Templates -->
+                    {% if user_templates %}
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-list me-2"></i>
+                                قوالبي الحالية
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% for template in user_templates %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card border{% if template.is_default %} border-primary{% endif %}">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                {{ template.template_name }}
+                                                {% if template.is_default %}
+                                                <span class="badge bg-primary ms-2">افتراضي</span>
+                                                {% endif %}
+                                            </h6>
+                                            <p class="card-text text-muted small">
+                                                النمط: {{ template.get_template_style_display }}<br>
+                                                اللون: <span class="badge" style="background-color: {{ template.primary_color }}; color: white;">{{ template.get_primary_color_display }}</span><br>
+                                                تم الإنشاء: {{ template.created_at|date:"d/m/Y" }}
+                                            </p>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{% url 'preview_certificate' template.id %}" class="btn btn-outline-primary" target="_blank">
+                                                    <i class="fas fa-eye"></i> معاينة
+                                                </a>
+                                                {% if not template.is_default %}
+                                                <button type="button" class="btn btn-outline-success" onclick="setDefaultTemplate({{ template.id }})">
+                                                    <i class="fas fa-star"></i> افتراضي
+                                                </button>
+                                                {% endif %}
+                                                <button type="button" class="btn btn-outline-danger" onclick="deleteTemplate({{ template.id }})">
+                                                    <i class="fas fa-trash"></i> حذف
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        لم تقم بإنشاء أي قوالب شهادات بعد. قم بإنشاء قالبك الأول باستخدام النموذج أعلاه.
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3">
+    <div id="successToast" class="toast" role="alert">
+        <div class="toast-header bg-success text-white">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong class="me-auto">نجح</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body"></div>
+    </div>
+    
+    <div id="errorToast" class="toast" role="alert">
+        <div class="toast-header bg-danger text-white">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <strong class="me-auto">خطأ</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Password Form
+    document.getElementById('passwordForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
+        
+        // Clear previous errors
+        clearErrors();
+        
+        fetch('{% url "change_password" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccessToast('تم تغيير كلمة المرور بنجاح!');
+                this.reset();
+            } else {
+                showErrors(data.errors);
+            }
+        })
+        .catch(error => {
+            showErrorToast('حدث خطأ أثناء تغيير كلمة المرور');
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    });
+    
+    // Profile Form
+    document.getElementById('profileForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
+        
+        // Clear previous errors
+        clearErrors();
+        
+        fetch('{% url "update_profile" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccessToast('تم تحديث الملف الشخصي بنجاح!');
+            } else {
+                showErrors(data.errors);
+            }
+        })
+        .catch(error => {
+            showErrorToast('حدث خطأ أثناء تحديث الملف الشخصي');
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    });
+    
+    // Certificate Form
+    {% if show_certificate_tab %}
+    document.getElementById('certificateForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
+        
+        // Clear previous errors
+        clearErrors();
+        
+        fetch('{% url "save_certificate_template" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccessToast('تم حفظ قالب الشهادة بنجاح!');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showErrors(data.errors);
+            }
+        })
+        .catch(error => {
+            showErrorToast('حدث خطأ أثناء حفظ القالب');
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    });
+    {% endif %}
+});
+
+// Utility functions
+function clearErrors() {
+    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    document.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+}
+
+function showErrors(errors) {
+    for (const [field, messages] of Object.entries(errors)) {
+        const input = document.querySelector(`[name="${field}"]`);
+        const errorDiv = document.getElementById(`${field}-error`);
+        
+        if (input && errorDiv) {
+            input.classList.add('is-invalid');
+            errorDiv.textContent = messages.join(', ');
+        }
+    }
+}
+
+function showSuccessToast(message) {
+    const toast = document.getElementById('successToast');
+    toast.querySelector('.toast-body').textContent = message;
+    new bootstrap.Toast(toast).show();
+}
+
+function showErrorToast(message) {
+    const toast = document.getElementById('errorToast');
+    toast.querySelector('.toast-body').textContent = message;
+    new bootstrap.Toast(toast).show();
+}
+
+{% if show_certificate_tab %}
+function setDefaultTemplate(templateId) {
+    if (confirm('هل تريد تعيين هذا القالب كافتراضي؟')) {
+        fetch(`/settings/template/${templateId}/default/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccessToast(data.message);
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showErrorToast(data.message);
+            }
+        });
+    }
+}
+
+function deleteTemplate(templateId) {
+    if (confirm('هل أنت متأكد من حذف هذا القالب؟ لا يمكن التراجع عن هذا الإجراء.')) {
+        fetch(`/settings/template/${templateId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccessToast(data.message);
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showErrorToast(data.message);
+            }
+        });
+    }
+}
+{% endif %}
+</script>
+
+<style>
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    border-bottom-color: #2a5a7c;
+    color: #2a5a7c;
+    background: none;
+}
+
+.nav-tabs .nav-link:hover {
+    border-bottom-color: #2a5a7c;
+    color: #2a5a7c;
+}
+
+.form-control:focus {
+    border-color: #2a5a7c;
+    box-shadow: 0 0 0 0.2rem rgba(42, 90, 124, 0.25);
+}
+
+.btn-primary {
+    background-color: #2a5a7c;
+    border-color: #2a5a7c;
+}
+
+.btn-primary:hover {
+    background-color: #1f4561;
+    border-color: #1f4561;
+}
+
+.toast-container {
+    z-index: 1055;
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %} 
