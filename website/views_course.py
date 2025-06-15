@@ -528,6 +528,15 @@ def courseviewpage(request, course_id):
                 'title': assignment.title
             })
         
+        # Add final exam if exists
+        if course.final_exam:
+            all_content.append({
+                'type': 'final_exam',
+                'content': course.final_exam,
+                'url': f"?content_type=final_exam&content_id={course.final_exam.id}",
+                'title': course.final_exam.title or 'الاختبار النهائي'
+            })
+        
         # Find current position and set next/prev
         current_index = -1
         for i, item in enumerate(all_content):

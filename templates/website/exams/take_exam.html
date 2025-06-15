@@ -107,7 +107,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <a href="{% url 'student_exams' course_id=exam.course.id %}" class="btn btn-danger">خروج بدون حفظ</a>
+                                    <a href="{% url 'student_course_exams' course_id=exam.course.id %}" class="btn btn-danger">خروج بدون حفظ</a>
             </div>
         </div>
     </div>

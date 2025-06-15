@@ -11,7 +11,7 @@ from .models import (
     Course, Module, Exam, ExamQuestion, ExamAnswer, 
     UserExamAttempt, UserExamAnswer, Enrollment, Teacher, Student
 )
-from .utils import update_enrollment_progress
+from .utils_course import update_enrollment_progress
 
 # Teacher Views - Exam Management
 
@@ -572,23 +572,23 @@ def take_exam(request, exam_id):
     course = exam.course
     
     # Check if student is enrolled
-    enrollment = get_object_or_404(Enrollment, user=request.user, course=course)
+    enrollment = get_object_or_404(Enrollment, student=request.user, course=course)
     
     # Check if exam is available based on dates
     current_time = timezone.now()
     if exam.start_date and exam.start_date > current_time:
         messages.error(request, 'لم يبدأ وقت الاختبار بعد.')
-        return redirect('student_exams', course_id=course.id)
+        return redirect('student_course_exams', course_id=course.id)
     
     if exam.end_date and exam.end_date < current_time:
         messages.error(request, 'انتهى وقت الاختبار.')
-        return redirect('student_exams', course_id=course.id)
+        return redirect('student_course_exams', course_id=course.id)
     
     # Check attempt limits
     attempt_count = UserExamAttempt.objects.filter(user=request.user, exam=exam).count()
     if not exam.allow_multiple_attempts and attempt_count >= exam.max_attempts:
         messages.error(request, 'لقد وصلت إلى الحد الأقصى من المحاولات لهذا الاختبار.')
-        return redirect('student_exams', course_id=course.id)
+        return redirect('student_course_exams', course_id=course.id)
     
     # Create a new attempt
     attempt_number = attempt_count + 1
@@ -671,7 +671,11 @@ def submit_exam(request, attempt_id):
         attempt.calculate_score()
         
         # Update enrollment progress
-        update_enrollment_progress(request.user, exam.course)
+        try:
+            enrollment = Enrollment.objects.get(student=request.user, course=exam.course)
+            update_enrollment_progress(enrollment)
+        except Enrollment.DoesNotExist:
+            pass
         
         return redirect('exam_results', attempt_id=attempt.id)
     

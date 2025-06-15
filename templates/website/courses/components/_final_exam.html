@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show confirmation dialog
             if (confirm('هل أنت متأكد من بدء الامتحان النهائي؟\nلن تتمكن من العودة بعد البدء.')) {
                 // Start the exam
-                window.location.href = `/start-exam/${examId}/`;
+                window.location.href = `/exam/${examId}/take/`;
             }
         });
     }

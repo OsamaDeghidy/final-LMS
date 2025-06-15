@@ -281,13 +281,7 @@
                             </div>
                         </div>
                         <div class="content-status">
-                            {% if user.is_authenticated %}
-                                {% if course.final_exam in user.completed_final_exams.all %}
-                                    <i class="fas fa-check-circle text-success" title="مكتمل"></i>
-                                {% else %}
-                                    <i class="fas fa-circle text-muted" title="غير مكتمل"></i>
-                                {% endif %}
-                            {% endif %}
+                            <i class="fas fa-graduation-cap text-success" title="اختبار نهائي"></i>
                         </div>
                     </a>
                 </div>

@@ -135,6 +135,11 @@ class Course(models.Model):
         
         return None  # All modules completed
     
+    @property
+    def final_exam(self):
+        """Get the final exam for this course"""
+        return self.exams.filter(is_final=True, is_active=True).first()
+    
     def __str__(self):
         return self.name
 
