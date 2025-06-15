@@ -5,8 +5,6 @@
 
 {% block head %}
 <link rel="stylesheet" href="{% static 'main/css/allcourses.css' %}?v=2">
-<!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <style>
     .category-tabs {
         background: white;
@@ -45,17 +43,56 @@
     .tab-content {
         min-height: 400px;
     }
+    
+    .category-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 60px 0;
+        border-radius: 0 0 20px 20px;
+        margin-bottom: 40px;
+    }
+    
+    .search-box {
+        max-width: 500px;
+        margin: 0 auto;
+        position: relative;
+    }
+    
+    .search-box input {
+        width: 100%;
+        padding: 15px 20px;
+        border: none;
+        border-radius: 50px;
+        font-size: 16px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    .search-box button {
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: #667eea;
+        color: white;
+        border: none;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- Simple Header with Overlapping Courses -->
-<header class="simple-header">
+<!-- Header Section -->
+<header class="category-header">
   <div class="container">
-    <div class="header-content">
-      <h1>تصفح الدورات حسب التصنيف</h1>
-      <p>اختر التصنيف المناسب لك واكتشف أفضل الدورات التعليمية</p>
+    <div class="text-center">
+      <h1 class="display-4 fw-bold mb-3">تصفح الدورات حسب التصنيف</h1>
+      <p class="lead mb-4">اختر التصنيف المناسب لك واكتشف أفضل الدورات التعليمية</p>
       <div class="search-box">
         <input 
           type="text" 
@@ -78,21 +115,17 @@
         <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" 
                 type="button" role="tab" aria-controls="all" aria-selected="true">
           <i class="fas fa-th-large me-2"></i>جميع الدورات
-          <span class="badge bg-light text-dark ms-2">{{ total_all_content }}</span>
+          <span class="badge bg-light text-dark ms-2">{{ all_courses.count|add:all_articles.count }}</span>
         </button>
       </li>
       {% for category_data in categories %}
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="{{ category_data.category.name|slugify }}-tab" data-bs-toggle="tab" 
-                data-bs-target="#{{ category_data.category.name|slugify }}" type="button" role="tab" 
-                aria-controls="{{ category_data.category.name|slugify }}" aria-selected="false">
+        <button class="nav-link" id="cat-{{ forloop.counter }}-tab" data-bs-toggle="tab" 
+                data-bs-target="#cat-{{ forloop.counter }}" type="button" role="tab" 
+                aria-controls="cat-{{ forloop.counter }}" aria-selected="false">
           <i class="fas fa-book me-2"></i>{{ category_data.category.name }}
           <span class="badge bg-light text-dark ms-2">{{ category_data.total_content }}</span>
         </button>
-      </li>
-      {% empty %}
-      <li class="nav-item">
-        <span class="nav-link disabled">لا توجد تصنيفات</span>
       </li>
       {% endfor %}
     </ul>
@@ -118,165 +151,144 @@
     <!-- All Courses Tab -->
     <div class="tab-pane fade show active" id="all" role="tabpanel" aria-labelledby="all-tab">
       
-      <!-- Debug Info for All -->
-      <div class="alert alert-warning mb-3">
-        <strong>Debug - All Content:</strong><br>
-        All Courses: {{ all_courses.count }}<br>
-        All Articles: {{ all_articles.count }}<br>
-        Categories: {{ categories|length }}
-      </div>
-      
-      <!-- All Courses Section -->
+      <!-- Courses Section -->
       {% if all_courses %}
-      <div class="mb-5">
-        <h3 class="fw-bold mb-4">
-          <i class="fas fa-play-circle text-primary me-2"></i>جميع الدورات التدريبية ({{ all_courses.count }})
+      <div class="mb-4">
+        <h3 class="fw-bold mb-3">
+          <i class="fas fa-play-circle text-primary me-2"></i>الدورات التدريبية ({{ all_courses.count }})
         </h3>
-        <div id="allCoursesContainer" class="courses-grid">
+        <div class="courses-grid">
           <div class="row g-4">
             {% for course in all_courses %}
-          <div class="col-12 col-md-6 col-lg-4 d-flex course-item">
-            <div class="course-card card border-0 shadow-sm h-100 hover-lift">
-              <!-- Course Badges -->
-              <div class="course-badges">
-                {% if course.is_new %}
-                <span class="badge bg-success">جديد</span>
-                {% endif %}
-                {% if course.discount_price %}
-                <span class="badge bg-danger">خصم</span>
-                {% endif %}
-              </div>
-              
-              <!-- Course Image -->
-              <div class="course-img-container">
-                <img
-                  src="{% if course.image_course %}{{ course.image_course.url }}{% else %}{% static 'main/images/blank_course.png' %}{% endif %}"
-                  class="card-img-top course-img"
-                  alt="{{ course.name }}"
-                  loading="lazy"
-                />
-                <div class="course-overlay">
-                  <div class="overlay-content">
-                    <a href="{% url 'course_detail' course.id %}" class="btn btn-sm btn-light">
-                      <i class="fas fa-play me-1"></i> عرض التفاصيل
-                    </a>
+            <div class="col-12 col-md-6 col-lg-4 d-flex course-item">
+              <div class="course-card card border-0 shadow-sm h-100 hover-lift">
+                <!-- Course Badges -->
+                <div class="course-badges">
+                  {% if course.is_new %}
+                  <span class="badge bg-success">جديد</span>
+                  {% endif %}
+                  {% if course.discount_price %}
+                  <span class="badge bg-danger">خصم</span>
+                  {% endif %}
+                </div>
+                
+                <!-- Course Image -->
+                <div class="course-img-container">
+                  <img
+                    src="{% if course.image_course %}{{ course.image_course.url }}{% else %}{% static 'main/images/blank_course.png' %}{% endif %}"
+                    class="card-img-top course-img"
+                    alt="{{ course.name }}"
+                    loading="lazy"
+                  />
+                  <div class="course-overlay">
+                    <div class="overlay-content">
+                      <a href="{% url 'course_detail' course.id %}" class="btn btn-sm btn-light">
+                        <i class="fas fa-play me-1"></i> عرض التفاصيل
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <!-- Card Body -->
-              <div class="card-body">
-                <!-- Instructor & Title -->
-                <div class="d-flex align-items-start mb-3">
-                  {% if course.teacher and course.teacher.profile %}
-                    {% with profile=course.teacher.profile %}
+                
+                <!-- Card Body -->
+                <div class="card-body">
+                  <!-- Instructor & Title -->
+                  <div class="d-flex align-items-start mb-3">
+                    {% if course.teacher and course.teacher.profile %}
+                      {% with profile=course.teacher.profile %}
+                        <div class="instructor-avatar me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
+                             style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; font-weight: 700; font-size: 16px; box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);">
+                          {% if profile.avatar %}
+                            <img src="{{ profile.avatar.url }}" 
+                                 alt="{{ profile.name }}" 
+                                 class="rounded-2 w-100 h-100" 
+                                 style="object-fit: cover;">
+                          {% else %}
+                            {{ profile.name|default:profile.user.username|slice:":1"|upper }}
+                          {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                          <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3; padding-right: 10px;">
+                            <a href="{% url 'course_detail' course.id %}" class="text-dark text-decoration-none hover-primary" style="transition: color 0.2s ease;">
+                              {{ course.name }}
+                            </a>
+                          </h5>
+                          <div class="d-flex align-items-center">
+                            <span class="text-muted small fw-medium" style="font-size: 0.85rem; padding-right: 10px;">
+                              {{ profile.name|default:profile.user.username|truncatechars:20 }}
+                            </span>
+                            {% if course.tag %}
+                              <span class="badge bg-light-primary text-primary ms-2" style="font-size: 0.7rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 600;">
+                                {{ course.tag }}
+                              </span>
+                            {% endif %}
+                          </div>
+                        </div>
+                      {% endwith %}
+                    {% else %}
                       <div class="instructor-avatar me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
-                           style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; font-weight: 700; font-size: 16px; box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);">
-                        {% if profile.avatar %}
-                          <img src="{{ profile.avatar.url }}" 
-                               alt="{{ profile.name }}" 
-                               class="rounded-2 w-100 h-100" 
-                               style="object-fit: cover;">
-                        {% else %}
-                          {{ profile.name|default:profile.user.username|slice:":1"|upper }}
-                        {% endif %}
+                           style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #6c757d 0%, #9e9e9e 100%); color: white; font-weight: 700; font-size: 18px; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.2);">
+                        <i class="fas fa-user"></i>
                       </div>
                       <div class="flex-grow-1">
-                        <!-- Course Title -->
-                        <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3; padding-right: 10px;">
+                        <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3;">
                           <a href="{% url 'course_detail' course.id %}" class="text-dark text-decoration-none hover-primary" style="transition: color 0.2s ease;">
                             {{ course.name }}
                           </a>
                         </h5>
-                        
-                        <!-- Instructor Name & Tag -->
-                        <div class="d-flex align-items-center">
-                          <span class="text-muted small fw-medium" style="font-size: 0.85rem; padding-right: 10px;">
-                            {{ profile.name|default:profile.user.username|truncatechars:20 }}
-                          </span>
-                          {% if course.tag %}
-                            <span class="badge bg-light-primary text-primary ms-2" style="font-size: 0.7rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 600;">
-                              {{ course.tag }}
-                            </span>
-                          {% endif %}
-                        </div>
+                        <span class="text-muted small">مجهول</span>
                       </div>
-                    {% endwith %}
-                  {% else %}
-                    <div class="instructor-avatar me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
-                         style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #6c757d 0%, #9e9e9e 100%); color: white; font-weight: 700; font-size: 18px; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.2);">
-                      <i class="fas fa-user"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3;">
-                        <a href="{% url 'course_detail' course.id %}" class="text-dark text-decoration-none hover-primary" style="transition: color 0.2s ease;">
-                          {{ course.name }}
-                        </a>
-                      </h5>
-                      <span class="text-muted small">مجهول</span>
-                    </div>
-                  {% endif %}
-                </div>
+                    {% endif %}
+                  </div>
 
-                <!-- Course Type & Rating Row -->
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <!-- Course Type -->
-                  <div class="d-flex align-items-center">
-                    <div style="width: 32px; height: 32px; background: rgba(14, 165, 233, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-left: 8px;">
-                      <i class="fas fa-tag" style="color: #0ea5e9; font-size: 14px;"></i>
+                  <!-- Course Type & Rating Row -->
+                  <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                      <div style="width: 32px; height: 32px; background: rgba(14, 165, 233, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-left: 8px;">
+                        <i class="fas fa-tag" style="color: #0ea5e9; font-size: 14px;"></i>
+                      </div>
+                      <span style="color: #1e293b; font-size: 0.9rem; font-weight: 600;">
+                        {{ course.category.name }}
+                      </span>
                     </div>
-                    <span style="color: #1e293b; font-size: 0.9rem; font-weight: 600;">
-                      {{ course.category.name }}
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-star text-warning me-1"></i>
+                      <span class="fw-bold me-1" style="color: #1e293b;">{{ course.rating|floatformat:1|default:"5.0" }}</span>
+                      <span class="text-muted" style="font-size: 0.85rem;">
+                        ({{ course.review_count|default:0 }})
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <!-- Course Meta -->
+                  <div class="course-meta d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-light text-dark">
+                      <i class="far fa-clock text-primary me-1"></i> {{ course.videos_time|default:"2ساعة" }}
+                    </span>
+                    <span class="badge bg-light text-dark">
+                      <i class="fas fa-layer-group text-primary me-1"></i> {{ course.total_module|default:5 }} وحدات
+                    </span>
+                    <span class="badge bg-light text-dark">
+                      <i class="fas fa-user-graduate text-primary me-1"></i> {{ course.enrolled_students|default:0 }}
                     </span>
                   </div>
                   
-                  <!-- Rating -->
-                  <div class="d-flex align-items-center">
-                    <i class="fas fa-star text-warning me-1"></i>
-                    <span class="fw-bold me-1" style="color: #1e293b;">{{ course.rating|floatformat:1|default:"5.0" }}</span>
-                    <span class="text-muted" style="font-size: 0.85rem;">
-                      ({{ course.review_count|default:0 }})
-                    </span>
+                  <!-- Price & Add to Cart -->
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      {% if course.price == 0 %}
+                        <span class="h5 mb-0 text-success">مجاني</span>
+                      {% elif course.discount_price %}
+                        <span class="h5 mb-0 text-dark">{{ course.discount_price }} ريال</span>
+                        <small class="text-muted text-decoration-line-through ms-2">{{ course.price }} ريال</small>
+                      {% else %}
+                        <span class="h5 mb-0 text-dark">{{ course.price }} ريال</span>
+                      {% endif %}
+                    </div>
+                    <button class="btn btn-sm btn-primary add-to-cart" data-course-id="{{ course.id }}">
+                      <i class="fas fa-shopping-cart me-1"></i> أضف للسلة
+                    </button>
                   </div>
                 </div>
-                
-                <!-- Course Meta -->
-                <div class="course-meta d-flex justify-content-between align-items-center mb-3">
-                  <span class="badge bg-light text-dark">
-                    <i class="far fa-clock text-primary me-1"></i> {{ course.videos_time|default:"2ساعة" }}
-                  </span>
-                  <span class="badge bg-light text-dark">
-                    <i class="fas fa-layer-group text-primary me-1"></i> {{ course.total_module|default:5 }} وحدات
-                  </span>
-                  <span class="badge bg-light text-dark">
-                    <i class="fas fa-user-graduate text-primary me-1"></i> {{ course.enrolled_students|default:0 }}
-                  </span>
-                </div>
-                
-                <!-- Price & Add to Cart -->
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    {% if course.price == 0 %}
-                      <span class="h5 mb-0 text-success">مجاني</span>
-                    {% elif course.discount_price %}
-                      <span class="h5 mb-0 text-dark">{{ course.discount_price }} ريال</span>
-                      <small class="text-muted text-decoration-line-through ms-2">{{ course.price }} ريال</small>
-                    {% else %}
-                      <span class="h5 mb-0 text-dark">{{ course.price }} ريال</span>
-                    {% endif %}
-                  </div>
-                  <button class="btn btn-sm btn-primary add-to-cart" data-course-id="{{ course.id }}">
-                    <i class="fas fa-shopping-cart me-1"></i> أضف للسلة
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-            {% empty %}
-            <div class="col-12 text-center py-3">
-              <div class="empty-state">
-                <i class="fas fa-play-circle fa-2x text-muted mb-2"></i>
-                <p class="text-muted mb-0">لا توجد دورات متاحة</p>
               </div>
             </div>
             {% endfor %}
@@ -285,11 +297,11 @@
       </div>
       {% endif %}
       
-      <!-- All Articles Section -->
+      <!-- Articles Section -->
       {% if all_articles %}
       <div class="mb-4">
-        <h3 class="fw-bold mb-4">
-          <i class="fas fa-newspaper text-success me-2"></i>جميع المقالات ({{ all_articles.count }})
+        <h3 class="fw-bold mb-3">
+          <i class="fas fa-newspaper text-success me-2"></i>المقالات ({{ all_articles.count }})
         </h3>
         <div class="courses-grid">
           <div class="row g-4">
@@ -328,7 +340,6 @@
                       <i class="fas fa-user-edit"></i>
                     </div>
                     <div class="flex-grow-1">
-                      <!-- Article Title -->
                       <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3; padding-right: 10px;">
                         {% if article.slug %}
                         <a href="{% url 'article_detail' article.slug %}" class="text-dark text-decoration-none hover-primary" style="transition: color 0.2s ease;">
@@ -338,8 +349,6 @@
                         <span class="text-dark">{{ article.title }}</span>
                         {% endif %}
                       </h5>
-                      
-                      <!-- Author Name -->
                       <div class="d-flex align-items-center">
                         <span class="text-muted small fw-medium" style="font-size: 0.85rem; padding-right: 10px;">
                           {% if article.author %}{{ article.author.get_full_name|default:article.author.username }}{% else %}مجهول{% endif %}
@@ -385,43 +394,27 @@
                 </div>
               </div>
             </div>
-            {% empty %}
-            <div class="col-12 text-center py-3">
-              <div class="empty-state">
-                <i class="fas fa-newspaper fa-2x text-muted mb-2"></i>
-                <p class="text-muted mb-0">لا توجد مقالات متاحة</p>
-              </div>
-            </div>
             {% endfor %}
           </div>
         </div>
       </div>
       {% endif %}
       
-      <!-- Empty State for All Content -->
+      <!-- Empty State for All -->
       {% if not all_courses and not all_articles %}
       <div class="col-12 text-center py-5">
         <div class="empty-state">
-          <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+          <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
           <h4>لا يوجد محتوى متاح</h4>
           <p class="text-muted">لم يتم إضافة أي محتوى بعد</p>
         </div>
       </div>
       {% endif %}
-      
     </div>
     
     <!-- Category Specific Tabs -->
     {% for category_data in categories %}
-    <div class="tab-pane fade" id="{{ category_data.category.name|slugify }}" role="tabpanel" aria-labelledby="{{ category_data.category.name|slugify }}-tab">
-      
-      <!-- Debug Info for Category -->
-      <div class="alert alert-info mb-3">
-        <strong>Debug - {{ category_data.category.name }}:</strong><br>
-        Courses: {{ category_data.courses.count }}<br>
-        Articles: {{ category_data.articles.count }}<br>
-        Total: {{ category_data.total_content }}
-      </div>
+    <div class="tab-pane fade" id="cat-{{ forloop.counter }}" role="tabpanel" aria-labelledby="cat-{{ forloop.counter }}-tab">
       
       <!-- Courses Section -->
       {% if category_data.courses %}
@@ -432,142 +425,131 @@
         <div class="courses-grid">
           <div class="row g-4">
             {% for course in category_data.courses %}
-          <div class="col-12 col-md-6 col-lg-4 d-flex course-item">
-            <div class="course-card card border-0 shadow-sm h-100 hover-lift">
-              <!-- Course Badges -->
-              <div class="course-badges">
-                {% if course.is_new %}
-                <span class="badge bg-success">جديد</span>
-                {% endif %}
-                {% if course.discount_price %}
-                <span class="badge bg-danger">خصم</span>
-                {% endif %}
-              </div>
-              
-              <!-- Course Image -->
-              <div class="course-img-container">
-                <img
-                  src="{% if course.image_course %}{{ course.image_course.url }}{% else %}{% static 'main/images/blank_course.png' %}{% endif %}"
-                  class="card-img-top course-img"
-                  alt="{{ course.name }}"
-                  loading="lazy"
-                />
-                <div class="course-overlay">
-                  <div class="overlay-content">
-                    <a href="{% url 'course_detail' course.id %}" class="btn btn-sm btn-light">
-                      <i class="fas fa-play me-1"></i> عرض التفاصيل
-                    </a>
+            <div class="col-12 col-md-6 col-lg-4 d-flex course-item">
+              <div class="course-card card border-0 shadow-sm h-100 hover-lift">
+                <!-- Course Badges -->
+                <div class="course-badges">
+                  {% if course.is_new %}
+                  <span class="badge bg-success">جديد</span>
+                  {% endif %}
+                  {% if course.discount_price %}
+                  <span class="badge bg-danger">خصم</span>
+                  {% endif %}
+                </div>
+                
+                <!-- Course Image -->
+                <div class="course-img-container">
+                  <img
+                    src="{% if course.image_course %}{{ course.image_course.url }}{% else %}{% static 'main/images/blank_course.png' %}{% endif %}"
+                    class="card-img-top course-img"
+                    alt="{{ course.name }}"
+                    loading="lazy"
+                  />
+                  <div class="course-overlay">
+                    <div class="overlay-content">
+                      <a href="{% url 'course_detail' course.id %}" class="btn btn-sm btn-light">
+                        <i class="fas fa-play me-1"></i> عرض التفاصيل
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <!-- Card Body -->
-              <div class="card-body">
-                <!-- Instructor & Title -->
-                <div class="d-flex align-items-start mb-3">
-                  {% if course.teacher and course.teacher.profile %}
-                    {% with profile=course.teacher.profile %}
+                
+                <!-- Card Body - Same structure as above -->
+                <div class="card-body">
+                  <div class="d-flex align-items-start mb-3">
+                    {% if course.teacher and course.teacher.profile %}
+                      {% with profile=course.teacher.profile %}
+                        <div class="instructor-avatar me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
+                             style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; font-weight: 700; font-size: 16px; box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);">
+                          {% if profile.avatar %}
+                            <img src="{{ profile.avatar.url }}" 
+                                 alt="{{ profile.name }}" 
+                                 class="rounded-2 w-100 h-100" 
+                                 style="object-fit: cover;">
+                          {% else %}
+                            {{ profile.name|default:profile.user.username|slice:":1"|upper }}
+                          {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                          <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3; padding-right: 10px;">
+                            <a href="{% url 'course_detail' course.id %}" class="text-dark text-decoration-none hover-primary" style="transition: color 0.2s ease;">
+                              {{ course.name }}
+                            </a>
+                          </h5>
+                          <div class="d-flex align-items-center">
+                            <span class="text-muted small fw-medium" style="font-size: 0.85rem; padding-right: 10px;">
+                              {{ profile.name|default:profile.user.username|truncatechars:20 }}
+                            </span>
+                            {% if course.tag %}
+                              <span class="badge bg-light-primary text-primary ms-2" style="font-size: 0.7rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 600;">
+                                {{ course.tag }}
+                              </span>
+                            {% endif %}
+                          </div>
+                        </div>
+                      {% endwith %}
+                    {% else %}
                       <div class="instructor-avatar me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
-                           style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; font-weight: 700; font-size: 16px; box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);">
-                        {% if profile.avatar %}
-                          <img src="{{ profile.avatar.url }}" 
-                               alt="{{ profile.name }}" 
-                               class="rounded-2 w-100 h-100" 
-                               style="object-fit: cover;">
-                        {% else %}
-                          {{ profile.name|default:profile.user.username|slice:":1"|upper }}
-                        {% endif %}
+                           style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #6c757d 0%, #9e9e9e 100%); color: white; font-weight: 700; font-size: 18px; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.2);">
+                        <i class="fas fa-user"></i>
                       </div>
                       <div class="flex-grow-1">
-                        <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3; padding-right: 10px;">
+                        <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3;">
                           <a href="{% url 'course_detail' course.id %}" class="text-dark text-decoration-none hover-primary" style="transition: color 0.2s ease;">
                             {{ course.name }}
                           </a>
                         </h5>
-                        <div class="d-flex align-items-center">
-                          <span class="text-muted small fw-medium" style="font-size: 0.85rem; padding-right: 10px;">
-                            {{ profile.name|default:profile.user.username|truncatechars:20 }}
-                          </span>
-                          {% if course.tag %}
-                            <span class="badge bg-light-primary text-primary ms-2" style="font-size: 0.7rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-weight: 600;">
-                              {{ course.tag }}
-                            </span>
-                          {% endif %}
-                        </div>
+                        <span class="text-muted small">مجهول</span>
                       </div>
-                    {% endwith %}
-                  {% else %}
-                    <div class="instructor-avatar me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
-                         style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #6c757d 0%, #9e9e9e 100%); color: white; font-weight: 700; font-size: 18px; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.2);">
-                      <i class="fas fa-user"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                      <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3;">
-                        <a href="{% url 'course_detail' course.id %}" class="text-dark text-decoration-none hover-primary" style="transition: color 0.2s ease;">
-                          {{ course.name }}
-                        </a>
-                      </h5>
-                      <span class="text-muted small">مجهول</span>
-                    </div>
-                  {% endif %}
-                </div>
-
-                <!-- Course Type & Rating Row -->
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <div class="d-flex align-items-center">
-                    <div style="width: 32px; height: 32px; background: rgba(14, 165, 233, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-left: 8px;">
-                      <i class="fas fa-tag" style="color: #0ea5e9; font-size: 14px;"></i>
-                    </div>
-                    <span style="color: #1e293b; font-size: 0.9rem; font-weight: 600;">
-                      {{ course.category.name }}
-                    </span>
-                  </div>
-                  <div class="d-flex align-items-center">
-                    <i class="fas fa-star text-warning me-1"></i>
-                    <span class="fw-bold me-1" style="color: #1e293b;">{{ course.rating|floatformat:1|default:"5.0" }}</span>
-                    <span class="text-muted" style="font-size: 0.85rem;">
-                      ({{ course.review_count|default:0 }})
-                    </span>
-                  </div>
-                </div>
-                
-                <!-- Course Meta -->
-                <div class="course-meta d-flex justify-content-between align-items-center mb-3">
-                  <span class="badge bg-light text-dark">
-                    <i class="far fa-clock text-primary me-1"></i> {{ course.videos_time|default:"2ساعة" }}
-                  </span>
-                  <span class="badge bg-light text-dark">
-                    <i class="fas fa-layer-group text-primary me-1"></i> {{ course.total_module|default:5 }} وحدات
-                  </span>
-                  <span class="badge bg-light text-dark">
-                    <i class="fas fa-user-graduate text-primary me-1"></i> {{ course.enrolled_students|default:0 }}
-                  </span>
-                </div>
-                
-                <!-- Price & Add to Cart -->
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    {% if course.price == 0 %}
-                      <span class="h5 mb-0 text-success">مجاني</span>
-                    {% elif course.discount_price %}
-                      <span class="h5 mb-0 text-dark">{{ course.discount_price }} ريال</span>
-                      <small class="text-muted text-decoration-line-through ms-2">{{ course.price }} ريال</small>
-                    {% else %}
-                      <span class="h5 mb-0 text-dark">{{ course.price }} ريال</span>
                     {% endif %}
                   </div>
-                  <button class="btn btn-sm btn-primary add-to-cart" data-course-id="{{ course.id }}">
-                    <i class="fas fa-shopping-cart me-1"></i> أضف للسلة
-                  </button>
+
+                  <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                      <div style="width: 32px; height: 32px; background: rgba(14, 165, 233, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-left: 8px;">
+                        <i class="fas fa-tag" style="color: #0ea5e9; font-size: 14px;"></i>
+                      </div>
+                      <span style="color: #1e293b; font-size: 0.9rem; font-weight: 600;">
+                        {{ course.category.name }}
+                      </span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-star text-warning me-1"></i>
+                      <span class="fw-bold me-1" style="color: #1e293b;">{{ course.rating|floatformat:1|default:"5.0" }}</span>
+                      <span class="text-muted" style="font-size: 0.85rem;">
+                        ({{ course.review_count|default:0 }})
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div class="course-meta d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-light text-dark">
+                      <i class="far fa-clock text-primary me-1"></i> {{ course.videos_time|default:"2ساعة" }}
+                    </span>
+                    <span class="badge bg-light text-dark">
+                      <i class="fas fa-layer-group text-primary me-1"></i> {{ course.total_module|default:5 }} وحدات
+                    </span>
+                    <span class="badge bg-light text-dark">
+                      <i class="fas fa-user-graduate text-primary me-1"></i> {{ course.enrolled_students|default:0 }}
+                    </span>
+                  </div>
+                  
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      {% if course.price == 0 %}
+                        <span class="h5 mb-0 text-success">مجاني</span>
+                      {% elif course.discount_price %}
+                        <span class="h5 mb-0 text-dark">{{ course.discount_price }} ريال</span>
+                        <small class="text-muted text-decoration-line-through ms-2">{{ course.price }} ريال</small>
+                      {% else %}
+                        <span class="h5 mb-0 text-dark">{{ course.price }} ريال</span>
+                      {% endif %}
+                    </div>
+                    <button class="btn btn-sm btn-primary add-to-cart" data-course-id="{{ course.id }}">
+                      <i class="fas fa-shopping-cart me-1"></i> أضف للسلة
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-            {% empty %}
-            <div class="col-12 text-center py-3">
-              <div class="empty-state">
-                <i class="fas fa-play-circle fa-2x text-muted mb-2"></i>
-                <p class="text-muted mb-0">لا توجد دورات في هذا التصنيف</p>
               </div>
             </div>
             {% endfor %}
@@ -612,14 +594,12 @@
                 
                 <!-- Card Body -->
                 <div class="card-body">
-                  <!-- Author & Title -->
                   <div class="d-flex align-items-start mb-3">
                     <div class="instructor-avatar me-3 d-flex align-items-center justify-content-center flex-shrink-0" 
                          style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; font-weight: 700; font-size: 16px; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);">
                       <i class="fas fa-user-edit"></i>
                     </div>
                     <div class="flex-grow-1">
-                      <!-- Article Title -->
                       <h5 class="card-title mb-1" style="font-size: 1.1rem; line-height: 1.3; padding-right: 10px;">
                         {% if article.slug %}
                         <a href="{% url 'article_detail' article.slug %}" class="text-dark text-decoration-none hover-primary" style="transition: color 0.2s ease;">
@@ -629,8 +609,6 @@
                         <span class="text-dark">{{ article.title }}</span>
                         {% endif %}
                       </h5>
-                      
-                      <!-- Author Name -->
                       <div class="d-flex align-items-center">
                         <span class="text-muted small fw-medium" style="font-size: 0.85rem; padding-right: 10px;">
                           {% if article.author %}{{ article.author.get_full_name|default:article.author.username }}{% else %}مجهول{% endif %}
@@ -639,14 +617,12 @@
                     </div>
                   </div>
 
-                  <!-- Article Summary -->
                   {% if article.summary %}
                   <p class="card-text text-muted mb-3" style="font-size: 0.9rem; line-height: 1.4;">
                     {{ article.summary|truncatechars:120 }}
                   </p>
                   {% endif %}
                   
-                  <!-- Article Meta -->
                   <div class="course-meta d-flex justify-content-between align-items-center mb-3">
                     <span class="badge bg-light text-dark">
                       <i class="far fa-calendar-alt text-success me-1"></i> {{ article.created_at|date:"d M Y" }}
@@ -661,7 +637,6 @@
                     {% endif %}
                   </div>
                   
-                  <!-- Read Article Button -->
                   <div class="d-flex justify-content-center">
                     {% if article.slug %}
                     <a href="{% url 'article_detail' article.slug %}" class="btn btn-success btn-sm w-100">
@@ -674,13 +649,6 @@
                     {% endif %}
                   </div>
                 </div>
-              </div>
-            </div>
-            {% empty %}
-            <div class="col-12 text-center py-3">
-              <div class="empty-state">
-                <i class="fas fa-newspaper fa-2x text-muted mb-2"></i>
-                <p class="text-muted mb-0">لا توجد مقالات في هذا التصنيف</p>
               </div>
             </div>
             {% endfor %}
@@ -767,16 +735,19 @@ function changeView(viewType) {
   }
 }
 
+// Search functionality
 function searchCourses() {
   const searchTerm = document.getElementById('searchInput').value.toLowerCase();
   const courseItems = document.querySelectorAll('.course-item');
   
   courseItems.forEach(item => {
-    const courseTitle = item.querySelector('.card-title a').textContent.toLowerCase();
-    const instructorName = item.querySelector('.text-muted.small') ? 
-                          item.querySelector('.text-muted.small').textContent.toLowerCase() : '';
+    const courseTitle = item.querySelector('.card-title a, .card-title span');
+    const instructorName = item.querySelector('.text-muted.small');
     
-    if (courseTitle.includes(searchTerm) || instructorName.includes(searchTerm)) {
+    const titleText = courseTitle ? courseTitle.textContent.toLowerCase() : '';
+    const instructorText = instructorName ? instructorName.textContent.toLowerCase() : '';
+    
+    if (titleText.includes(searchTerm) || instructorText.includes(searchTerm)) {
       item.style.display = 'flex';
     } else {
       item.style.display = searchTerm === '' ? 'flex' : 'none';
@@ -784,20 +755,32 @@ function searchCourses() {
   });
 }
 
-// Use vanilla JavaScript instead of jQuery
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize Bootstrap tabs
-  const triggerTabList = [].slice.call(document.querySelectorAll('#categoryTabs button[data-bs-toggle="tab"]'));
-  triggerTabList.forEach(function (triggerEl) {
-    const tabTrigger = new bootstrap.Tab(triggerEl);
-    
-    triggerEl.addEventListener('click', function (event) {
-      event.preventDefault();
-      tabTrigger.show();
+  // Initialize tabs manually
+  const tabButtons = document.querySelectorAll('#categoryTabs button[data-bs-toggle="tab"]');
+  
+  tabButtons.forEach(function(button) {
+    button.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      // Remove active class from all buttons and panes
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.remove('show', 'active');
+      });
+      
+      // Add active class to clicked button
+      this.classList.add('active');
+      
+      // Show corresponding tab pane
+      const targetId = this.getAttribute('data-bs-target');
+      const targetPane = document.querySelector(targetId);
+      if (targetPane) {
+        targetPane.classList.add('show', 'active');
+      }
     });
   });
   
-  console.log('Bootstrap tabs initialized:', triggerTabList.length);
   // View toggle buttons
   const gridBtn = document.getElementById('gridBtn');
   const listBtn = document.getElementById('listBtn');
@@ -830,8 +813,10 @@ document.addEventListener('DOMContentLoaded', function() {
       e.stopPropagation();
       const courseId = this.getAttribute('data-course-id');
       
-      const toast = new bootstrap.Toast(document.getElementById('addToCartToast'));
-      toast.show();
+      if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+        const toast = new bootstrap.Toast(document.getElementById('addToCartToast'));
+        toast.show();
+      }
     });
   });
 
@@ -843,13 +828,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Initialize tooltips if Bootstrap is available
-  if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-  }
+  console.log('Categories page initialized successfully');
 });
 </script>
-{% endblock %}
+{% endblock %} 

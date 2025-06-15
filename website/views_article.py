@@ -123,6 +123,7 @@ def my_articles(request):
     """
     Display articles created by the current user
     """
+    # Get all articles by user, but prioritize those with valid slugs
     articles = Article.objects.filter(author=request.user).order_by('-created_at')
     
     # Get user profile data for dashboard template

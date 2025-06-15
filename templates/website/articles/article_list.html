@@ -57,7 +57,11 @@
                                 <p class="card-text">{{ article.summary|truncatechars:100 }}</p>
                             </div>
                             <div class="card-footer bg-transparent border-0">
+                                {% if article.slug %}
                                 <a href="{% url 'article_detail' article.slug %}" class="btn btn-outline-primary btn-sm">قراءة المزيد</a>
+                                {% else %}
+                                <span class="btn btn-outline-secondary btn-sm disabled">رابط غير متاح</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -85,7 +89,11 @@
                                 <p class="card-text">{{ article.summary|truncatechars:100 }}</p>
                             </div>
                             <div class="card-footer bg-transparent border-0">
+                                {% if article.slug %}
                                 <a href="{% url 'article_detail' article.slug %}" class="btn btn-outline-primary btn-sm">قراءة المزيد</a>
+                                {% else %}
+                                <span class="btn btn-outline-secondary btn-sm disabled">رابط غير متاح</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

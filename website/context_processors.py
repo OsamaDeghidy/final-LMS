@@ -6,7 +6,7 @@ def categories_processor(request):
     This makes the categories available in all templates.
     """
     return {
-        'categories': Category.objects.all()
+        'categories': Category.objects.filter(name__isnull=False).exclude(name='').order_by('name')
     }
 
 def notifications_processor(request):

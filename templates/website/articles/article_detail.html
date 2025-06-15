@@ -61,9 +61,15 @@
                 <!-- Article Actions -->
                 {% if user.is_authenticated and user == article.author or user.is_staff %}
                 <div class="d-flex gap-2 mb-5">
+                    {% if article.slug %}
                     <a href="{% url 'update_article' article.slug %}" class="btn btn-outline-primary">
                         <i class="fas fa-edit me-1"></i> تعديل
                     </a>
+                    {% else %}
+                    <span class="btn btn-outline-secondary disabled">
+                        <i class="fas fa-edit me-1"></i> تعديل (رابط غير متاح)
+                    </span>
+                    {% endif %}
                     <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteArticleModal">
                         <i class="fas fa-trash-alt me-1"></i> حذف
                     </button>
@@ -82,10 +88,14 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                {% if article.slug %}
                                 <form action="{% url 'delete_article' article.slug %}" method="post">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-danger">حذف</button>
                                 </form>
+                                {% else %}
+                                <button type="button" class="btn btn-secondary disabled">رابط غير متاح</button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -112,7 +122,11 @@
                                     </p>
                                 </div>
                                 <div class="card-footer bg-transparent border-0">
+                                    {% if related.slug %}
                                     <a href="{% url 'article_detail' related.slug %}" class="btn btn-outline-primary btn-sm">قراءة المزيد</a>
+                                    {% else %}
+                                    <span class="btn btn-outline-secondary btn-sm disabled">رابط غير متاح</span>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -163,9 +177,15 @@
                                 {% endif %}
                                 <div>
                                     <h6 class="mb-0">
+                                        {% if pop_article.slug %}
                                         <a href="{% url 'article_detail' pop_article.slug %}" class="text-decoration-none text-dark">
                                             {{ pop_article.title|truncatechars:40 }}
                                         </a>
+                                        {% else %}
+                                        <span class="text-decoration-none text-dark">
+                                            {{ pop_article.title|truncatechars:40 }}
+                                        </span>
+                                        {% endif %}
                                     </h6>
                                     <small class="text-muted">{{ pop_article.views_count }} مشاهدة</small>
                                 </div>

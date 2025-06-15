@@ -81,20 +81,28 @@
                            الرئيسية
                         </a>
                     </li>
-                    <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
+                    <!-- <li class="nav-item mx-1"> 
                         <a class="nav-link px-3 py-2 fw-semibold" href="/allcourses"
                            style="color: #495057; border-radius: 8px;">
                            الكورسات
                         </a>
-                    </li>
-                    {% for category in categories %}
+                    </li> -->
                     <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
+                        <a class="nav-link px-3 py-2 fw-semibold" href="{% url 'categories_view' %}"
+                           style="color: #495057; border-radius: 8px;">
+                           التصنيفات
+                        </a>
+                    </li>
+                    <!-- {% for category in categories %}
+                    {% if category.name %}
+                    <li class="nav-item mx-1">  
                         <a class="nav-link px-3 py-2 fw-semibold" href="{% url 'course_category' category_slug=category.name %}"
                            style="color: #495057; border-radius: 8px;">
                            {{ category.name }}
                         </a>
                     </li>
-                    {% endfor %}
+                    {% endif %}
+                    {% endfor %} -->
                     <li class="nav-item mx-1">  <!-- Increased margin to mx-4 -->
                         <a class="nav-link px-3 py-2 fw-semibold" href="/contact"
                            style="color: #495057; border-radius: 8px;">

@@ -131,16 +131,80 @@ def course_category(request, category_slug):
     # Get all courses in this category
     courses = Course.objects.filter(category=category, status='published')
     
-    # Get all articles in this category
-    articles = Article.objects.filter(category=category, status='published')
+    # Get all articles in this category (only those with valid slugs)
+    articles = Article.objects.filter(category=category, status='published', slug__isnull=False).exclude(slug='')
+    
+    # Get all categories with their content for the new template structure
+    all_categories = Category.objects.all().order_by('name')
+    all_courses = Course.objects.filter(status='published').order_by('-created_at')
+    all_articles = Article.objects.filter(status='published', slug__isnull=False).exclude(slug='').order_by('-created_at')
+    
+    # Create categories structure for the new template
+    categories_with_content = []
+    for cat in all_categories:
+        cat_courses = all_courses.filter(category=cat)
+        cat_articles = all_articles.filter(category=cat)
+        
+        categories_with_content.append({
+            'category': cat,
+            'courses': cat_courses,
+            'articles': cat_articles,
+            'total_content': cat_courses.count() + cat_articles.count(),
+        })
     
     context = {
         'category': category,
         'courses': courses,
         'articles': articles,
+        # New structure for the updated template
+        'categories': categories_with_content,
+        'all_courses': all_courses,
+        'all_articles': all_articles,
+        'total_all_content': all_courses.count() + all_articles.count(),
     }
     
     return render(request, 'website/category_courses.html', context)
+
+def categories_view(request):
+    """
+    عرض جميع التصنيفات مع محتوياتها (كورسات، مقالات، إلخ)
+    """
+    # Get all categories
+    categories = Category.objects.all().order_by('name')
+    
+    # Get all published courses
+    all_courses = Course.objects.filter(status='published').order_by('-created_at')
+    
+    # Get all published articles (only those with valid slugs)
+    all_articles = Article.objects.filter(status='published', slug__isnull=False).exclude(slug='').order_by('-created_at')
+    
+    # Create a dictionary to store content for each category
+    categories_with_content = []
+    
+    for category in categories:
+        # Get courses for this category
+        category_courses = all_courses.filter(category=category)
+        
+        # Get articles for this category (only those with valid slugs)
+        category_articles = all_articles.filter(category=category)
+        
+        # Add category with its content
+        categories_with_content.append({
+            'category': category,
+            'courses': category_courses,
+            'articles': category_articles,
+            'total_content': category_courses.count() + category_articles.count(),
+        })
+    
+    # Get all content for "All" tab
+    context = {
+        'categories': categories_with_content,
+        'all_courses': all_courses,
+        'all_articles': all_articles,
+        'total_all_content': all_courses.count() + all_articles.count(),
+    }
+    
+    return render(request, 'website/simple_categories.html', context)
 
 # Course detail and management views
 @login_required

@@ -62,10 +62,16 @@
                                     </div>
                                     {% endif %}
                                     <div>
+                                        {% if article.slug %}
                                         <a href="{% url 'article_detail' article.slug %}" 
                                            class="text-decoration-none fw-bold text-dark d-block">
                                             {{ article.title|truncatechars:30 }}
                                         </a>
+                                        {% else %}
+                                        <span class="fw-bold text-dark d-block">
+                                            {{ article.title|truncatechars:30 }}
+                                        </span>
+                                        {% endif %}
                                         <small class="text-muted">
                                             <i class="far fa-clock me-1"></i>{{ article.reading_time }} دقيقة
                                         </small>
@@ -100,6 +106,7 @@
                             </td>
                             <td class="pe-4">
                                 <div class="d-flex justify-content-end">
+                                    {% if article.slug %}
                                     <a href="{% url 'article_detail' article.slug %}" 
                                        class="btn btn-sm btn-icon btn-outline-primary rounded-circle me-2"
                                        data-bs-toggle="tooltip" title="معاينة">
@@ -110,6 +117,16 @@
                                        data-bs-toggle="tooltip" title="تعديل">
                                         <i class="fas fa-edit"></i>
                                     </a>
+                                    {% else %}
+                                    <span class="btn btn-sm btn-icon btn-outline-secondary rounded-circle me-2 disabled"
+                                          data-bs-toggle="tooltip" title="رابط غير متاح">
+                                        <i class="fas fa-eye"></i>
+                                    </span>
+                                    <span class="btn btn-sm btn-icon btn-outline-secondary rounded-circle me-2 disabled"
+                                          data-bs-toggle="tooltip" title="رابط غير متاح">
+                                        <i class="fas fa-edit"></i>
+                                    </span>
+                                    {% endif %}
                                     <button type="button" 
                                             class="btn btn-sm btn-icon btn-outline-danger rounded-circle"
                                             data-bs-toggle="modal" 
@@ -176,12 +193,18 @@
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                {% if article.slug %}
                 <form action="{% url 'delete_article' article.slug %}" method="post" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger rounded-pill px-4">
                         <i class="fas fa-trash-alt me-1"></i>تأكيد الحذف
                     </button>
                 </form>
+                {% else %}
+                <button type="button" class="btn btn-secondary rounded-pill px-4 disabled">
+                    <i class="fas fa-exclamation-triangle me-1"></i>رابط غير متاح
+                </button>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -244,7 +267,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </div>
                                         {% endif %}
                                         <div>
+                                            {% if article.slug %}
                                             <a href="{% url 'article_detail' article.slug %}" class="text-decoration-none">{{ article.title }}</a>
+                                            {% else %}
+                                            <span class="text-decoration-none">{{ article.title }}</span>
+                                            {% endif %}
                                             <div class="small text-muted">{{ article.reading_time }} دقيقة للقراءة</div>
                                         </div>
                                     </div>
@@ -267,12 +294,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td>{{ article.created_at|date:"Y/m/d" }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
+                                        {% if article.slug %}
                                         <a href="{% url 'article_detail' article.slug %}" class="btn btn-sm btn-outline-primary" title="عرض">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                         <a href="{% url 'update_article' article.slug %}" class="btn btn-sm btn-outline-secondary" title="تعديل">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        {% else %}
+                                        <span class="btn btn-sm btn-outline-secondary disabled" title="رابط غير متاح">
+                                            <i class="fas fa-eye"></i>
+                                        </span>
+                                        <span class="btn btn-sm btn-outline-secondary disabled" title="رابط غير متاح">
+                                            <i class="fas fa-edit"></i>
+                                        </span>
+                                        {% endif %}
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ article.id }}" title="حذف">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
@@ -291,10 +327,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 </div>
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                    {% if article.slug %}
                                                     <form action="{% url 'delete_article' article.slug %}" method="post">
                                                         {% csrf_token %}
                                                         <button type="submit" class="btn btn-danger">حذف</button>
                                                     </form>
+                                                    {% else %}
+                                                    <button type="button" class="btn btn-secondary disabled">رابط غير متاح</button>
+                                                    {% endif %}
                                                 </div>
                                             </div>
                                         </div>
