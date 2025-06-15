@@ -29,11 +29,13 @@
             </ul>
             
             <!-- Create Meeting Button -->
+            {% if profile and profile.status == 'Teacher' or profile.status == 'Admin' %}
             <div class="text-end mb-3">
                 <a href="{% url 'meeting_create' %}" class="btn btn-success">
                     <i class="fas fa-plus-circle"></i> إنشاء اجتماع جديد
                 </a>
             </div>
+            {% endif %}
             
             <!-- Meetings List -->
             <div class="row">

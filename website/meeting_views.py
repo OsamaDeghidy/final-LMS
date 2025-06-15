@@ -258,10 +258,20 @@ def my_meetings(request):
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
+    # Get user profile and student data
+    profile = None
+    student = None
+    if hasattr(request.user, 'profile'):
+        profile = request.user.profile
+        if hasattr(profile, 'student'):
+            student = profile.student
+    
     context = {
         'page_obj': page_obj,
         'filter_type': filter_type,
         'active_tab': 'my_meetings',
+        'profile': profile,
+        'student': student,
     }
     return render(request, 'website/meetings/my_meetings.html', context)
 
