@@ -79,6 +79,8 @@
                                             </div>
                                         </div>
                                     {% endfor %}
+                                    <!-- Add empty hidden inputs for new answers -->
+                                    <input type="hidden" id="answer_count" name="answer_count" value="{{ answers|length }}">
                                 {% else %}
                                     <!-- Default empty answers for multiple choice if converting from another type -->
                                     <div class="answer-item mb-3">
@@ -114,23 +116,39 @@
                         <div id="true_false_section" {% if question.question_type != 'true_false' %}style="display: none;"{% endif %}>
                             <h4 class="h5 mb-3">الإجابة الصحيحة</h4>
                             {% if question.question_type == 'true_false' %}
-                                {% for answer in answers %}
-                                    {% if answer.text == 'صحيح' or answer.text == 'True' %}
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="radio" name="true_false_answer" id="true_answer" value="true" {% if answer.is_correct %}checked{% endif %}>
-                                            <label class="form-check-label" for="true_answer">
-                                                صحيح
-                                            </label>
-                                        </div>
-                                    {% elif answer.text == 'خطأ' or answer.text == 'False' %}
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="true_false_answer" id="false_answer" value="false" {% if answer.is_correct %}checked{% endif %}>
-                                            <label class="form-check-label" for="false_answer">
-                                                خطأ
-                                            </label>
-                                        </div>
-                                    {% endif %}
-                                {% endfor %}
+                                {% if answers %}
+                                    {% for answer in answers %}
+                                        {% if answer.text == 'صحيح' or answer.text == 'True' or answer.text == 'صح' %}
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="radio" name="true_false_answer" id="true_answer" value="true" {% if answer.is_correct %}checked{% endif %}>
+                                                <label class="form-check-label" for="true_answer">
+                                                    صحيح
+                                                </label>
+                                            </div>
+                                        {% elif answer.text == 'خطأ' or answer.text == 'False' %}
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="true_false_answer" id="false_answer" value="false" {% if answer.is_correct %}checked{% endif %}>
+                                                <label class="form-check-label" for="false_answer">
+                                                    خطأ
+                                                </label>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <!-- Default options if no answers exist -->
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="true_false_answer" id="true_answer" value="true" checked>
+                                        <label class="form-check-label" for="true_answer">
+                                            صحيح
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="true_false_answer" id="false_answer" value="false">
+                                        <label class="form-check-label" for="false_answer">
+                                            خطأ
+                                        </label>
+                                    </div>
+                                {% endif %}
                             {% else %}
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="true_false_answer" id="true_answer" value="true" checked>
@@ -221,6 +239,7 @@
                         <input type="radio" name="correct_answer" value="${answerCount}">
                     </div>
                     <input type="text" class="form-control" name="answer_text[]" placeholder="خيار الإجابة" ${questionTypeSelect.value === 'multiple_choice' ? 'required' : ''}>
+                    <input type="hidden" name="answer_id[]" value="">
                     <button type="button" class="btn btn-outline-danger remove-answer">
                         <i class="fas fa-times"></i>
                     </button>
@@ -228,6 +247,7 @@
             `;
             answersContainer.appendChild(newAnswer);
             updateRemoveButtons();
+            updateAnswerCount();
         });
         
         // Remove answer option
@@ -245,6 +265,7 @@
                 
                 // Enable/disable remove buttons
                 updateRemoveButtons();
+                updateAnswerCount();
             }
         });
         
@@ -262,9 +283,19 @@
             });
         }
         
+        // Function to update answer count
+        function updateAnswerCount() {
+            const answerCountInput = document.getElementById('answer_count');
+            if (answerCountInput) {
+                const currentCount = document.querySelectorAll('.answer-item').length;
+                answerCountInput.value = currentCount;
+            }
+        }
+        
         // Initial setup
         toggleQuestionSections();
         questionTypeSelect.addEventListener('change', toggleQuestionSections);
+        updateAnswerCount();
     });
 </script>
 {% endblock dashboard_content %}

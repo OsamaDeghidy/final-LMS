@@ -274,11 +274,14 @@ def add_question(request, exam_id):
         if question_type in ['multiple_choice', 'true_false']:
             # For true/false questions
             if question_type == 'true_false':
+                correct_answer = request.POST.get('true_false_answer')
+                logger.info(f"Creating True/False question - correct_answer: {correct_answer}")
+                
                 # Create True answer
                 ExamAnswer.objects.create(
                     question=question,
-                    text='صح',
-                    is_correct=request.POST.get('correct_answer') == 'true',
+                    text='صحيح',
+                    is_correct=correct_answer == 'true',
                     order=1
                 )
                 
@@ -286,24 +289,26 @@ def add_question(request, exam_id):
                 ExamAnswer.objects.create(
                     question=question,
                     text='خطأ',
-                    is_correct=request.POST.get('correct_answer') == 'false',
+                    is_correct=correct_answer == 'false',
                     order=2
                 )
             else:  # For multiple choice questions
-                # Get the number of answer options
-                answer_count = int(request.POST.get('answer_count', 0))
+                # Get answer texts from the form
+                answer_texts = request.POST.getlist('answer_text[]')
+                correct_answer_index = request.POST.get('correct_answer')
                 
-                for i in range(1, answer_count + 1):
-                    answer_text = request.POST.get(f'answer_{i}')
-                    is_correct = request.POST.get(f'correct_answer') == str(i)
+                for i, answer_text in enumerate(answer_texts):
+                    if not answer_text.strip():  # Skip empty answers
+                        continue
+                        
+                    is_correct = str(i) == correct_answer_index
                     
-                    if answer_text:  # Only create if text is provided
-                        ExamAnswer.objects.create(
-                            question=question,
-                            text=answer_text,
-                            is_correct=is_correct,
-                            order=i
-                        )
+                    ExamAnswer.objects.create(
+                        question=question,
+                        text=answer_text.strip(),
+                        is_correct=is_correct,
+                        order=i + 1
+                    )
         
         messages.success(request, 'تم إضافة السؤال بنجاح.')
         return redirect('edit_exam', exam_id=exam.id)
@@ -327,6 +332,9 @@ def edit_question(request, question_id):
     answers = ExamAnswer.objects.filter(question=question).order_by('order')
     
     if request.method == 'POST':
+        # Debug: Log the POST data
+        logger.info(f"POST data for question {question.id}: {dict(request.POST)}")
+        
         question.text = request.POST.get('text')
         question.points = request.POST.get('points', 1)
         question.explanation = request.POST.get('explanation')
@@ -343,48 +351,114 @@ def edit_question(request, question_id):
         if question.question_type in ['multiple_choice', 'true_false']:
             if question.question_type == 'true_false':
                 # Update true/false answers
-                correct_answer = request.POST.get('correct_answer')
+                correct_answer = request.POST.get('true_false_answer')
+                logger.info(f"True/False question - correct_answer: {correct_answer}")
+                logger.info(f"Existing answers: {[(a.id, a.text, a.is_correct) for a in answers]}")
+                
+                # Check if we have the required True/False answers
+                true_answer = None
+                false_answer = None
                 
                 for answer in answers:
-                    if answer.text == 'صح':
-                        answer.is_correct = correct_answer == 'true'
-                    else:  # 'خطأ'
-                        answer.is_correct = correct_answer == 'false'
-                    answer.save()
+                    if answer.text in ['صحيح', 'True', 'صح']:
+                        true_answer = answer
+                    elif answer.text in ['خطأ', 'False']:
+                        false_answer = answer
+                
+                # If we don't have the required answers, create them
+                if not true_answer:
+                    true_answer = ExamAnswer.objects.create(
+                        question=question,
+                        text='صحيح',
+                        is_correct=correct_answer == 'true',
+                        order=1
+                    )
+                    logger.info(f"Created true answer: {true_answer.id}")
+                else:
+                    true_answer.is_correct = correct_answer == 'true'
+                    true_answer.save()
+                    logger.info(f"Updated true answer: {true_answer.id} -> {true_answer.is_correct}")
+                
+                if not false_answer:
+                    false_answer = ExamAnswer.objects.create(
+                        question=question,
+                        text='خطأ',
+                        is_correct=correct_answer == 'false',
+                        order=2
+                    )
+                    logger.info(f"Created false answer: {false_answer.id}")
+                else:
+                    false_answer.is_correct = correct_answer == 'false'
+                    false_answer.save()
+                    logger.info(f"Updated false answer: {false_answer.id} -> {false_answer.is_correct}")
+                
+                # Delete any extra answers that don't belong to True/False
+                for answer in answers:
+                    if answer.text not in ['صحيح', 'True', 'صح', 'خطأ', 'False']:
+                        logger.info(f"Deleting extra answer: {answer.id} - {answer.text}")
+                        answer.delete()
             else:  # multiple choice
                 # Get existing answers to update
                 existing_answers = {str(a.id): a for a in answers}
                 
-                # Get the number of answer options
-                answer_count = int(request.POST.get('answer_count', 0))
+                # Get answer texts and IDs from the form
+                answer_texts = request.POST.getlist('answer_text[]')
+                answer_ids = request.POST.getlist('answer_id[]')
+                correct_answer_index = request.POST.get('correct_answer')
+                
+                # Debug logging
+                logger.info(f"Answer texts: {answer_texts}")
+                logger.info(f"Answer IDs: {answer_ids}")
+                logger.info(f"Correct answer index: {correct_answer_index}")
+                logger.info(f"Existing answers: {list(existing_answers.keys())}")
                 
                 # Track which answers were updated
                 updated_answers = set()
                 
-                for i in range(1, answer_count + 1):
-                    answer_id = request.POST.get(f'answer_id_{i}')
-                    answer_text = request.POST.get(f'answer_{i}')
-                    is_correct = request.POST.get('correct_answer') == str(i)
+                # Process each answer
+                for i, answer_text in enumerate(answer_texts):
+                    if not answer_text.strip():  # Skip empty answers
+                        continue
+                        
+                    is_correct = str(i) == correct_answer_index
                     
-                    if answer_id and answer_id in existing_answers:  # Update existing
-                        answer = existing_answers[answer_id]
-                        answer.text = answer_text
+                    # Check if this is an existing answer
+                    if i < len(answer_ids) and answer_ids[i] and answer_ids[i] in existing_answers:
+                        # Update existing answer
+                        answer = existing_answers[answer_ids[i]]
+                        answer.text = answer_text.strip()
                         answer.is_correct = is_correct
-                        answer.order = i
+                        answer.order = i + 1
                         answer.save()
-                        updated_answers.add(answer_id)
-                    elif answer_text:  # Create new
+                        updated_answers.add(answer_ids[i])
+                    else:
+                        # Create new answer
                         ExamAnswer.objects.create(
                             question=question,
-                            text=answer_text,
+                            text=answer_text.strip(),
                             is_correct=is_correct,
-                            order=i
+                            order=i + 1
                         )
                 
                 # Delete answers that weren't updated
                 for answer_id, answer in existing_answers.items():
                     if answer_id not in updated_answers:
                         answer.delete()
+        elif question.question_type == 'short_answer':
+            # Handle model answer for short answer questions
+            model_answer = request.POST.get('model_answer', '').strip()
+            
+            # Delete existing answers first
+            answers.delete()
+            
+            # Create new model answer if provided
+            if model_answer:
+                ExamAnswer.objects.create(
+                    question=question,
+                    text=model_answer,
+                    is_correct=True,  # Model answer is always "correct"
+                    order=1
+                )
         
         messages.success(request, 'تم تحديث السؤال بنجاح.')
         return redirect('edit_exam', exam_id=exam.id)
@@ -505,6 +579,9 @@ def student_exams(request, course_id):
     
     # Get all active exams for the course
     current_time = timezone.now()
+    logger.info(f"Current time (UTC): {current_time}")
+    logger.info(f"Current time (local): {timezone.localtime(current_time)}")
+    
     exams = Exam.objects.filter(
         course=course,
         is_active=True
@@ -525,6 +602,8 @@ def student_exams(request, course_id):
     
     # Process each exam
     available_exams = []
+    logger.info(f"Processing {exams.count()} exams for course {course.name}")
+    
     for exam in exams:
         # Get attempts for this exam
         exam_attempts = attempts_by_exam.get(exam.id, [])
@@ -532,13 +611,56 @@ def student_exams(request, course_id):
         
         # Check if exam is available based on start/end dates
         is_available = True
-        if exam.start_date and exam.start_date > current_time:
-            is_available = False
-        if exam.end_date and exam.end_date < current_time:
-            is_available = False
+        is_upcoming = False
+        is_expired = False
+        
+        # Convert to timezone-aware datetime for comparison if needed
+        if exam.start_date:
+            # If start_date is naive, make it timezone-aware using the current timezone
+            start_date = exam.start_date
+            if timezone.is_naive(start_date):
+                # Assume the naive datetime is in the local timezone
+                start_date = timezone.make_aware(start_date, timezone.get_current_timezone())
+            
+            # If current time is before start time, exam is upcoming
+            if current_time < start_date:
+                is_available = False
+                is_upcoming = True
+        
+        if exam.end_date:
+            # If end_date is naive, make it timezone-aware using the current timezone
+            end_date = exam.end_date
+            if timezone.is_naive(end_date):
+                # Assume the naive datetime is in the local timezone
+                end_date = timezone.make_aware(end_date, timezone.get_current_timezone())
+            
+            # If current time is after end time, exam is expired
+            if current_time > end_date:
+                is_available = False
+                is_expired = True
         
         # Check if user can take the exam based on attempt limits
         can_take = is_available and (exam.allow_multiple_attempts or attempt_count < exam.max_attempts)
+        
+        # Debug logging
+        logger.info(f"Exam '{exam.title}': is_available={is_available}, is_upcoming={is_upcoming}, is_expired={is_expired}, can_take={can_take}")
+        logger.info(f"  Current time: {current_time}")
+        logger.info(f"  Current time (local): {timezone.localtime(current_time)}")
+        if exam.start_date:
+            start_date_aware = exam.start_date
+            if timezone.is_naive(start_date_aware):
+                start_date_aware = timezone.make_aware(start_date_aware)
+            logger.info(f"  Start date: {start_date_aware} (original: {exam.start_date})")
+            logger.info(f"  Start date (local): {timezone.localtime(start_date_aware)}")
+            logger.info(f"  Current < Start? {current_time < start_date_aware}")
+        if exam.end_date:
+            end_date_aware = exam.end_date
+            if timezone.is_naive(end_date_aware):
+                end_date_aware = timezone.make_aware(end_date_aware)
+            logger.info(f"  End date: {end_date_aware} (original: {exam.end_date})")
+            logger.info(f"  End date (local): {timezone.localtime(end_date_aware)}")
+            logger.info(f"  Current > End? {current_time > end_date_aware}")
+        logger.info(f"  Attempt count: {attempt_count}, Max attempts: {exam.max_attempts}, Allow multiple: {exam.allow_multiple_attempts}")
         
         # Get the best score if there are attempts
         best_score = None
@@ -548,6 +670,8 @@ def student_exams(request, course_id):
         available_exams.append({
             'exam': exam,
             'is_available': is_available,
+            'is_upcoming': is_upcoming,
+            'is_expired': is_expired,
             'can_take': can_take,
             'attempt_count': attempt_count,
             'best_score': best_score,
@@ -556,12 +680,17 @@ def student_exams(request, course_id):
             'can_take_exam': can_take
         })
     
+    # Separate upcoming exams for sidebar
+    upcoming_exams = [exam_data for exam_data in available_exams if exam_data['is_upcoming']]
+    
     context = {
         'course': course,
-        'exams': available_exams,  # Changed from available_exams to match template
+        'exams': available_exams,  # All exams including upcoming ones
+        'upcoming_exams': upcoming_exams,  # Only upcoming exams for sidebar
         'profile': request.user.profile,
         'student': request.user.student if hasattr(request.user, 'student') else None,
         'now': timezone.now(),  # Add current time for template comparisons
+        'now_local': timezone.localtime(timezone.now()),  # Local time for display
     }
     return render(request, 'website/exams/student_exams.html', context)
 
@@ -576,13 +705,30 @@ def take_exam(request, exam_id):
     
     # Check if exam is available based on dates
     current_time = timezone.now()
-    if exam.start_date and exam.start_date > current_time:
-        messages.error(request, 'لم يبدأ وقت الاختبار بعد.')
-        return redirect('student_course_exams', course_id=course.id)
     
-    if exam.end_date and exam.end_date < current_time:
-        messages.error(request, 'انتهى وقت الاختبار.')
-        return redirect('student_course_exams', course_id=course.id)
+    # Check start date
+    if exam.start_date:
+        start_date = exam.start_date
+        if timezone.is_naive(start_date):
+            start_date = timezone.make_aware(start_date, timezone.get_current_timezone())
+        
+        # If current time is before start time, exam hasn't started yet
+        if current_time < start_date:
+            local_start = timezone.localtime(start_date)
+            messages.error(request, f'لم يبدأ وقت الاختبار بعد. سيبدأ في: {local_start.strftime("%Y-%m-%d %H:%M")}')
+            return redirect('student_course_exams', course_id=course.id)
+    
+    # Check end date
+    if exam.end_date:
+        end_date = exam.end_date
+        if timezone.is_naive(end_date):
+            end_date = timezone.make_aware(end_date, timezone.get_current_timezone())
+        
+        # If current time is after end time, exam has expired
+        if current_time > end_date:
+            local_end = timezone.localtime(end_date)
+            messages.error(request, f'انتهى وقت الاختبار. انتهى في: {local_end.strftime("%Y-%m-%d %H:%M")}')
+            return redirect('student_course_exams', course_id=course.id)
     
     # Check attempt limits
     attempt_count = UserExamAttempt.objects.filter(user=request.user, exam=exam).count()
@@ -605,11 +751,26 @@ def take_exam(request, exam_id):
     else:
         questions = questions.order_by('order')
     
+    # Calculate time left if there's a time limit
+    time_left = None
+    time_left_formatted = None
+    if exam.time_limit:
+        elapsed_time = (timezone.now() - attempt.start_time).total_seconds()
+        time_left = max(0, exam.time_limit * 60 - elapsed_time)  # time_limit is in minutes
+        
+        # Format time left
+        hours = int(time_left // 3600)
+        minutes = int((time_left % 3600) // 60)
+        seconds = int(time_left % 60)
+        time_left_formatted = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    
     context = {
         'exam': exam,
         'attempt': attempt,
         'questions': questions,
         'time_limit': exam.time_limit,
+        'time_left': time_left,
+        'time_left_formatted': time_left_formatted,
         'profile': request.user.profile if hasattr(request.user, 'profile') else None,
         'student': request.user.student if hasattr(request.user, 'student') else None,
     }
