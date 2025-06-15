@@ -216,7 +216,7 @@ def delete_exam(request, exam_id):
     if request.method == 'POST':
         exam.delete()
         messages.success(request, 'تم حذف الامتحان بنجاح')
-        return redirect('teacher_exams', course_id=course_id)
+        return redirect('teacher_exams_course', course_id=course_id)
     
     context = {
         'exam': exam,
@@ -232,8 +232,11 @@ def add_question(request, exam_id):
     """View for teachers to add a question to an exam"""
     exam = get_object_or_404(Exam, id=exam_id)
     
-    # Check if user is the course teacher through profile
-    if not hasattr(request.user, 'profile') or request.user.profile.status != 'Teacher' or request.user.profile != exam.course.teacher.profile:
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user.profile == exam.course.teacher.profile) and not (is_admin or request.user.is_superuser):
         return HttpResponseForbidden("ليس لديك صلاحية إضافة أسئلة لهذا الاختبار")
     
     # Prepare context with user profile and student data
@@ -313,8 +316,11 @@ def edit_question(request, question_id):
     question = get_object_or_404(ExamQuestion, id=question_id)
     exam = question.exam
     
-    # Check if user is the course teacher through profile
-    if not hasattr(request.user, 'profile') or request.user.profile.status != 'Teacher' or request.user.profile != exam.course.teacher.profile:
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user.profile == exam.course.teacher.profile) and not (is_admin or request.user.is_superuser):
         return HttpResponseForbidden("ليس لديك صلاحية تعديل هذا السؤال")
     
     # Get existing answers
@@ -398,8 +404,11 @@ def delete_question(request, question_id):
     question = get_object_or_404(ExamQuestion, id=question_id)
     exam = question.exam
     
-    # Check if user is the course teacher through profile
-    if not hasattr(request.user, 'profile') or request.user.profile.status != 'Teacher' or request.user.profile != exam.course.teacher.profile:
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user.profile == exam.course.teacher.profile) and not (is_admin or request.user.is_superuser):
         return HttpResponseForbidden("ليس لديك صلاحية حذف هذا السؤال")
     
     if request.method == 'POST':
@@ -421,8 +430,11 @@ def reorder_questions(request, exam_id):
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         exam = get_object_or_404(Exam, id=exam_id)
         
-        # Check if user is the course teacher
-        if request.user != exam.course.teacher:
+        # Check if user is the course teacher or admin
+        is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+        is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+        
+        if not (is_teacher and request.user.profile == exam.course.teacher.profile) and not (is_admin or request.user.is_superuser):
             return JsonResponse({'status': 'error', 'message': 'ليس لديك صلاحية تعديل هذا الاختبار'}, status=403)
         
         # Get the new order from the request
@@ -548,7 +560,7 @@ def student_exams(request, course_id):
         'course': course,
         'exams': available_exams,  # Changed from available_exams to match template
         'profile': request.user.profile,
-        'student': request.user,
+        'student': request.user.student if hasattr(request.user, 'student') else None,
         'now': timezone.now(),  # Add current time for template comparisons
     }
     return render(request, 'website/exams/student_exams.html', context)
@@ -705,8 +717,11 @@ def grade_short_answers(request, attempt_id):
     attempt = get_object_or_404(UserExamAttempt, id=attempt_id)
     exam = attempt.exam
     
-    # Check if user is the course teacher through profile
-    if not hasattr(request.user, 'profile') or request.user.profile.status != 'Teacher' or request.user.profile != exam.course.teacher.profile:
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user.profile == exam.course.teacher.profile) and not (is_admin or request.user.is_superuser):
         return HttpResponseForbidden("ليس لديك صلاحية تقييم هذا الاختبار")
     
     # Get short answer questions
@@ -749,8 +764,11 @@ def teacher_exam_attempts(request, exam_id):
     """View for teachers to see all attempts for an exam"""
     exam = get_object_or_404(Exam, id=exam_id)
     
-    # Check if user is the course teacher through profile
-    if not hasattr(request.user, 'profile') or request.user.profile.status != 'Teacher' or request.user.profile != exam.course.teacher.profile:
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user.profile == exam.course.teacher.profile) and not (is_admin or request.user.is_superuser):
         return HttpResponseForbidden("ليس لديك صلاحية عرض محاولات هذا الاختبار")
     
     # Get all attempts for this exam

@@ -394,31 +394,29 @@ def _process_quiz_questions(request, quiz, module_prefix):
 def delete_course(request):
     if request.method == 'POST':
         try:
-            # Try to parse JSON data (for AJAX requests)
-            if request.content_type == 'application/json':
-                data = json.loads(request.body)
-                course_id = data.get('course_id')
-            else:
-                # Handle form data (for regular form submissions)
-                course_id = request.POST.get('course_id')
-                
+            data = json.loads(request.body)
+            course_id = data.get('course_id')
+            
             if not course_id:
                 return JsonResponse({'error': 'Course ID is required'}, status=400)
                 
             course = get_object_or_404(Course, id=course_id)
             
-            # Check if user has permission to delete this course
-            if hasattr(request.user, 'profile') and hasattr(course, 'teacher') and course.teacher.profile == request.user.profile:
-                course.delete()
-                if request.content_type == 'application/json':
-                    return JsonResponse({'success': True, 'message': 'Course deleted successfully'})
-                else:
-                    return redirect('dashboard')
-            else:
+            # Check if user has permission to delete this course (teacher or admin)
+            is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+            is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+            
+            if not (is_teacher and hasattr(course, 'teacher') and course.teacher.profile == request.user.profile) and not (is_admin or request.user.is_superuser):
                 if request.content_type == 'application/json':
                     return JsonResponse({'error': 'Permission denied'}, status=403)
                 else:
                     return redirect('course_detail', course_id=course_id)
+            
+            course.delete()
+            if request.content_type == 'application/json':
+                return JsonResponse({'success': True, 'message': 'Course deleted successfully'})
+            else:
+                return redirect('dashboard')
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
         except Exception as e:
@@ -444,7 +442,12 @@ from datetime import datetime, timedelta
 
 def create_quiz(request, video_id):
     video = Video.objects.get(id=video_id)
-    if request.user.profile != video.module.course.teacher.profile:
+    
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user.profile == video.module.course.teacher.profile) and not (is_admin or request.user.is_superuser):
         return HttpResponse('You do not have permission to access this page')
     if request.method == 'POST':
         pass_mark = request.POST.get('pass_mark')

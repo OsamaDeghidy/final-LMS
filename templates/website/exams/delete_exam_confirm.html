@@ -31,7 +31,7 @@
                             {% if exam.module %}
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
                                     <span>الوحدة</span>
-                                    <span>{{ exam.module.title }}</span>
+                                    <span>{{ exam.module.name }}</span>
                                 </li>
                             {% endif %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -40,7 +40,7 @@
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <span>عدد المحاولات</span>
-                                <span>{{ exam.attempts.count }}</span>
+                                <span>{{ exam.user_attempts.count }}</span>
                             </li>
                         </ul>
                     </div>
@@ -51,7 +51,7 @@
                             <li>الاختبار نفسه</li>
                             <li>جميع الأسئلة المرتبطة به ({{ exam.questions.count }} سؤال)</li>
                             <li>جميع الإجابات المرتبطة بالأسئلة</li>
-                            <li>جميع محاولات الطلاب لهذا الاختبار ({{ exam.attempts.count }} محاولة)</li>
+                            <li>جميع محاولات الطلاب لهذا الاختبار ({{ exam.user_attempts.count }} محاولة)</li>
                         </ul>
                     </div>
                     
@@ -71,4 +71,4 @@
         </div>
     </div>
 </div>
-{% endblock dashboard_content %}
+{% endblock dashboard_content %} 

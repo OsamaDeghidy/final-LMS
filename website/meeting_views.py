@@ -130,8 +130,10 @@ def meeting_update(request, pk):
     """View for updating an existing meeting"""
     meeting = get_object_or_404(Meeting, pk=pk)
     
-    # Check if user has permission to edit
-    if meeting.creator != request.user and not request.user.is_superuser:
+    # Check if user has permission to edit (creator, admin, or superuser)
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if meeting.creator != request.user and not is_admin and not request.user.is_superuser:
         return HttpResponseForbidden("ليس لديك صلاحية لتعديل هذا الاجتماع")
     
     if request.method == 'POST':
@@ -166,8 +168,10 @@ def meeting_delete(request, pk):
     """View for deleting a meeting"""
     meeting = get_object_or_404(Meeting, pk=pk)
     
-    # Check if user has permission to delete
-    if meeting.creator != request.user and not request.user.is_superuser:
+    # Check if user has permission to delete (creator, admin, or superuser)
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if meeting.creator != request.user and not is_admin and not request.user.is_superuser:
         return HttpResponseForbidden("ليس لديك صلاحية لحذف هذا الاجتماع")
     
     if request.method == 'POST':

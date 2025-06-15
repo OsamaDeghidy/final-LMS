@@ -990,8 +990,11 @@ def create_course(request):
 def update_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
-    # Check if user is the course teacher
-    if request.user != course.teacher.profile.user:
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user == course.teacher.profile.user) and not (is_admin or request.user.is_superuser):
         messages.error(request, _('You do not have permission to edit this course.'))
         return redirect('course')
     
@@ -1203,7 +1206,7 @@ def update_course(request, course_id):
                             if q.get('text'):
                                 q_type_map = {
                                     'multiple_choice': 'multiple_choice',
-                                    'true_false': 'true_false', 
+                                    'true_false': 'true_false',
                                     'short_answer': 'short_answer'
                                 }
                                 
@@ -1308,8 +1311,11 @@ def delete_course(request):
         course_id = request.POST.get('course_id')
         course = get_object_or_404(Course, id=course_id)
         
-        # Check if user is the course teacher
-        if request.user != course.teacher.profile.user:
+        # Check if user is the course teacher or admin
+        is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+        is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+        
+        if not (is_teacher and request.user == course.teacher.profile.user) and not (is_admin or request.user.is_superuser):
             messages.error(request, _('You do not have permission to delete this course.'))
             return redirect('course')
         
@@ -1323,8 +1329,11 @@ def delete_course(request):
 def create_module(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
-    # Check if user is the course teacher
-    if request.user != course.teacher.profile.user:
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user == course.teacher.profile.user) and not (is_admin or request.user.is_superuser):
         messages.error(request, _('You do not have permission to add modules to this course.'))
         return redirect('course')
     
@@ -1352,8 +1361,11 @@ def update_module(request, course_id, module_id):
     course = get_object_or_404(Course, id=course_id)
     module = get_object_or_404(Module, id=module_id, course=course)
     
-    # Check if user is the course teacher
-    if request.user != course.teacher.profile.user:
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'  
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user == course.teacher.profile.user) and not (is_admin or request.user.is_superuser):
         messages.error(request, _('You do not have permission to edit this module.'))
         return redirect('course')
     
@@ -1375,8 +1387,11 @@ def delete_module(request, course_id, module_id):
     course = get_object_or_404(Course, id=course_id)
     module = get_object_or_404(Module, id=module_id, course=course)
     
-    # Check if user is the course teacher
-    if request.user != course.teacher.profile.user:
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user == course.teacher.profile.user) and not (is_admin or request.user.is_superuser):
         messages.error(request, _('You do not have permission to delete this module.'))
         return redirect('course')
     
@@ -1694,8 +1709,11 @@ def create_quiz(request, video_id):
     video = get_object_or_404(Video, id=video_id)
     course = video.module.course
     
-    # Check if user is the course teacher
-    if request.user != course.teacher.profile.user:
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user == course.teacher.profile.user) and not (is_admin or request.user.is_superuser):
         messages.error(request, _('You do not have permission to create quizzes for this course.'))
         return redirect('course')
     
@@ -1746,8 +1764,11 @@ def update_quiz(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
     course = quiz.course
     
-    # Check if user is the course teacher
-    if request.user != course.teacher.profile.user:
+    # Check if user is the course teacher or admin
+    is_teacher = hasattr(request.user, 'profile') and request.user.profile.status == 'Teacher'
+    is_admin = hasattr(request.user, 'profile') and request.user.profile.status == 'Admin'
+    
+    if not (is_teacher and request.user == course.teacher.profile.user) and not (is_admin or request.user.is_superuser):
         messages.error(request, _('You do not have permission to edit this quiz.'))
         return redirect('course')
     
