@@ -38,7 +38,9 @@
                     {% endif %}
                     تأكد من أنك في مكان هادئ وجاهز للبدء.
                 </p>
-                <button type="button" class="btn btn-primary btn-lg start-quiz-btn" data-quiz-id="{{ current_content.content.id }}">
+                <button type="button" class="btn btn-primary btn-lg start-quiz-btn" 
+                        data-quiz-id="{{ current_content.content.id }}"
+                        {% if current_content.content.time_limit %}data-time-limit="{{ current_content.content.time_limit }}"{% endif %}>
                     <i class="fas fa-play me-2"></i>بدء الاختبار
                 </button>
             </div>
@@ -109,6 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (startBtn) {
         startBtn.addEventListener('click', function() {
             const quizId = this.dataset.quizId;
+            const timeLimit = this.dataset.timeLimit;
             const questionsDiv = document.getElementById('quiz-questions-' + quizId);
             
             // Hide start panel and show questions
@@ -116,14 +119,11 @@ document.addEventListener('DOMContentLoaded', function() {
             questionsDiv.style.display = 'block';
             
             // Start timer if time limit exists
-            const timerElement = document.getElementById('quiz-timer-' + quizId);
-            if (timerElement) {
-                {% if current_content.content.time_limit %}
-                const timeLimit = {{ current_content.content.time_limit }};
-                if (timeLimit > 0) {
-                    startQuizTimer(quizId, timeLimit);
+            if (timeLimit && timeLimit > 0) {
+                const timerElement = document.getElementById('quiz-timer-' + quizId);
+                if (timerElement) {
+                    startQuizTimer(quizId, parseInt(timeLimit));
                 }
-                {% endif %}
             }
         });
     }
@@ -132,6 +132,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function startQuizTimer(quizId, timeLimit) {
     let timeLeft = timeLimit * 60; // Convert to seconds
     const timerElement = document.getElementById('quiz-timer-' + quizId);
+    
+    if (!timerElement) return;
     
     const timer = setInterval(function() {
         const minutes = Math.floor(timeLeft / 60);
@@ -142,7 +144,10 @@ function startQuizTimer(quizId, timeLimit) {
         if (timeLeft <= 0) {
             clearInterval(timer);
             // Auto submit quiz
-            document.getElementById('quiz-form-' + quizId).submit();
+            const quizForm = document.getElementById('quiz-form-' + quizId);
+            if (quizForm) {
+                quizForm.submit();
+            }
         }
         
         timeLeft--;
