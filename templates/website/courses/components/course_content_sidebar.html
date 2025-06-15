@@ -625,22 +625,13 @@
                     // Update completion stats
                     updateCompletionStats();
                     
-                    // Show success message with progress
+                    // Show success message with progress and next content option
                     showSuccessMessage(`🎉 تم تسجيل تقدمك! النسبة الآن: ${data.progress.toFixed(1)}%`);
                     
-                    // Auto-redirect to next content after a delay (like quiz behavior)
-                    setTimeout(() => {
-                        // Use the original content type for redirect navigation
-                        let originalContentType = data.content_type || contentType;
-                        if (originalContentType === 'module_video') {
-                            originalContentType = 'video';
-                        } else if (originalContentType === 'module_pdf') {
-                            originalContentType = 'pdf';
-                        } else if (originalContentType === 'module_note') {
-                            originalContentType = 'note';
-                        }
-                        redirectToNextContent(originalContentType, data.content_id || contentId);
-                    }, 2000);
+                    // Show next content button instead of auto-redirect
+                    showNextContentButton(data.content_type || contentType, data.content_id || contentId);
+                    
+                    console.log('✅ Content marked successfully, user can navigate manually');
                 } else {
                     console.log('⚠️ No progress data received');
                     showSuccessMessage('تم تسجيل المحتوى ولكن لم يتم تحديث النسبة');
@@ -690,6 +681,120 @@
                 }
             }, 300);
         }, 3000);
+    }
+    
+    // Function to show next content button
+    function showNextContentButton(currentType, currentId) {
+        // Find next content
+        const allContentItems = document.querySelectorAll('.content-item[data-content-type]');
+        const contentArray = Array.from(allContentItems);
+        
+        // Map types for comparison
+        let searchType = currentType;
+        if (currentType === 'module_video') {
+            searchType = 'video';
+        } else if (currentType === 'module_pdf') {
+            searchType = 'pdf';
+        } else if (currentType === 'module_note') {
+            searchType = 'note';
+        }
+        
+        // Find current item index
+        let currentIndex = -1;
+        for (let i = 0; i < contentArray.length; i++) {
+            const item = contentArray[i];
+            const itemType = item.getAttribute('data-content-type');
+            const itemId = item.getAttribute('data-content-id');
+            
+            if (itemType === searchType && itemId === currentId) {
+                currentIndex = i;
+                break;
+            }
+        }
+        
+        // Get next content item
+        if (currentIndex >= 0 && currentIndex < contentArray.length - 1) {
+            const nextItem = contentArray[currentIndex + 1];
+            const nextUrl = nextItem.getAttribute('href');
+            const nextTitle = nextItem.querySelector('.content-name')?.textContent || 'المحتوى التالي';
+            
+            if (nextUrl) {
+                // Create next content notification
+                const nextButton = document.createElement('div');
+                nextButton.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: #3b82f6;
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+                    z-index: 9999;
+                    font-weight: 500;
+                    transform: translateY(100%);
+                    transition: all 0.3s ease;
+                    cursor: pointer;
+                    max-width: 300px;
+                    border: none;
+                `;
+                
+                nextButton.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="fas fa-arrow-left"></i>
+                        <div>
+                            <div style="font-size: 0.9rem; margin-bottom: 0.25rem;">المحتوى التالي:</div>
+                            <div style="font-size: 0.85rem; opacity: 0.9;">${nextTitle}</div>
+                        </div>
+                    </div>
+                `;
+                
+                nextButton.addEventListener('click', () => {
+                    window.location.href = nextUrl;
+                });
+                
+                // Add close button
+                const closeBtn = document.createElement('span');
+                closeBtn.innerHTML = '&times;';
+                closeBtn.style.cssText = `
+                    position: absolute;
+                    top: 0.5rem;
+                    left: 0.75rem;
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                    opacity: 0.7;
+                `;
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    nextButton.style.transform = 'translateY(100%)';
+                    setTimeout(() => {
+                        if (nextButton.parentNode) {
+                            nextButton.parentNode.removeChild(nextButton);
+                        }
+                    }, 300);
+                });
+                
+                nextButton.appendChild(closeBtn);
+                document.body.appendChild(nextButton);
+                
+                // Show button
+                setTimeout(() => {
+                    nextButton.style.transform = 'translateY(0)';
+                }, 100);
+                
+                // Auto-hide after 10 seconds
+                setTimeout(() => {
+                    if (nextButton.parentNode) {
+                        nextButton.style.transform = 'translateY(100%)';
+                        setTimeout(() => {
+                            if (nextButton.parentNode) {
+                                nextButton.parentNode.removeChild(nextButton);
+                            }
+                        }, 300);
+                    }
+                }, 10000);
+            }
+        }
     }
     
     // Function to track video progress

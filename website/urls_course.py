@@ -10,7 +10,6 @@ urlpatterns = [
     path('course/', views_course.course, name='course'),
     path('allcourses/', views_course.allcourses, name='allcourses'),
     path('course-category/<str:category_slug>/', views_course.course_category, name='course_category'),
-    path('course/<int:course_id>/add-comment/', views_course.add_comment, name='add_comment'),
     
     # Course modules management
     path('create_module/<int:course_id>/', views_course.create_module, name='create_module'),
