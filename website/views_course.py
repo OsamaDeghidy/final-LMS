@@ -23,6 +23,97 @@ from .models import (
 from user.models import Profile, Student, Organization, Teacher
 from .utils_course import searchCourses, update_enrollment_progress, mark_content_completed, get_completed_content_ids, get_user_course_progress, get_user_enrolled_courses, ensure_course_has_module
 
+def find_next_content_url(course, current_type, current_id, user):
+    """Find the next content item after the current one"""
+    try:
+        # Get all modules for this course with prefetch for better performance
+        modules = Module.objects.filter(course=course).order_by('number')
+        
+        # Build navigation for next content
+        all_content = []
+        
+        for module in modules:
+            # Add video content
+            if module.video:
+                all_content.append({
+                    'type': 'module_video',
+                    'id': str(module.id),
+                    'url': f'/courseviewpage/{course.id}/?content_type=module_video&content_id={module.id}',
+                    'title': f'فيديو: {module.name}'
+                })
+            
+            # Add PDF content
+            if module.pdf:
+                all_content.append({
+                    'type': 'module_pdf', 
+                    'id': str(module.id),
+                    'url': f'/courseviewpage/{course.id}/?content_type=module_pdf&content_id={module.id}',
+                    'title': f'PDF: {module.name}'
+                })
+            
+            # Add notes content
+            if module.note:
+                all_content.append({
+                    'type': 'module_note',
+                    'id': str(module.id),
+                    'url': f'/courseviewpage/{course.id}/?content_type=module_note&content_id={module.id}',
+                    'title': f'ملاحظات: {module.name}'
+                })
+            
+            # Add module quizzes
+            for quiz in module.module_quizzes.filter(is_active=True).order_by('created_at'):
+                all_content.append({
+                    'type': 'quiz',
+                    'id': str(quiz.id),
+                    'url': f'/courseviewpage/{course.id}/?content_type=quiz&content_id={quiz.id}',
+                    'title': quiz.title or f'اختبار: {module.name}'
+                })
+            
+            # Add module assignments
+            for assignment in module.module_assignments.filter(is_active=True).order_by('created_at'):
+                all_content.append({
+                    'type': 'assignment',
+                    'id': str(assignment.id),
+                    'url': f'/courseviewpage/{course.id}/?content_type=assignment&content_id={assignment.id}',
+                    'title': assignment.title
+                })
+        
+        # Add course-level quizzes
+        for quiz in course.course_quizzes.filter(is_active=True).order_by('created_at'):
+            all_content.append({
+                'type': 'quiz',
+                'id': str(quiz.id),
+                'url': f'/courseviewpage/{course.id}/?content_type=quiz&content_id={quiz.id}',
+                'title': quiz.title
+            })
+        
+        # Add course-level assignments
+        for assignment in course.assignments.filter(is_active=True).order_by('created_at'):
+            all_content.append({
+                'type': 'assignment',
+                'id': str(assignment.id),
+                'url': f'/courseviewpage/{course.id}/?content_type=assignment&content_id={assignment.id}',
+                'title': assignment.title
+            })
+        
+        # Find current content index
+        current_index = -1
+        for i, content in enumerate(all_content):
+            if content['type'] == current_type and content['id'] == str(current_id):
+                current_index = i
+                break
+        
+        # Get next content
+        if current_index >= 0 and current_index < len(all_content) - 1:
+            next_content = all_content[current_index + 1]
+            return next_content['url']
+        
+        return None
+        
+    except Exception as e:
+        print(f"Error finding next content: {e}")
+        return None
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -110,7 +201,22 @@ def courseviewpage(request, course_id):
     enrollment.last_accessed = timezone.now()
     enrollment.save(update_fields=['last_accessed'])
     
-    # Get completed content IDs for progress tracking
+    # ============ استخدام نظام Progress الجديد ============
+    # Get user progress using the new system
+    try:
+        user_progress = course.get_user_progress(request.user)
+        progress_percentage = user_progress.overall_progress
+        modules_with_progress = course.get_modules_with_progress(request.user)
+        next_module = course.get_next_module_for_user(request.user)
+    except Exception as e:
+        logger.error(f"Error getting progress for user {request.user.id} in course {course_id}: {e}")
+        # Fallback to old system
+        progress_percentage = enrollment.progress or 0
+        modules_with_progress = []
+        next_module = None
+    
+    # ============ نظام المحتوى المحسن ============
+    # Get completed content IDs for progress tracking (keep for backward compatibility)
     completed_videos = get_completed_content_ids(request.user, course, 'video')
     completed_notes = get_completed_content_ids(request.user, course, 'note')
     completed_assignments = get_completed_content_ids(request.user, course, 'assignment')
@@ -146,19 +252,23 @@ def courseviewpage(request, course_id):
     # Calculate total reading materials (PDFs + Notes)
     total_reading = total_pdfs + total_notes
     
-    # Calculate progress more accurately
+    # Calculate progress more accurately (backup calculation)
     total_content = total_videos + total_reading + total_quizzes + assignments_count
     completed_content = (len(completed_videos) + len(completed_notes) + 
                         len(completed_pdfs) + len(completed_quizzes) + 
                         len(completed_assignments))
     
     if total_content > 0:
-        progress = (completed_content / total_content) * 100
+        fallback_progress = (completed_content / total_content) * 100
     else:
-        progress = 0
+        fallback_progress = 0
+    
+    # Use new progress system, fallback to old calculation if needed
+    if progress_percentage is None or progress_percentage == 0:
+        progress_percentage = fallback_progress
     
     # Update enrollment progress
-    enrollment.progress = progress
+    enrollment.progress = progress_percentage
     enrollment.save(update_fields=['progress'])
     
     # Check if specific content is requested via URL parameters
@@ -169,6 +279,7 @@ def courseviewpage(request, course_id):
     next_content = None
     prev_content = None
     first_available_content = None
+    current_module_progress = None
     
     if content_type and content_id:
         try:
@@ -183,6 +294,8 @@ def courseviewpage(request, course_id):
                         'pdf_url': module.pdf.url,
                         'pdf_title': module.name or f'الوحدة {module.number} - PDF'
                     }
+                    # Get module progress for this user
+                    current_module_progress = module.get_user_progress(request.user)
                 else:
                     messages.error(request, _('PDF file not found for this module.'))
                     
@@ -197,6 +310,8 @@ def courseviewpage(request, course_id):
                         'video_url': module.video.url,
                         'video_title': module.name or f'الوحدة {module.number} - فيديو'
                     }
+                    # Get module progress for this user
+                    current_module_progress = module.get_user_progress(request.user)
                 else:
                     messages.error(request, _('Video file not found for this module.'))
                     
@@ -211,6 +326,8 @@ def courseviewpage(request, course_id):
                         'note_content': module.note,
                         'note_title': module.name or f'الوحدة {module.number} - ملاحظات'
                     }
+                    # Get module progress for this user
+                    current_module_progress = module.get_user_progress(request.user)
                 else:
                     messages.error(request, _('Notes not found for this module.'))
                     
@@ -229,6 +346,10 @@ def courseviewpage(request, course_id):
                     'user_attempts': user_attempts,
                     'quiz_started': quiz_started
                 }
+                
+                # Get module progress if quiz is module-specific
+                if quiz.module:
+                    current_module_progress = quiz.module.get_user_progress(request.user)
                 
             elif content_type == 'assignment':
                 # Get the assignment
@@ -250,6 +371,10 @@ def courseviewpage(request, course_id):
                     'assignment': assignment,
                     'user_submission': user_submission
                 }
+                
+                # Get module progress if assignment is module-specific
+                if assignment.module:
+                    current_module_progress = assignment.module.get_user_progress(request.user)
                 
             elif content_type == 'final_exam':
                 # Get the final exam
@@ -420,7 +545,7 @@ def courseviewpage(request, course_id):
         'current_content': current_content,
         'next_content': next_content,
         'prev_content': prev_content,
-        'progress': progress,
+        'progress': progress_percentage,
         'total_videos': total_videos,
         'total_notes': total_reading,  # Combined reading materials
         'total_quizzes': total_quizzes,
@@ -431,6 +556,7 @@ def courseviewpage(request, course_id):
         # Additional statistics for better display
         'course_quizzes': course_quizzes,
         'course_assignments': course_assignments,
+        'assignments': course_assignments,  # Required for sidebar
         'enrollment_date': enrollment.enrollment_date,
         'last_accessed': enrollment.last_accessed,
         # Discussion section
@@ -440,7 +566,8 @@ def courseviewpage(request, course_id):
         'user_submission': current_content.get('user_submission') if current_content and current_content.get('type') == 'assignment' else None,
         'user_attempt': current_content.get('user_attempts')[0] if current_content and current_content.get('type') == 'final_exam' and current_content.get('user_attempts') else None,
         'quiz_started': current_content.get('quiz_started', False) if current_content and current_content.get('type') == 'quiz' else False,
-        'user_attempts': len(current_content.get('user_attempts', [])) if current_content and current_content.get('type') == 'quiz' else 0
+        'user_attempts': len(current_content.get('user_attempts', [])) if current_content and current_content.get('type') == 'quiz' else 0,
+        'current_module_progress': current_module_progress
     }
     
     return render(request, 'website/courses/courseviewpage.html', context)
@@ -1320,65 +1447,91 @@ def mark_video_watched(request, video_id):
     })
 
 @login_required
-@require_POST
+@require_POST  
 def mark_content_viewed(request, content_type, content_id):
-    # Get the course based on content type and ID
-    course = None
-    
-    if content_type == 'video':
-        video = get_object_or_404(Video, id=content_id)
-        course = video.module.course
-    elif content_type == 'note':
-        note = get_object_or_404(Notes, id=content_id)
-        course = note.module.course
-    elif content_type == 'assignment':
-        assignment = get_object_or_404(Assignment, id=content_id)
-        course = assignment.course
-    elif content_type == 'quiz':
-        quiz = get_object_or_404(Quiz, id=content_id)
-        course = quiz.course
-    elif content_type == 'pdf':
-        # Handle different PDF types (module PDF, course PDF, etc)
-        if content_id.startswith('module_pdf_'):
-            module_id = content_id.replace('module_pdf_', '')
-            module = get_object_or_404(Module, id=module_id)
-            course = module.course
-        elif content_id.startswith('course_syllabus_'):
-            course_id = content_id.replace('course_syllabus_', '')
-            course = get_object_or_404(Course, id=course_id)
-        elif content_id.startswith('course_materials_'):
-            course_id = content_id.replace('course_materials_', '')
-            course = get_object_or_404(Course, id=course_id)
-        else:
-            # Try to handle as a module PDF directly
-            try:
-                module = get_object_or_404(Module, id=content_id)
-                course = module.course
-            except:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': _('Invalid PDF content ID')
-                }, status=400)
-    else:
-        return JsonResponse({
-            'status': 'error',
-            'message': _('Invalid content type')
-        }, status=400)
-    
-    if not course:
-        return JsonResponse({
-            'status': 'error',
-            'message': _('Could not determine course for this content')
-        }, status=400)
+    """Enhanced content tracking for all module content types"""
+    try:
+        course = None
         
-    # Mark content as completed
-    progress = mark_content_completed(request.user, course, content_type, content_id)
-    
-    return JsonResponse({
-        'status': 'success',
-        'message': _('Content marked as viewed'),
-        'progress': progress
-    })
+        # Handle different content types
+        if content_type == 'module_video':
+            # Module video - get course from module
+            module = get_object_or_404(Module, id=content_id)
+            course = module.course
+            # Mark as video content for tracking
+            track_type = 'video'
+            track_id = f'module_video_{content_id}'
+            
+        elif content_type == 'module_pdf':
+            # Module PDF - get course from module  
+            module = get_object_or_404(Module, id=content_id)
+            course = module.course
+            track_type = 'pdf'
+            track_id = f'module_pdf_{content_id}'
+            
+        elif content_type == 'module_note':
+            # Module notes - get course from module
+            module = get_object_or_404(Module, id=content_id)
+            course = module.course
+            track_type = 'note'
+            track_id = f'module_note_{content_id}'
+            
+        elif content_type == 'quiz':
+            # Quiz - can be module or course level
+            quiz = get_object_or_404(Quiz, id=content_id)
+            course = quiz.course
+            track_type = 'quiz'
+            track_id = content_id
+            
+        elif content_type == 'assignment':
+            # Assignment - can be module or course level
+            assignment = get_object_or_404(Assignment, id=content_id)
+            course = assignment.course
+            track_type = 'assignment' 
+            track_id = content_id
+            
+        else:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Invalid content type: {content_type}'
+            }, status=400)
+        
+        # Check enrollment
+        try:
+            enrollment = Enrollment.objects.get(course=course, student=request.user)
+        except Enrollment.DoesNotExist:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'You are not enrolled in this course'
+            }, status=403)
+        
+        # Mark content as completed
+        print(f"[DEBUG] Marking {track_type} {track_id} as completed for {request.user.username}")
+        progress_percentage = mark_content_completed(request.user, course, track_type, track_id)
+        
+        # Update enrollment progress
+        enrollment.progress = progress_percentage
+        enrollment.save(update_fields=['progress'])
+        
+        print(f"[DEBUG] Updated progress to {progress_percentage}% for {request.user.username}")
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Content marked as viewed successfully',
+            'progress': progress_percentage,
+            'content_type': content_type,
+            'content_id': content_id
+        })
+        
+    except Exception as e:
+        print(f"[ERROR] Error in mark_content_viewed: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Server error: {str(e)}'
+        }, status=500)
 
 @login_required
 @require_POST
@@ -1682,8 +1835,19 @@ def submit_quiz(request):
                 'progress': progress
             })
         else:
-            messages.success(request, f'تم تسليم الاختبار بنجاح! نتيجتك: {score:.1f}%')
-            return redirect('courseviewpage', course_id=course.id)
+            # Success message based on result
+            if passed:
+                messages.success(request, f'🎉 مبروك! نجحت في الاختبار بدرجة {score:.1f}%')
+            else:
+                messages.warning(request, f'⚠️ لم تحقق الدرجة المطلوبة. حصلت على {score:.1f}% والمطلوب {quiz.pass_mark}%')
+            
+            # Find next content to redirect to
+            next_content_url = find_next_content_url(course, 'quiz', quiz_id, request.user)
+            if next_content_url:
+                return redirect(next_content_url)
+            else:
+                # If no next content, go back to course with current content highlighted
+                return redirect(f'/courseviewpage/{course.id}/?content_type=quiz&content_id={quiz_id}')
             
     except Exception as e:
         logger.error(f"Error submitting quiz: {e}")

@@ -6,6 +6,8 @@ from django.utils.translation import gettext as _
 from . import views, views_course
 from django.conf import settings
 from django.conf.urls.static import static
+# Import progress helper function
+from progress_helpers import track_progress_view
 
 urlpatterns = [
     path('', views.index, name='index'),
@@ -49,7 +51,12 @@ urlpatterns = [
     path('api/<str:content_type>/<int:content_id>/mark-viewed/', views.mark_content_viewed, name='mark_content_viewed'),
     path('api/<str:content_type>/<int:content_id>/mark-completed/', views.mark_content_viewed, name='mark_content_completed'),
     path('api/assignment/<int:assignment_id>/mark-completed/', views.mark_assignment_completed, name='mark_assignment_completed'),
-
+    
+    # Progress tracking endpoint
+    path('track-progress/', track_progress_view, name='track_progress'),
+    path('mark-content-viewed/<str:content_type>/<str:content_id>/', views_course.mark_content_viewed, name='mark_content_viewed'),
+    # Recalculate progress endpoint
+    path('api/course/<int:course_id>/recalculate-progress/', views_course.recalculate_progress, name='recalculate_progress'),
 
 ]
 

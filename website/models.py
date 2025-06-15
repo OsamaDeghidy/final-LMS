@@ -82,6 +82,59 @@ class Course(models.Model):
     def save(self, *args, **kwargs):
         # First save the course if it's a new instance
         super().save(*args, **kwargs)
+        
+    def get_user_progress(self, user):
+        """Get user's progress in this course"""
+        try:
+            return UserProgress.objects.get(user=user, course=self)
+        except UserProgress.DoesNotExist:
+            # Create progress if doesn't exist
+            return UserProgress.objects.create(user=user, course=self)
+    
+    def get_user_progress_percentage(self, user):
+        """Get user's progress percentage in this course"""
+        progress = self.get_user_progress(user)
+        return progress.overall_progress
+    
+    def is_user_enrolled(self, user):
+        """Check if user is enrolled in this course"""
+        return self.enroller_user.filter(id=user.id).exists()
+    
+    def get_modules_with_progress(self, user):
+        """Get all modules with user's progress"""
+        modules = self.module_set.all().order_by('number')
+        modules_with_progress = []
+        
+        for module in modules:
+            try:
+                progress = ModuleProgress.objects.get(user=user, module=module)
+            except ModuleProgress.DoesNotExist:
+                progress = None
+            
+            modules_with_progress.append({
+                'module': module,
+                'progress': progress,
+                'completed': progress.is_completed if progress else False,
+                'percentage': progress.get_completion_percentage() if progress else 0
+            })
+        
+        return modules_with_progress
+    
+    def get_next_module_for_user(self, user):
+        """Get the next incomplete module for the user"""
+        modules = self.module_set.all().order_by('number')
+        
+        for module in modules:
+            try:
+                progress = ModuleProgress.objects.get(user=user, module=module)
+                if not progress.is_completed:
+                    return module
+            except ModuleProgress.DoesNotExist:
+                # Return first module without progress
+                return module
+        
+        return None  # All modules completed
+    
     def __str__(self):
         return self.name
 
@@ -107,7 +160,20 @@ class Enrollment(models.Model):
         # Update the course's enrolled users count
         if not self.pk:  # If this is a new enrollment
             self.course.enroller_user.add(self.student)
+            
         super().save(*args, **kwargs)
+        
+        # Create UserProgress if this is a new enrollment
+        if not self.pk or not hasattr(self, '_user_progress_created'):
+            try:
+                user_progress, created = UserProgress.objects.get_or_create(
+                    user=self.student,
+                    course=self.course
+                )
+                if created:
+                    self._user_progress_created = True
+            except Exception as e:
+                print(f"Error creating UserProgress: {e}")
 
     def __str__(self):
         return f"{self.course.name} - {self.student.username}"
@@ -168,6 +234,73 @@ class Module(models.Model):
             if os.path.isfile(self.pdf.path):
                 os.remove(self.pdf.path)
         super().delete(*args, **kwargs)
+    
+    def get_user_progress(self, user):
+        """Get user's progress for this module"""
+        return ModuleProgress.get_or_create_progress(user, self)
+    
+    def mark_content_as_viewed(self, user, content_type):
+        """Mark specific content as viewed for user"""
+        progress = self.get_user_progress(user)
+        
+        if content_type == 'video':
+            progress.mark_video_watched()
+        elif content_type == 'pdf':
+            progress.mark_pdf_viewed()
+        elif content_type == 'note':
+            progress.mark_notes_read()
+        elif content_type == 'quiz':
+            progress.mark_quiz_completed()
+    
+    def is_completed_by_user(self, user):
+        """Check if this module is completed by the user"""
+        try:
+            progress = ModuleProgress.objects.get(user=user, module=self)
+            return progress.is_completed
+        except ModuleProgress.DoesNotExist:
+            return False
+    
+    def get_completion_percentage_for_user(self, user):
+        """Get completion percentage for this module for specific user"""
+        try:
+            progress = ModuleProgress.objects.get(user=user, module=self)
+            return progress.get_completion_percentage()
+        except ModuleProgress.DoesNotExist:
+            return 0
+    
+    def has_content(self):
+        """Check if module has any content"""
+        return any([self.video, self.pdf, self.note, self.module_quizzes.filter(is_active=True).exists()])
+    
+    def get_content_status_for_user(self, user):
+        """Get detailed content status for user"""
+        progress = self.get_user_progress(user)
+        
+        return {
+            'video': {
+                'exists': bool(self.video),
+                'completed': progress.video_watched,
+                'url': self.video.url if self.video else None,
+                'duration': self.video_duration
+            },
+            'pdf': {
+                'exists': bool(self.pdf),
+                'completed': progress.pdf_viewed,
+                'url': self.pdf.url if self.pdf else None
+            },
+            'note': {
+                'exists': bool(self.note),
+                'completed': progress.notes_read,
+                'content': self.note
+            },
+            'quiz': {
+                'exists': self.module_quizzes.filter(is_active=True).exists(),
+                'completed': progress.quiz_completed,
+                'quizzes': list(self.module_quizzes.filter(is_active=True))
+            },
+            'overall_completed': progress.is_completed,
+            'completion_percentage': progress.get_completion_percentage()
+        }
     
     def get_ordered_content(self):
         """
@@ -353,9 +486,28 @@ class ModuleProgress(models.Model):
         verbose_name_plural = 'Module Progress'
 
     def save(self, *args, **kwargs):
-        # Check if all required components are completed
-        required_components = [self.video_watched, self.pdf_viewed, self.notes_read, self.quiz_completed]
-        self.is_completed = all(required_components)
+        # Check if module is completed based on available content
+        # Only count components that actually exist
+        required_components = []
+        
+        if self.module.video:
+            required_components.append(self.video_watched)
+        if self.module.pdf:
+            required_components.append(self.pdf_viewed)
+        if self.module.note:
+            required_components.append(self.notes_read)
+        
+        # Check if there are active quizzes for this module
+        has_quiz = self.module.module_quizzes.filter(is_active=True).exists()
+        if has_quiz:
+            required_components.append(self.quiz_completed)
+        
+        # Module is completed if all available components are completed
+        # If no components exist, consider it completed
+        if required_components:
+            self.is_completed = all(required_components)
+        else:
+            self.is_completed = True
         
         if self.is_completed and not self.completed_at:
             self.completed_at = timezone.now()
@@ -364,13 +516,76 @@ class ModuleProgress(models.Model):
         
         # Update parent UserProgress
         try:
-            user_progress = UserProgress.objects.get(
+            user_progress, created = UserProgress.objects.get_or_create(
                 user=self.user,
                 course=self.module.course
             )
             user_progress.update_progress()
-        except UserProgress.DoesNotExist:
-            pass
+        except Exception as e:
+            print(f"Error updating UserProgress: {e}")
+
+    def mark_video_watched(self):
+        """Mark video as watched"""
+        if not self.video_watched:
+            self.video_watched = True
+            self.save()
+
+    def mark_pdf_viewed(self):
+        """Mark PDF as viewed"""
+        if not self.pdf_viewed:
+            self.pdf_viewed = True
+            self.save()
+
+    def mark_notes_read(self):
+        """Mark notes as read"""
+        if not self.notes_read:
+            self.notes_read = True
+            self.save()
+
+    def mark_quiz_completed(self):
+        """Mark quiz as completed"""
+        if not self.quiz_completed:
+            self.quiz_completed = True
+            self.save()
+
+    @classmethod
+    def get_or_create_progress(cls, user, module):
+        """Get or create progress for a user and module"""
+        progress, created = cls.objects.get_or_create(
+            user=user,
+            module=module
+        )
+        return progress
+
+    def get_completion_percentage(self):
+        """Get completion percentage for this module"""
+        total_components = 0
+        completed_components = 0
+        
+        if self.module.video:
+            total_components += 1
+            if self.video_watched:
+                completed_components += 1
+        
+        if self.module.pdf:
+            total_components += 1
+            if self.pdf_viewed:
+                completed_components += 1
+        
+        if self.module.note:
+            total_components += 1
+            if self.notes_read:
+                completed_components += 1
+        
+        if self.module.module_quizzes.filter(is_active=True).exists():
+            total_components += 1
+            if self.quiz_completed:
+                completed_components += 1
+        
+        if total_components == 0:
+            return 100
+        
+        return (completed_components / total_components) * 100
 
     def __str__(self):
         status = "Completed" if self.is_completed else "In Progress"
@@ -1226,6 +1441,64 @@ class SubCommentLike(models.Model):
     
     def __str__(self):
         return f"{self.user.username} likes {self.subcomment}"
+
+
+# Signals for automatic progress tracking
+@receiver(post_save, sender=Enrollment)
+def create_user_progress_on_enrollment(sender, instance, created, **kwargs):
+    """Create UserProgress when user enrolls in a course"""
+    if created:
+        try:
+            UserProgress.objects.get_or_create(
+                user=instance.student,
+                course=instance.course
+            )
+        except Exception as e:
+            print(f"Error creating UserProgress for enrollment: {e}")
+
+
+# Signal to create course progress stats
+@receiver(post_save, sender=Course)
+def create_course_progress_stats(sender, instance, created, **kwargs):
+    """Create CourseProgress stats when a course is created"""
+    if created:
+        try:
+            CourseProgress.objects.get_or_create(course=instance)
+        except Exception as e:
+            print(f"Error creating CourseProgress stats: {e}")
+
+
+# Signal to update progress when user completes quiz
+@receiver(post_save, sender=QuizAttempt)
+def update_progress_on_quiz_completion(sender, instance, created, **kwargs):
+    """Update module progress when user completes a quiz"""
+    if instance.end_time and instance.passed:  # Quiz is completed and passed
+        try:
+            if instance.quiz.module:
+                progress = ModuleProgress.get_or_create_progress(
+                    instance.user, 
+                    instance.quiz.module
+                )
+                progress.mark_quiz_completed()
+        except Exception as e:
+            print(f"Error updating progress on quiz completion: {e}")
+
+
+# Signal to update progress when user submits assignment
+@receiver(post_save, sender=AssignmentSubmission)
+def update_progress_on_assignment_submission(sender, instance, created, **kwargs):
+    """Update module progress when user submits an assignment"""
+    if created and instance.assignment.module:
+        try:
+            progress = ModuleProgress.get_or_create_progress(
+                instance.user, 
+                instance.assignment.module
+            )
+            # Mark as completed when assignment is submitted
+            # You might want to change this logic based on grading
+            progress.save()  # This will recalculate completion status
+        except Exception as e:
+            print(f"Error updating progress on assignment submission: {e}")
 
 
 

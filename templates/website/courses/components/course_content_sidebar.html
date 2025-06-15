@@ -21,10 +21,14 @@
                         title="إعادة حساب التقدم">
                     <i class="fas fa-sync-alt"></i>
                 </button>
+                <button class="btn btn-sm btn-outline-success ms-1 test-progress-btn" 
+                        title="اختبار التقدم">
+                    <i class="fas fa-play"></i>
+                </button>
                 {% endif %}
             </div>
             <div class="course-progress-sidebar">
-                <div class="progress-fill-sidebar" data-progress="{{ progress }}"></div>
+                <div class="progress-fill-sidebar" data-progress="{{ progress|default:0 }}"></div>
             </div>
             
             <!-- مؤشر المكان الحالي -->
@@ -35,17 +39,23 @@
                     <span class="position-text">أنت هنا:</span>
                 </div>
                 <div class="current-content-info">
-                    {% if current_content.type == 'video' %}
+                    {% if current_content.type == 'module_video' %}
                         <i class="fas fa-play-circle text-primary me-1"></i>
                         {{ current_content.content.name|truncatewords:4 }}
-                    {% elif current_content.type == 'note' %}
+                    {% elif current_content.type == 'module_note' %}
+                        <i class="fas fa-file-alt text-info me-1"></i>
+                        {{ current_content.content.name|truncatewords:4 }}
+                    {% elif current_content.type == 'module_pdf' %}
                         <i class="fas fa-file-pdf text-danger me-1"></i>
-                        {{ current_content.content.description|truncatewords:4 }}
+                        {{ current_content.content.name|truncatewords:4 }}
                     {% elif current_content.type == 'quiz' %}
                         <i class="fas fa-question-circle text-warning me-1"></i>
                         {{ current_content.content.title|truncatewords:4 }}
                     {% elif current_content.type == 'assignment' %}
                         <i class="fas fa-tasks text-success me-1"></i>
+                        {{ current_content.content.title|truncatewords:4 }}
+                    {% elif current_content.type == 'exam' %}
+                        <i class="fas fa-graduation-cap text-primary me-1"></i>
                         {{ current_content.content.title|truncatewords:4 }}
                     {% endif %}
                 </div>
@@ -55,11 +65,15 @@
             <!-- إحصائيات الإكمال -->
             <div class="completion-stats">
                 <div class="stat-card">
-                    <span class="stat-number">{{ completed_videos|length|add:completed_pdfs|length|add:completed_quizzes|length }}</span>
+                    <span class="stat-number">{{ completed_content|default:0 }}</span>
                     <span class="stat-label">مكتمل</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-number">{{ modules|length }}</span>
+                    <span class="stat-number">{{ total_content|default:0 }}</span>
+                    <span class="stat-label">إجمالي</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">{{ modules|length|default:0 }}</span>
                     <span class="stat-label">وحدة</span>
                 </div>
             </div>
@@ -232,54 +246,6 @@
             </div>
             {% endif %}
             
-            <!-- واجبات الدورة -->
-            {% if assignments %}
-            <div class="module-item course-assignments-section">
-                <button class="module-header" onclick="toggleModule('course-assignments')">
-                    <div class="module-title-section">
-                        <i class="fas fa-chevron-down toggle-icon" id="icon-course-assignments"></i>
-                        <h5 class="module-title">
-                            <i class="fas fa-clipboard-list me-2 text-success"></i>
-                            واجبات الدورة
-                        </h5>
-                    </div>
-                    <div class="module-meta">
-                        {{ assignments|length }} واجب
-                    </div>
-                </button>
-                
-                <div class="module-content" id="course-assignments">
-                    {% for assignment in assignments %}
-                        {% if not assignment.module %}
-                        <a href="{% url 'courseviewpage' course.id %}?content_type=assignment&content_id={{ assignment.id }}" 
-                           class="content-item {% if current_content and current_content.type == 'assignment' and current_content.content.id == assignment.id %}active current{% endif %} {% if assignment.id in completed_assignments %}completed{% endif %}"
-                           data-content-type="assignment" data-content-id="{{ assignment.id }}">
-                            <div class="content-icon">
-                                <i class="fas {% if assignment.id in completed_assignments %}fa-check{% else %}fa-clipboard-list{% endif %}"></i>
-                            </div>
-                            <div class="content-details">
-                                <div class="content-name">{{ assignment.title }}</div>
-                                <div class="content-info">
-                                    <span><i class="fas fa-tasks"></i> واجب</span>
-                                    {% if assignment.due_date %}
-                                        <span><i class="far fa-calendar-alt"></i> {{ assignment.due_date|date:"d/m/Y" }}</span>
-                                    {% endif %}
-                                    {% if assignment.points %}
-                                        <span><i class="fas fa-star"></i> {{ assignment.points }} نقطة</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% if assignment.id in completed_assignments %}
-                            <div class="completion-badge">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            {% endif %}
-                        </a>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
             
             <!-- الاختبار النهائي -->
             {% if course.final_exam %}
@@ -330,3 +296,686 @@
         </div>
     </div>
 </div> 
+
+<!-- Django data for JavaScript -->
+<script type="application/json" id="django-data">
+{
+    "completed_quizzes": [
+        {% for quiz_id in completed_quizzes %}{{ quiz_id }}{% if not forloop.last %},{% endif %}{% endfor %}
+    ],
+    "completed_assignments": [  
+        {% for assignment_id in completed_assignments %}{{ assignment_id }}{% if not forloop.last %},{% endif %}{% endfor %}
+    ]
+}
+</script>
+
+<style>
+/* Sidebar Progress Styles */
+.sidebar-progress-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 12px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.progress-title-sidebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.course-progress-sidebar {
+    background: rgba(255, 255, 255, 0.2);
+    height: 10px;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.progress-fill-sidebar {
+    height: 100%;
+    background: linear-gradient(90deg, #00c9ff 0%, #92fe9d 100%);
+    border-radius: 20px;
+    transition: width 0.6s ease-in-out;
+    width: 0%;
+    box-shadow: 0 2px 8px rgba(0, 201, 255, 0.4);
+}
+
+.current-position-indicator {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 4px solid #00c9ff;
+}
+
+.position-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.current-content-info {
+    font-weight: 500;
+    margin-right: 25px;
+}
+
+.completion-stats {
+    display: flex;
+    gap: 10px;
+    justify-content: space-around;
+}
+
+.stat-card {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 10px 8px;
+    border-radius: 8px;
+    flex: 1;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #00c9ff;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.recalculate-progress-btn {
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    color: white !important;
+    transition: all 0.3s ease;
+}
+
+.recalculate-progress-btn:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    transform: rotate(180deg);
+}
+
+/* Completion Animation */
+@keyframes completionPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); background-color: rgba(40, 167, 69, 0.2); }
+    100% { transform: scale(1); }
+}
+
+/* Enhanced completion styles */
+.content-item.completed {
+    background: rgba(40, 167, 69, 0.1) !important;
+    border-left: 4px solid #28a745 !important;
+}
+</style>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+      // Load Django data from JSON
+      let djangoData = {};
+      try {
+          const djangoDataElement = document.getElementById('django-data');
+          if (djangoDataElement) {
+              djangoData = JSON.parse(djangoDataElement.textContent);
+          }
+      } catch (e) {
+          console.warn('Could not load Django data:', e);
+      }
+      
+      // Initialize Progress Bar Animation
+      const progressBars = document.querySelectorAll('.progress-fill-sidebar');
+    
+    progressBars.forEach(function(bar) {
+        const progress = parseFloat(bar.getAttribute('data-progress')) || 0;
+        setTimeout(() => {
+            bar.style.width = progress + '%';
+        }, 500);
+    });
+    
+    // Mark already completed content items on page load
+    markCompletedContentOnLoad();
+    
+    // Recalculate Progress Button
+    const recalculateBtn = document.querySelector('.recalculate-progress-btn');
+    if (recalculateBtn) {
+        recalculateBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.reload();
+        });
+    }
+    
+    // Test Progress Button
+    const testBtn = document.querySelector('.test-progress-btn');
+    if (testBtn) {
+        testBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🧪 Testing progress system...');
+            
+            // Test with current content
+            const urlParams = new URLSearchParams(window.location.search);
+            const contentType = urlParams.get('content_type');
+            const contentId = urlParams.get('content_id');
+            
+            if (contentType && contentId) {
+                console.log('Testing with current content:', contentType, contentId);
+                markContentViewed(contentType, contentId);
+            } else {
+                console.log('No current content, testing with first available...');
+                // Test with first content item
+                const firstContent = document.querySelector('.content-item[data-content-type]');
+                if (firstContent) {
+                    const testType = firstContent.getAttribute('data-content-type');
+                    const testId = firstContent.getAttribute('data-content-id');
+                    console.log('Testing with first content:', testType, testId);
+                    markContentViewed(testType, testId);
+                } else {
+                    showSuccessMessage('لا يوجد محتوى للاختبار');
+                }
+            }
+        });
+    }
+    
+    // Auto-track content when viewing
+    const urlParams = new URLSearchParams(window.location.search);
+    const contentType = urlParams.get('content_type');
+    const contentId = urlParams.get('content_id');
+    
+    if (contentType && contentId) {
+        console.log('🎯 Current content detected:', contentType, contentId);
+        
+        // Immediate test tracking (for quick testing)
+        setTimeout(() => {
+            console.log('⚡ Immediate tracking test...');
+            // Map URL content type to Django content type
+            let djangoContentType = contentType;
+            if (contentType === 'video') {
+                djangoContentType = 'module_video';
+            } else if (contentType === 'pdf') {
+                djangoContentType = 'module_pdf';
+            } else if (contentType === 'note') {
+                djangoContentType = 'module_note';
+            }
+            markContentViewed(djangoContentType, contentId);
+        }, 2000); // 2 seconds only
+        
+        // For videos, set up proper tracking
+        if (contentType === 'video') {
+            trackVideoProgress(contentId);
+            
+            // Also mark immediately for testing
+            setTimeout(() => {
+                console.log('🎬 Video auto-mark after 5 seconds...');
+                markContentViewed('module_video', contentId);
+            }, 5000);
+        }
+        
+        // For PDFs, quick marking for testing
+        if (contentType === 'pdf') {
+            console.log('📄 PDF content detected');
+            setTimeout(() => {
+                console.log('📖 PDF auto-mark after 8 seconds...');
+                markContentViewed('module_pdf', contentId);
+            }, 8000); // Reduced to 8 seconds for testing
+        }
+        
+        // For notes, quick marking for testing  
+        if (contentType === 'note') {
+            console.log('📝 Note content detected');
+            setTimeout(() => {
+                console.log('📚 Note auto-mark after 6 seconds...');
+                markContentViewed('module_note', contentId);
+            }, 6000); // Reduced to 6 seconds for testing
+        }
+        
+        // For other content types
+        if (contentType === 'quiz' || contentType === 'assignment') {
+            console.log('📋 Interactive content detected:', contentType);
+            setTimeout(() => {
+                console.log('💯 Interactive content auto-mark after 3 seconds...');
+                markContentViewed(contentType, contentId);  
+            }, 3000); // Quick for interactive content
+        }
+    }
+    
+    // Function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Function to mark content as viewed
+    function markContentViewed(contentType, contentId) {
+        const csrfToken = getCookie('csrftoken');
+        if (!csrfToken) {
+            console.error('CSRF token not found');
+            return;
+        }
+        
+        console.log('Marking content as viewed:', contentType, contentId);
+        
+        fetch('/mark-content-viewed/' + contentType + '/' + contentId + '/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.status === 'success') {
+                console.log('✅ Content marked as viewed successfully!');
+                
+                // Update progress bar
+                if (data.progress !== undefined && data.progress !== null) {
+                    const progressBar = document.querySelector('.progress-fill-sidebar');
+                    const progressText = document.querySelector('.progress-title-sidebar');
+                    
+                    console.log('📈 Updating progress from', progressBar ? progressBar.style.width : 'unknown', 'to:', data.progress + '%');
+                    
+                    if (progressBar) {
+                        // Animate progress bar
+                        progressBar.style.transition = 'width 0.8s ease-in-out';
+                        progressBar.style.width = data.progress + '%';
+                        progressBar.setAttribute('data-progress', data.progress);
+                        
+                        // Add glow effect
+                        progressBar.style.boxShadow = '0 2px 8px rgba(0, 201, 255, 0.6)';
+                        setTimeout(() => {
+                            progressBar.style.boxShadow = '0 2px 8px rgba(0, 201, 255, 0.4)';
+                        }, 1000);
+                    }
+                    
+                    if (progressText) {
+                        const newText = progressText.innerHTML.replace(/تقدمك: \d+\.?\d*%/, `تقدمك: ${data.progress.toFixed(1)}%`);
+                        progressText.innerHTML = newText;
+                        
+                        // Add text glow effect
+                        progressText.style.textShadow = '0 0 10px rgba(255, 255, 255, 0.8)';
+                        setTimeout(() => {
+                            progressText.style.textShadow = '';
+                        }, 1000);
+                    }
+                    
+                    // Update completion stats
+                    updateCompletionStats();
+                    
+                    // Show success message with progress
+                    showSuccessMessage(`🎉 تم تسجيل تقدمك! النسبة الآن: ${data.progress.toFixed(1)}%`);
+                    
+                    // Auto-redirect to next content after a delay (like quiz behavior)
+                    setTimeout(() => {
+                        // Use the original content type for redirect navigation
+                        let originalContentType = data.content_type || contentType;
+                        if (originalContentType === 'module_video') {
+                            originalContentType = 'video';
+                        } else if (originalContentType === 'module_pdf') {
+                            originalContentType = 'pdf';
+                        } else if (originalContentType === 'module_note') {
+                            originalContentType = 'note';
+                        }
+                        redirectToNextContent(originalContentType, data.content_id || contentId);
+                    }, 2000);
+                } else {
+                    console.log('⚠️ No progress data received');
+                    showSuccessMessage('تم تسجيل المحتوى ولكن لم يتم تحديث النسبة');
+                }
+                
+                // Mark content as completed in sidebar with enhanced effects
+                markContentItemAsCompleted(contentType, contentId);
+            } else {
+                console.error('❌ Failed to mark content:', data.message || 'Unknown error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error marking content as viewed:', error);
+        });
+    }
+    
+    // Function to show success message
+    function showSuccessMessage(message) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 9999;
+            font-weight: 500;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        `;
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.transform = 'translateX(0)';
+        }, 100);
+        
+        setTimeout(() => {
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
+    
+    // Function to track video progress
+    function trackVideoProgress(videoId) {
+        const video = document.querySelector('video');
+        let hasMarked = false; // Prevent multiple calls
+        
+        if (video) {
+            console.log('🎥 Setting up video tracking for video ID:', videoId);
+            
+            video.addEventListener('timeupdate', function() {
+                if (hasMarked) return; // Already marked
+                
+                const currentTime = video.currentTime;
+                const duration = video.duration;
+                
+                if (duration > 0) {
+                    const percentWatched = (currentTime / duration) * 100;
+                    console.log(`📊 Video progress: ${percentWatched.toFixed(1)}% (${currentTime.toFixed(1)}s / ${duration.toFixed(1)}s)`);
+                    
+                    // Mark as watched if 80% completed or watched for 30+ seconds
+                    if (percentWatched >= 80 || currentTime >= 30) {
+                        console.log('✅ Video milestone reached, marking as viewed...');
+                        hasMarked = true;
+                        markContentViewed('module_video', videoId);
+                    }
+                }
+            });
+            
+            // Also track when video ends
+            video.addEventListener('ended', function() {
+                if (!hasMarked) {
+                    console.log('🏁 Video ended, marking as viewed...');
+                    hasMarked = true;
+                    markContentViewed('module_video', videoId);
+                }
+            });
+            
+            // Track when video starts playing
+            video.addEventListener('play', function() {
+                console.log('▶️ Video started playing');
+            });
+        } else {
+            console.log('❌ No video element found for tracking');
+        }
+    }
+    
+    // Function to mark content item as completed with enhanced effects
+    function markContentItemAsCompleted(contentType, contentId) {
+        // Map Django content types to HTML content types for selector
+        let selectorType = contentType;
+        if (contentType === 'module_video') {
+            selectorType = 'video';
+        } else if (contentType === 'module_pdf') {
+            selectorType = 'pdf';
+        } else if (contentType === 'module_note') {
+            selectorType = 'note';
+        }
+        
+        // Try both selector types for compatibility
+        let contentItem = document.querySelector(`[data-content-type="${contentType}"][data-content-id="${contentId}"]`);
+        if (!contentItem) {
+            contentItem = document.querySelector(`[data-content-type="${selectorType}"][data-content-id="${contentId}"]`);
+        }
+        
+        if (contentItem && !contentItem.classList.contains('completed')) {
+            console.log('🎯 Marking content item as completed in UI:', contentType, contentId);
+            
+            // Add completed class
+            contentItem.classList.add('completed');
+            
+            // Update icon to green check
+            const icon = contentItem.querySelector('.content-icon i');
+            if (icon) {
+                icon.className = 'fas fa-check';
+                icon.style.color = '#28a745';
+                icon.style.fontSize = '1.2em';
+            }
+            
+            // Add green completion badge
+            if (!contentItem.querySelector('.completion-badge')) {
+                const badge = document.createElement('div');
+                badge.className = 'completion-badge';
+                badge.innerHTML = '<i class="fas fa-check"></i>';
+                badge.style.cssText = `
+                    background: #28a745;
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 50%;
+                    font-size: 0.8rem;
+                    position: absolute;
+                    right: 10px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                `;
+                contentItem.style.position = 'relative';
+                contentItem.appendChild(badge);
+            }
+            
+            // Add green background and border
+            contentItem.style.background = 'rgba(40, 167, 69, 0.1)';
+            contentItem.style.borderLeft = '4px solid #28a745';
+            contentItem.style.boxShadow = '0 2px 8px rgba(40, 167, 69, 0.2)';
+            
+            // Add completion animation
+            contentItem.style.animation = 'completionPulse 0.8s ease';
+            setTimeout(() => {
+                contentItem.style.animation = '';
+            }, 800);
+            
+            // Show celebration effect
+            showCelebrationEffect(contentItem);
+            
+            // Update completion stats
+            updateCompletionStats();
+        } else {
+            console.log('⚠️ Content item already completed or not found:', contentType, contentId);
+        }
+    }
+    
+    // Function to show celebration effect
+    function showCelebrationEffect(element) {
+        // Create celebration icon
+        const celebration = document.createElement('div');
+        celebration.innerHTML = '🎉';
+        celebration.style.cssText = `
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5rem;
+            animation: celebrationFloat 2s ease-out forwards;
+            pointer-events: none;
+            z-index: 1000;
+        `;
+        
+        // Add celebration animation CSS if not exists
+        if (!document.getElementById('celebrationCSS')) {
+            const style = document.createElement('style');
+            style.id = 'celebrationCSS';
+            style.textContent = `
+                @keyframes celebrationFloat {
+                    0% { opacity: 1; transform: translateY(-50%) scale(0.5); }
+                    50% { opacity: 1; transform: translateY(-70%) scale(1.2); }
+                    100% { opacity: 0; transform: translateY(-90%) scale(0.8); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        element.style.position = 'relative';
+        element.appendChild(celebration);
+        
+        // Remove celebration after animation
+        setTimeout(() => {
+            if (celebration.parentNode) {
+                celebration.parentNode.removeChild(celebration);
+            }
+        }, 2000);
+    }
+    
+    // Function to update completion stats
+    function updateCompletionStats() {
+        const completedItems = document.querySelectorAll('.content-item.completed').length;
+        const totalItems = document.querySelectorAll('.content-item').length;
+        
+        // Update completed counter
+        const completedCounter = document.querySelector('.stat-number');
+        if (completedCounter) {
+            completedCounter.textContent = completedItems;
+            
+            // Add glow effect when updated
+            completedCounter.style.textShadow = '0 0 10px #00c9ff';
+            setTimeout(() => {
+                completedCounter.style.textShadow = '';
+            }, 1000);
+        }
+        
+        // Update total counter if exists
+        const totalCounters = document.querySelectorAll('.stat-number');
+        if (totalCounters.length > 1) {
+            totalCounters[1].textContent = totalItems;
+        }
+        
+        console.log(`📊 Completion stats updated: ${completedItems}/${totalItems} items completed`);
+    }
+    
+    // Function to redirect to next content (like quiz behavior)
+    function redirectToNextContent(currentType, currentId) {
+        console.log('🔄 Looking for next content after:', currentType, currentId);
+        
+        // Get all content items in order
+        const allContentItems = document.querySelectorAll('.content-item[data-content-type]');
+        const contentArray = Array.from(allContentItems);
+        
+        // Find current item index
+        let currentIndex = -1;
+        for (let i = 0; i < contentArray.length; i++) {
+            const item = contentArray[i];
+            const itemType = item.getAttribute('data-content-type');
+            const itemId = item.getAttribute('data-content-id');
+            
+            if (itemType === currentType && itemId === currentId) {
+                currentIndex = i;
+                break;
+            }
+        }
+        
+        // Get next content item
+        if (currentIndex >= 0 && currentIndex < contentArray.length - 1) {
+            const nextItem = contentArray[currentIndex + 1];
+            const nextType = nextItem.getAttribute('data-content-type');
+            const nextId = nextItem.getAttribute('data-content-id');
+            const nextUrl = nextItem.getAttribute('href');
+            
+            if (nextUrl) {
+                console.log('➡️ Redirecting to next content:', nextType, nextId);
+                
+                // Show transition message
+                showSuccessMessage(`➡️ الانتقال للمحتوى التالي...`);
+                
+                // Redirect after short delay
+                setTimeout(() => {
+                    window.location.href = nextUrl;
+                }, 1500);
+            } else {
+                console.log('✅ No more content available - course section completed!');
+                showSuccessMessage('🎉 تم إكمال هذا القسم من الدورة!');
+            }
+        } else if (currentIndex === contentArray.length - 1) {
+            console.log('🏁 Last content item completed!');
+            showSuccessMessage('🎊 مبروك! تم إكمال جميع محتوى الدورة!');
+        } else {
+                         console.log('❓ Current content not found in navigation');
+         }
+     }
+     
+     // Function to mark completed content on page load
+     function markCompletedContentOnLoad() {
+         console.log('🔍 Checking for already completed content...');
+         
+         // Mark completed quizzes from Django data
+         if (djangoData.completed_quizzes && djangoData.completed_quizzes.length > 0) {
+             djangoData.completed_quizzes.forEach(quizId => {
+                 markContentItemAsCompleted('quiz', quizId.toString());
+             });
+         }
+         
+         // Mark completed assignments from Django data
+         if (djangoData.completed_assignments && djangoData.completed_assignments.length > 0) {
+             djangoData.completed_assignments.forEach(assignmentId => {
+                 markContentItemAsCompleted('assignment', assignmentId.toString());
+             });
+         }
+         
+         // Mark completed videos (check for completed class or special attributes)
+         document.querySelectorAll('.content-item[data-content-type="module_video"]').forEach(item => {
+             if (item.classList.contains('completed') || 
+                 item.querySelector('.completion-badge') ||
+                 item.querySelector('.fa-check')) {
+                 const videoId = item.getAttribute('data-content-id');
+                 markContentItemAsCompleted('module_video', videoId);
+             }
+         });
+         
+         // Mark completed PDFs
+         document.querySelectorAll('.content-item[data-content-type="module_pdf"]').forEach(item => {
+             if (item.classList.contains('completed') || 
+                 item.querySelector('.completion-badge') ||
+                 item.querySelector('.fa-check')) {
+                 const pdfId = item.getAttribute('data-content-id');
+                 markContentItemAsCompleted('module_pdf', pdfId);
+             }
+         });
+         
+         // Mark completed Notes
+         document.querySelectorAll('.content-item[data-content-type="module_note"]').forEach(item => {
+             if (item.classList.contains('completed') || 
+                 item.querySelector('.completion-badge') ||
+                 item.querySelector('.fa-check')) {
+                 const noteId = item.getAttribute('data-content-id');
+                 markContentItemAsCompleted('module_note', noteId);
+             }
+         });
+         
+         console.log('✅ Completed content marking finished');
+     }
+});
+</script> 
