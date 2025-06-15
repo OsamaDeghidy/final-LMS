@@ -134,6 +134,54 @@
                             <small class="form-text text-muted">يمكنك رفع ملفات العرض التقديمي أو أي مواد أخرى للاجتماع</small>
                         </div>
                         
+                        <!-- Meeting Type dependent fields -->
+                        <div id="zoom-fields" style="display: none;">
+                            <div class="mb-3">
+                                {{ form.zoom_link.label_tag }}
+                                {{ form.zoom_link }}
+                                {% if form.zoom_link.errors %}
+                                    <div class="text-danger">{{ form.zoom_link.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div id="live-fields" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        {{ form.max_participants.label_tag }}
+                                        {{ form.max_participants }}
+                                        <small class="form-text text-muted">الحد الأقصى للمشاركين (2-200)</small>
+                                        {% if form.max_participants.errors %}
+                                            <div class="text-danger">{{ form.max_participants.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">إعدادات الاجتماع المباشر</label>
+                                <div class="form-check">
+                                    {{ form.enable_screen_share }}
+                                    <label class="form-check-label" for="{{ form.enable_screen_share.id_for_label }}">
+                                        تمكين مشاركة الشاشة
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.enable_chat }}
+                                    <label class="form-check-label" for="{{ form.enable_chat.id_for_label }}">
+                                        تمكين الدردشة
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    {{ form.enable_recording }}
+                                    <label class="form-check-label" for="{{ form.enable_recording.id_for_label }}">
+                                        تمكين التسجيل
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="text-center mt-4">
                             <button type="submit" class="btn btn-primary">
                                 {% if is_create %}
@@ -183,4 +231,27 @@
         });
     });
 </script>
+
+<script>
+    // Handle meeting type change
+    $('#id_meeting_type').change(function() {
+        const meetingType = $(this).val();
+        
+        // Hide all conditional fields first
+        $('#zoom-fields, #live-fields').hide();
+        
+        // Show relevant fields based on selected type
+        if (meetingType === 'ZOOM') {
+            $('#zoom-fields').show();
+        } else if (meetingType === 'LIVE') {
+            $('#live-fields').show();
+        }
+    });
+    
+    // Trigger change event on page load to show correct fields
+    $(document).ready(function() {
+        $('#id_meeting_type').trigger('change');
+    });
+</script>
+
 {% endblock dashboard_content %}

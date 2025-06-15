@@ -50,6 +50,51 @@
                                         <i class="fas fa-video"></i> انضم إلى اجتماع زووم
                                     </a>
                                 </div>
+                            {% elif meeting.meeting_type == 'LIVE' %}
+                                <div class="mt-3">
+                                    {% if meeting.creator == request.user or request.user.is_superuser %}
+                                        {% if not meeting.is_live_started %}
+                                            <button id="start-live-meeting" class="btn btn-success" data-meeting-id="{{ meeting.pk }}">
+                                                <i class="fas fa-play"></i> بدء الاجتماع المباشر
+                                            </button>
+                                        {% elif meeting.is_live_started and not meeting.live_ended_at %}
+                                            <a href="{% url 'meeting_live_room' meeting.pk %}" class="btn btn-primary">
+                                                <i class="fas fa-video"></i> دخول غرفة الاجتماع
+                                            </a>
+                                            <button id="end-live-meeting" class="btn btn-danger ms-2" data-meeting-id="{{ meeting.pk }}">
+                                                <i class="fas fa-stop"></i> إنهاء الاجتماع
+                                            </button>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if meeting.is_live_started and not meeting.live_ended_at %}
+                                            {% if meeting.can_join_live %}
+                                                <a href="{% url 'meeting_live_room' meeting.pk %}" class="btn btn-primary">
+                                                    <i class="fas fa-video"></i> الانضمام للاجتماع المباشر
+                                                </a>
+                                            {% else %}
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-exclamation-triangle"></i> تم الوصول للحد الأقصى من المشاركين ({{ meeting.live_participants_count }}/{{ meeting.max_participants }})
+                                                </div>
+                                            {% endif %}
+                                        {% elif not meeting.is_live_started %}
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-clock"></i> لم يبدأ الاجتماع المباشر بعد
+                                            </div>
+                                        {% elif meeting.live_ended_at %}
+                                            <div class="alert alert-secondary">
+                                                <i class="fas fa-check"></i> انتهى الاجتماع المباشر
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                
+                                {% if meeting.is_live_started %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-users"></i> المشاركون الحاليون: {{ meeting.live_participants_count }}/{{ meeting.max_participants }}
+                                        </small>
+                                    </div>
+                                {% endif %}
                             {% endif %}
                             
                             {% if meeting.recording_url %}
@@ -117,9 +162,9 @@
                                         <div class="mt-3">
                                             <h6>معدل الحضور</h6>
                                             <div class="progress">
-                                                <div class="progress-bar" role="progressbar" style="width: {{ meeting.attendance_rate }}%;" 
-                                                     aria-valuenow="{{ meeting.attendance_rate }}" aria-valuemin="0" aria-valuemax="100">
-                                                    {{ meeting.attendance_rate|floatformat:1 }}%
+                                                <div class="progress-bar" role="progressbar" style="width: {% if meeting.attendance_rate %}{{ meeting.attendance_rate }}{% else %}0{% endif %}%;" 
+                                                     aria-valuenow="{% if meeting.attendance_rate %}{{ meeting.attendance_rate }}{% else %}0{% endif %}" aria-valuemin="0" aria-valuemax="100">
+                                                    {% if meeting.attendance_rate %}{{ meeting.attendance_rate|floatformat:1 }}{% else %}0{% endif %}%
                                                 </div>
                                             </div>
                                         </div>
@@ -246,6 +291,74 @@
                 },
                 error: function(xhr) {
                     toastr.error('حدث خطأ أثناء تسجيل المغادرة');
+                }
+            });
+        });
+        
+        // Start live meeting
+        $('#start-live-meeting').click(function() {
+            const meetingId = $(this).data('meeting-id');
+            const button = $(this);
+            
+            button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> جاري البدء...');
+            
+            $.ajax({
+                url: `/meetings/${meetingId}/start-live/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        toastr.success(response.message);
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        toastr.error(response.message);
+                        button.prop('disabled', false).html('<i class="fas fa-play"></i> بدء الاجتماع المباشر');
+                    }
+                },
+                error: function(xhr) {
+                    const response = xhr.responseJSON;
+                    toastr.error(response ? response.message : 'حدث خطأ أثناء بدء الاجتماع');
+                    button.prop('disabled', false).html('<i class="fas fa-play"></i> بدء الاجتماع المباشر');
+                }
+            });
+        });
+        
+        // End live meeting
+        $('#end-live-meeting').click(function() {
+            if (!confirm('هل أنت متأكد من إنهاء الاجتماع؟ سيتم إخراج جميع المشاركين.')) {
+                return;
+            }
+            
+            const meetingId = $(this).data('meeting-id');
+            const button = $(this);
+            
+            button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> جاري الإنهاء...');
+            
+            $.ajax({
+                url: `/meetings/${meetingId}/end-live/`,
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        toastr.success(response.message);
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        toastr.error(response.message);
+                        button.prop('disabled', false).html('<i class="fas fa-stop"></i> إنهاء الاجتماع');
+                    }
+                },
+                error: function(xhr) {
+                    const response = xhr.responseJSON;
+                    toastr.error(response ? response.message : 'حدث خطأ أثناء إنهاء الاجتماع');
+                    button.prop('disabled', false).html('<i class="fas fa-stop"></i> إنهاء الاجتماع');
                 }
             });
         });

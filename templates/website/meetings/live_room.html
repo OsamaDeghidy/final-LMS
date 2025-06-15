@@ -1,0 +1,424 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}{{ meeting.title }} - اجتماع مباشر{% endblock %}
+
+{% block head %}
+<style>
+    .video-container {
+        background-color: #000;
+        border-radius: 10px;
+        min-height: 400px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .video-placeholder {
+        color: #fff;
+        text-align: center;
+    }
+    
+    .meeting-controls {
+        background-color: rgba(0,0,0,0.8);
+        border-radius: 25px;
+        padding: 10px 20px;
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    .meeting-controls .btn {
+        margin: 0 5px;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .chat-container {
+        height: 500px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        max-height: 350px;
+    }
+    
+    .chat-message {
+        margin-bottom: 10px;
+        padding: 8px 12px;
+        border-radius: 15px;
+        background-color: #fff;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .chat-message.system {
+        background-color: #e3f2fd;
+        font-style: italic;
+        text-align: center;
+    }
+    
+    .chat-message .username {
+        font-weight: bold;
+        color: #0d6efd;
+        font-size: 0.9em;
+    }
+    
+    .chat-message .timestamp {
+        font-size: 0.8em;
+        color: #6c757d;
+        float: right;
+    }
+    
+    .chat-input {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .participants-list {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    
+    .participant-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .participant-item:last-child {
+        border-bottom: none;
+    }
+    
+    .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    
+    .status-indicator.online {
+        background-color: #28a745;
+    }
+    
+    .status-indicator.offline {
+        background-color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4" dir="rtl">
+    <div class="row">
+        <!-- Meeting Header -->
+        <div class="col-12 mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h3>{{ meeting.title }}</h3>
+                    <span class="badge bg-success">اجتماع مباشر</span>
+                    <span class="badge bg-info">{{ meeting.live_participants_count }}/{{ meeting.max_participants }} مشارك</span>
+                </div>
+                <div>
+                    <a href="{% url 'meeting_detail' meeting.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right"></i> العودة للتفاصيل
+                    </a>
+                    {% if meeting.creator == request.user or request.user.is_superuser %}
+                        <button id="end-meeting-btn" class="btn btn-danger ms-2" data-meeting-id="{{ meeting.pk }}">
+                            <i class="fas fa-stop"></i> إنهاء الاجتماع
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Video Area -->
+        <div class="col-lg-8">
+            <div class="video-container">
+                <div class="video-placeholder">
+                    <i class="fas fa-video fa-3x mb-3"></i>
+                    <h4>منطقة الفيديو</h4>
+                    <p>سيتم عرض الفيديوهات هنا</p>
+                    <small class="text-muted">يتم تتبع الحضور تلقائياً عند الانضمام للاجتماع</small>
+                </div>
+                
+                <!-- Meeting Controls -->
+                <div class="meeting-controls">
+                    <button id="mic-btn" class="btn btn-secondary" title="الميكروفون">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button id="camera-btn" class="btn btn-secondary" title="الكاميرا">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    {% if meeting.enable_screen_share %}
+                        <button id="screen-share-btn" class="btn btn-secondary" title="مشاركة الشاشة">
+                            <i class="fas fa-desktop"></i>
+                        </button>
+                    {% endif %}
+                    <button id="leave-btn" class="btn btn-danger" title="مغادرة الاجتماع">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Participants Panel -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> المشاركون ({{ meeting.live_participants_count }})
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="participants-list">
+                        <div id="participants-container">
+                            <div class="participant-item">
+                                <div class="status-indicator online"></div>
+                                <div>{{ request.user.get_full_name|default:request.user.username }} (أنت)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Panel -->
+            {% if meeting.enable_chat %}
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments"></i> الدردشة
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chat-messages">
+                            {% for message in chat_messages %}
+                                <div class="chat-message {% if message.is_system_message %}system{% endif %}">
+                                    {% if not message.is_system_message %}
+                                        <div class="username">{{ message.user.get_full_name|default:message.user.username }}</div>
+                                    {% endif %}
+                                    <div class="message-content">{{ message.message }}</div>
+                                    <div class="timestamp">{{ message.timestamp|date:"H:i" }}</div>
+                                    <div class="clearfix"></div>
+                                </div>
+                            {% empty %}
+                                <div class="text-muted text-center">لا توجد رسائل بعد</div>
+                            {% endfor %}
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" class="form-control" id="message-input" placeholder="اكتب رسالة..." maxlength="500">
+                            <button class="btn btn-primary" id="send-message-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    const meetingId = {{ meeting.pk|escapejs }};
+    let chatRefreshInterval;
+    
+    // Initialize
+    {% if meeting.enable_chat %}
+        refreshChat();
+        startChatRefresh();
+    {% endif %}
+    
+    // Send chat message
+    $('#send-message-btn').click(function() {
+        sendMessage();
+    });
+    
+    $('#message-input').keypress(function(e) {
+        if (e.which == 13) {
+            sendMessage();
+        }
+    });
+    
+    function sendMessage() {
+        const message = $('#message-input').val().trim();
+        if (!message) return;
+        
+        $.ajax({
+            url: '/meetings/' + meetingId + '/send-chat/',
+            method: 'POST',
+            data: {
+                'message': message,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#message-input').val('');
+                    refreshChat();
+                } else {
+                    toastr.error(response.message);
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                toastr.error(response ? response.message : 'حدث خطأ أثناء إرسال الرسالة');
+            }
+        });
+    }
+    
+    function refreshChat() {
+        $.ajax({
+            url: '/meetings/' + meetingId + '/get-chat/',
+            method: 'GET',
+            success: function(response) {
+                if (response.status === 'success') {
+                    updateChatMessages(response.messages);
+                }
+            }
+        });
+    }
+    
+    function updateChatMessages(messages) {
+        const container = $('#chat-messages');
+        container.empty();
+        
+        if (messages.length === 0) {
+            container.html('<div class="text-muted text-center">لا توجد رسائل بعد</div>');
+            return;
+        }
+        
+        messages.forEach(function(msg) {
+            const messageDiv = $('<div>').addClass('chat-message');
+            if (msg.is_system) {
+                messageDiv.addClass('system');
+            }
+            
+            let messageHtml = '';
+            if (!msg.is_system) {
+                messageHtml += `<div class="username">${msg.user_name}</div>`;
+            }
+            messageHtml += `<div class="message-content">${msg.message}</div>`;
+            messageHtml += `<div class="timestamp">${msg.timestamp}</div>`;
+            messageHtml += `<div class="clearfix"></div>`;
+            
+            messageDiv.html(messageHtml);
+            container.append(messageDiv);
+        });
+        
+        // Scroll to bottom
+        container.scrollTop(container[0].scrollHeight);
+    }
+    
+    function startChatRefresh() {
+        chatRefreshInterval = setInterval(refreshChat, 3000); // Refresh every 3 seconds
+    }
+    
+    // Meeting controls
+    $('#mic-btn').click(function() {
+        $(this).toggleClass('btn-secondary btn-danger');
+        const icon = $(this).find('i');
+        if ($(this).hasClass('btn-danger')) {
+            icon.removeClass('fa-microphone').addClass('fa-microphone-slash');
+            toastr.info('تم كتم الميكروفون');
+        } else {
+            icon.removeClass('fa-microphone-slash').addClass('fa-microphone');
+            toastr.info('تم تشغيل الميكروفون');
+        }
+    });
+    
+    $('#camera-btn').click(function() {
+        $(this).toggleClass('btn-secondary btn-danger');
+        const icon = $(this).find('i');
+        if ($(this).hasClass('btn-danger')) {
+            icon.removeClass('fa-video').addClass('fa-video-slash');
+            toastr.info('تم إيقاف الكاميرا');
+        } else {
+            icon.removeClass('fa-video-slash').addClass('fa-video');
+            toastr.info('تم تشغيل الكاميرا');
+        }
+    });
+    
+    $('#screen-share-btn').click(function() {
+        $(this).toggleClass('btn-secondary btn-success');
+        if ($(this).hasClass('btn-success')) {
+            toastr.info('تم بدء مشاركة الشاشة');
+        } else {
+            toastr.info('تم إيقاف مشاركة الشاشة');
+        }
+    });
+    
+    $('#leave-btn').click(function() {
+        if (confirm('هل أنت متأكد من مغادرة الاجتماع؟')) {
+            // Mark exit before leaving
+            $.ajax({
+                url: '/meetings/' + meetingId + '/mark-exit/',
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                complete: function() {
+                    window.location.href = "{% url 'meeting_detail' meeting.pk %}";
+                }
+            });
+        }
+    });
+    
+    $('#end-meeting-btn').click(function() {
+        if (confirm('هل أنت متأكد من إنهاء الاجتماع؟ سيتم إخراج جميع المشاركين.')) {
+            const button = $(this);
+            button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> جاري الإنهاء...');
+            
+            $.ajax({
+                url: '/meetings/' + meetingId + '/end-live/',
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        toastr.success(response.message);
+                        setTimeout(function() {
+                            window.location.href = "{% url 'meeting_detail' meeting.pk %}";
+                        }, 1000);
+                    } else {
+                        toastr.error(response.message);
+                        button.prop('disabled', false).html('<i class="fas fa-stop"></i> إنهاء الاجتماع');
+                    }
+                },
+                error: function(xhr) {
+                    const response = xhr.responseJSON;
+                    toastr.error(response ? response.message : 'حدث خطأ أثناء إنهاء الاجتماع');
+                    button.prop('disabled', false).html('<i class="fas fa-stop"></i> إنهاء الاجتماع');
+                }
+            });
+        }
+    });
+    
+    // Clean up intervals when leaving page
+    $(window).on('beforeunload', function() {
+        if (chatRefreshInterval) clearInterval(chatRefreshInterval);
+        
+        // Mark exit when leaving page
+        navigator.sendBeacon('/meetings/' + meetingId + '/mark-exit/', new URLSearchParams({
+            'csrfmiddlewaretoken': '{{ csrf_token }}'
+        }));
+    });
+});
+</script>
+{% endblock content %}

@@ -17,8 +17,25 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
     <!-- <link rel="stylesheet" href="{% static 'main/css/base.css' %}" /> -->
     
+    <!-- jQuery - Load First Before Any Other Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script>
+        // Test if jQuery is loaded
+        if (typeof jQuery !== 'undefined') {
+            console.log('✅ jQuery loaded successfully:', jQuery.fn.jquery);
+        } else {
+            console.error('❌ jQuery failed to load');
+        }
+    </script>
+    
     <!-- CKEditor -->
     <script src="{% static 'ckeditor/ckeditor.js' %}"></script>
+    
+    <!-- Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    
+    <!-- Toastr JS - Load After jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     
     <!-- Cart Dropdown Styles -->
     <style>
@@ -468,14 +485,34 @@
   </footer>
 
 
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
     <!-- Bootstrap 5 JS Bundle with Popper -->
     <script 
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
       integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
       crossorigin="anonymous">
+    </script>
+    
+    <!-- Toastr Configuration -->
+    <script>
+        // Configure Toastr for RTL and better styling
+        $(document).ready(function() {
+            toastr.options = {
+                "closeButton": true,
+                "debug": false,
+                "newestOnTop": true,
+                "progressBar": true,
+                "positionClass": "toast-top-right",
+                "preventDuplicates": false,
+                "showDuration": "300",
+                "hideDuration": "1000",
+                "timeOut": "5000",
+                "extendedTimeOut": "1000",
+                "showEasing": "swing",
+                "hideEasing": "linear",
+                "showMethod": "fadeIn",
+                "hideMethod": "fadeOut"
+            };
+        });
     </script>
       <script>
         let videos = document.querySelectorAll('video');

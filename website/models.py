@@ -953,6 +953,7 @@ class Meeting(models.Model):
     MEETING_TYPES = (
         ('ZOOM', 'اجتماع عبر زووم'),
         ('NORMAL', 'اجتماع عادي'),
+        ('LIVE', 'اجتماع مباشر'),
     )
     
     NOTIFICATION_TYPES = (
@@ -973,6 +974,15 @@ class Meeting(models.Model):
     recording_url = models.URLField(blank=True, null=True, verbose_name="رابط التسجيل")
     materials = models.FileField(upload_to='meeting_materials/', blank=True, null=True, verbose_name="مواد الاجتماع")
     is_active = models.BooleanField(default=True, verbose_name="نشط")
+    # Fields for live meetings
+    meeting_room_id = models.CharField(max_length=255, blank=True, null=True, verbose_name="معرف غرفة الاجتماع")
+    is_live_started = models.BooleanField(default=False, verbose_name="بدأ الاجتماع المباشر")
+    live_started_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت بدء الاجتماع المباشر")
+    live_ended_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت انتهاء الاجتماع المباشر")
+    max_participants = models.IntegerField(default=50, verbose_name="الحد الأقصى للمشاركين")
+    enable_screen_share = models.BooleanField(default=True, verbose_name="تمكين مشاركة الشاشة")
+    enable_chat = models.BooleanField(default=True, verbose_name="تمكين الدردشة")
+    enable_recording = models.BooleanField(default=False, verbose_name="تمكين التسجيل")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الإنشاء")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="تاريخ التحديث")
     notification_task_id = models.CharField(max_length=255, blank=True, null=True)
@@ -1025,6 +1035,54 @@ class Meeting(models.Model):
         )
         return participant
     
+    def start_live_meeting(self):
+        """Start the live meeting"""
+        if self.meeting_type == 'LIVE' and not self.is_live_started:
+            import uuid
+            self.meeting_room_id = str(uuid.uuid4())
+            self.is_live_started = True
+            self.live_started_at = timezone.now()
+            self.save()
+            return True
+        return False
+    
+    def end_live_meeting(self):
+        """End the live meeting"""
+        if self.meeting_type == 'LIVE' and self.is_live_started:
+            self.live_ended_at = timezone.now()
+            self.save()
+            # Mark all participants as exited if they haven't already
+            participants = self.participant_set.filter(exit_time__isnull=True, attendance_time__isnull=False)
+            for participant in participants:
+                participant.mark_exit()
+            return True
+        return False
+    
+    @property
+    def can_join_live(self):
+        """Check if user can join live meeting"""
+        if self.meeting_type != 'LIVE':
+            return False
+        if not self.is_live_started:
+            return False
+        if self.live_ended_at:
+            return False
+        current_participants = self.participant_set.filter(
+            attendance_time__isnull=False, 
+            exit_time__isnull=True
+        ).count()
+        return current_participants < self.max_participants
+    
+    @property
+    def live_participants_count(self):
+        """Get current live participants count"""
+        if self.meeting_type != 'LIVE':
+            return 0
+        return self.participant_set.filter(
+            attendance_time__isnull=False, 
+            exit_time__isnull=True
+        ).count()
+
     def setup_notifications(self):
         """Set up automatic notifications for this meeting"""
         # Create day before notification
@@ -1504,6 +1562,23 @@ def update_progress_on_assignment_submission(sender, instance, created, **kwargs
             progress.save()  # This will recalculate completion status
         except Exception as e:
             print(f"Error updating progress on assignment submission: {e}")
+
+
+class MeetingChat(models.Model):
+    """Chat messages for live meetings"""
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name='chat_messages', verbose_name="الاجتماع")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="المستخدم")
+    message = models.TextField(verbose_name="الرسالة")
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name="وقت الإرسال")
+    is_system_message = models.BooleanField(default=False, verbose_name="رسالة نظام")
+    
+    class Meta:
+        ordering = ['timestamp']
+        verbose_name = "رسالة دردشة"
+        verbose_name_plural = "رسائل الدردشة"
+    
+    def __str__(self):
+        return f"{self.user.username}: {self.message[:50]}"
 
 
 
