@@ -640,32 +640,17 @@ def student_exams(request, course_id):
                 is_expired = True
         
         # Check if user can take the exam based on attempt limits
-        can_take = is_available and (exam.allow_multiple_attempts or attempt_count < exam.max_attempts)
+        can_take = is_available and attempt_count < exam.max_attempts
         
-        # Debug logging
-        logger.info(f"Exam '{exam.title}': is_available={is_available}, is_upcoming={is_upcoming}, is_expired={is_expired}, can_take={can_take}")
-        logger.info(f"  Current time: {current_time}")
-        logger.info(f"  Current time (local): {timezone.localtime(current_time)}")
-        if exam.start_date:
-            start_date_aware = exam.start_date
-            if timezone.is_naive(start_date_aware):
-                start_date_aware = timezone.make_aware(start_date_aware)
-            logger.info(f"  Start date: {start_date_aware} (original: {exam.start_date})")
-            logger.info(f"  Start date (local): {timezone.localtime(start_date_aware)}")
-            logger.info(f"  Current < Start? {current_time < start_date_aware}")
-        if exam.end_date:
-            end_date_aware = exam.end_date
-            if timezone.is_naive(end_date_aware):
-                end_date_aware = timezone.make_aware(end_date_aware)
-            logger.info(f"  End date: {end_date_aware} (original: {exam.end_date})")
-            logger.info(f"  End date (local): {timezone.localtime(end_date_aware)}")
-            logger.info(f"  Current > End? {current_time > end_date_aware}")
-        logger.info(f"  Attempt count: {attempt_count}, Max attempts: {exam.max_attempts}, Allow multiple: {exam.allow_multiple_attempts}")
+
         
         # Get the best score if there are attempts
         best_score = None
         if exam_attempts:
             best_score = max((a.score for a in exam_attempts if a.score is not None), default=None)
+        
+        # Calculate remaining attempts
+        remaining_attempts = exam.max_attempts - attempt_count if exam.allow_multiple_attempts else (1 - attempt_count)
         
         available_exams.append({
             'exam': exam,
@@ -674,6 +659,7 @@ def student_exams(request, course_id):
             'is_expired': is_expired,
             'can_take': can_take,
             'attempt_count': attempt_count,
+            'remaining_attempts': max(0, remaining_attempts),
             'best_score': best_score,
             'passed': best_score >= exam.pass_mark if best_score is not None else False,
             'user_attempts': exam_attempts,
