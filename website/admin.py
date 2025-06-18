@@ -10,7 +10,7 @@ from .models import (
     QuizUserAnswer, Meeting, Participant, Notification, BookCategory, Review,
     Book, Article, Cart, CartItem, ContentProgress
 )
-from .models import CertificateTemplate  # Import separately to avoid duplication
+from .models import CertificateTemplate, PresetCertificateTemplate, UserSignature  # Import separately to avoid duplication
 
 # Register your models here
 admin.site.register(Category)
@@ -102,12 +102,83 @@ admin.site.register(Article, ArticleAdmin)
 
 # Certificate Template Admin
 class CertificateTemplateAdmin(admin.ModelAdmin):
-    list_display = ('template_name', 'created_by', 'template_style', 'primary_color', 'is_default', 'is_active', 'created_at')
-    list_filter = ('template_style', 'is_default', 'is_active', 'created_at')
+    list_display = ('template_name', 'created_by', 'template_style', 'template_source', 'primary_color', 'is_public', 'is_default', 'is_active', 'created_at')
+    list_filter = ('template_style', 'template_source', 'is_public', 'is_default', 'is_active', 'created_at')
     search_fields = ('template_name', 'institution_name', 'created_by__username')
     date_hierarchy = 'created_at'
     ordering = ('-created_at',)
     readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        ('معلومات أساسية', {
+            'fields': ('created_by', 'template_name', 'template_style', 'template_source')
+        }),
+        ('التخصيص', {
+            'fields': ('primary_color', 'secondary_color', 'background_pattern', 'border_style', 'font_family')
+        }),
+        ('معلومات المؤسسة', {
+            'fields': ('institution_name', 'institution_logo')
+        }),
+        ('التوقيع', {
+            'fields': ('signature_name', 'signature_title', 'signature_image', 'user_signature')
+        }),
+        ('نص الشهادة', {
+            'fields': ('certificate_text',)
+        }),
+        ('خيارات الشهادة', {
+            'fields': ('include_qr_code', 'include_grade', 'include_completion_date', 'include_course_duration')
+        }),
+        ('الإعدادات', {
+            'fields': ('is_public', 'is_default', 'is_active')
+        }),
+        ('بيانات النظام', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
 
 admin.site.register(CertificateTemplate, CertificateTemplateAdmin)
+
+# Preset Certificate Template Admin
+class PresetCertificateTemplateAdmin(admin.ModelAdmin):
+    list_display = ('name', 'template_style', 'category', 'is_featured', 'is_active', 'created_at')
+    list_filter = ('template_style', 'category', 'is_featured', 'is_active', 'created_at')
+    search_fields = ('name', 'description', 'category')
+    date_hierarchy = 'created_at'
+    ordering = ('-is_featured', '-created_at')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        ('معلومات أساسية', {
+            'fields': ('name', 'description', 'category')
+        }),
+        ('تصميم القالب', {
+            'fields': ('template_style', 'primary_color', 'secondary_color', 'background_pattern', 'border_style', 'font_family')
+        }),
+        ('معاينة القالب', {
+            'fields': ('preview_image',)
+        }),
+        ('كود القالب', {
+            'fields': ('template_html', 'template_css'),
+            'classes': ('collapse',)
+        }),
+        ('الإعدادات', {
+            'fields': ('is_featured', 'is_active')
+        }),
+        ('بيانات النظام', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+admin.site.register(PresetCertificateTemplate, PresetCertificateTemplateAdmin)
+
+# User Signature Admin
+class UserSignatureAdmin(admin.ModelAdmin):
+    list_display = ('name', 'user', 'is_default', 'created_at')
+    list_filter = ('is_default', 'created_at')
+    search_fields = ('name', 'user__username', 'user__email')
+    date_hierarchy = 'created_at'
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at',)
+
+admin.site.register(UserSignature, UserSignatureAdmin)
 

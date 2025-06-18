@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تصفح القوالب الجاهزة</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --accent-color: #f72585;
+            --text-color: #2b2d42;
+            --light-bg: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Tajawal', 'Segoe UI', sans-serif;
+            background: var(--light-bg);
+            color: var(--text-color);
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .template-card {
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+        }
+        
+        .template-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .template-preview {
+            height: 200px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .template-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .template-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--accent-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .template-card-body {
+            padding: 1.5rem;
+        }
+        
+        .template-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .template-description {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+        
+        .template-style-tag {
+            display: inline-block;
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary-color);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .btn-select-template {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .btn-select-template:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+        }
+        
+        .category-section {
+            margin-bottom: 3rem;
+        }
+        
+        .category-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .featured-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 3rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .search-filter {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .filter-btn {
+            background: white;
+            border: 2px solid #e9ecef;
+            color: var(--text-color);
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            margin: 0 0.25rem 0.5rem 0;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-5 fw-bold mb-3">
+                        <i class="fas fa-layer-group me-3"></i>
+                        تصفح القوالب الجاهزة
+                    </h1>
+                    <p class="lead mb-0">
+                        اختر من مجموعة متنوعة من القوالب المصممة بعناية لإنشاء شهادات احترافية
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{% url 'settings' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-arrow-right me-2"></i>
+                        العودة للإعدادات
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Search and Filter -->
+        <div class="search-filter">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="البحث في القوالب...">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="filter-btn active" data-category="all">الكل</button>
+                        <button class="filter-btn" data-category="general">عام</button>
+                        <button class="filter-btn" data-category="academic">أكاديمي</button>
+                        <button class="filter-btn" data-category="corporate">شركات</button>
+                        <button class="filter-btn" data-category="creative">إبداعي</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Featured Templates -->
+        {% if featured_templates %}
+        <div class="featured-section">
+            <h2 class="category-title">
+                <i class="fas fa-star text-warning"></i>
+                القوالب المميزة
+            </h2>
+            <div class="row">
+                {% for template in featured_templates %}
+                <div class="col-lg-4 col-md-6 template-item" data-category="{{ template.category }}">
+                    <div class="template-card">
+                        <div class="template-preview">
+                            <img src="{{ template.preview_image.url }}" alt="{{ template.name }}">
+                            <div class="template-badge">مميز</div>
+                        </div>
+                        <div class="template-card-body">
+                            <h5 class="template-title">{{ template.name }}</h5>
+                            <p class="template-description">{{ template.description }}</p>
+                            <div class="template-tags">
+                                <span class="template-style-tag">{{ template.get_template_style_display }}</span>
+                            </div>
+                            <button class="btn-select-template" onclick="selectTemplate({{ template.id }})">
+                                <i class="fas fa-download me-2"></i>
+                                استخدام هذا القالب
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Templates by Category -->
+        {% for category, templates in categories.items %}
+        <div class="category-section">
+            <h2 class="category-title">
+                <i class="fas fa-folder-open"></i>
+                {{ category|title }}
+            </h2>
+            <div class="row">
+                {% for template in templates %}
+                <div class="col-lg-4 col-md-6 template-item" data-category="{{ template.category }}">
+                    <div class="template-card">
+                        <div class="template-preview">
+                            <img src="{{ template.preview_image.url }}" alt="{{ template.name }}">
+                            {% if template.is_featured %}
+                            <div class="template-badge">مميز</div>
+                            {% endif %}
+                        </div>
+                        <div class="template-card-body">
+                            <h5 class="template-title">{{ template.name }}</h5>
+                            <p class="template-description">{{ template.description }}</p>
+                            <div class="template-tags">
+                                <span class="template-style-tag">{{ template.get_template_style_display }}</span>
+                            </div>
+                            <button class="btn-select-template" onclick="selectTemplate({{ template.id }})">
+                                <i class="fas fa-download me-2"></i>
+                                استخدام هذا القالب
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Loading Spinner -->
+        <div class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">جاري التحميل...</span>
+            </div>
+            <p class="mt-2">جاري إنشاء القالب...</p>
+        </div>
+    </div>
+
+    <!-- Selection Modal -->
+    <div class="modal fade" id="templateModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-cog me-2"></i>
+                        إعداد القالب
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="templateForm">
+                        {% csrf_token %}
+                        <input type="hidden" id="selectedTemplateId" name="preset_template">
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">اسم المؤسسة</label>
+                                    <input type="text" class="form-control" name="institution_name" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">اسم الموقع</label>
+                                    <input type="text" class="form-control" name="signature_name" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">منصب الموقع</label>
+                            <input type="text" class="form-control" name="signature_title" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" onclick="createTemplate()">
+                        <i class="fas fa-plus me-2"></i>
+                        إنشاء القالب
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const templates = document.querySelectorAll('.template-item');
+            
+            templates.forEach(template => {
+                const title = template.querySelector('.template-title').textContent.toLowerCase();
+                const description = template.querySelector('.template-description').textContent.toLowerCase();
+                
+                if (title.includes(searchTerm) || description.includes(searchTerm)) {
+                    template.style.display = 'block';
+                } else {
+                    template.style.display = 'none';
+                }
+            });
+        });
+
+        // Filter functionality
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                const category = this.dataset.category;
+                const templates = document.querySelectorAll('.template-item');
+                
+                templates.forEach(template => {
+                    if (category === 'all' || template.dataset.category === category) {
+                        template.style.display = 'block';
+                    } else {
+                        template.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // Template selection
+        function selectTemplate(templateId) {
+            document.getElementById('selectedTemplateId').value = templateId;
+            new bootstrap.Modal(document.getElementById('templateModal')).show();
+        }
+
+        // Create template from preset
+        function createTemplate() {
+            const form = document.getElementById('templateForm');
+            const formData = new FormData(form);
+            
+            // Show loading
+            document.querySelector('.loading-spinner').style.display = 'block';
+            document.getElementById('templateModal').style.display = 'none';
+            
+            fetch('{% url "create_template_from_preset" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message and redirect
+                    alert('تم إنشاء القالب بنجاح!');
+                    window.location.href = '{% url "settings" %}';
+                } else {
+                    alert('حدث خطأ: ' + data.message);
+                    document.querySelector('.loading-spinner').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('حدث خطأ أثناء إنشاء القالب');
+                document.querySelector('.loading-spinner').style.display = 'none';
+            });
+        }
+    </script>
+</body>
+</html> 

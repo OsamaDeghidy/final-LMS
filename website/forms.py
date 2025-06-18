@@ -211,6 +211,10 @@ class CertificateTemplateForm(forms.Form):
         ('classic', 'تصميم كلاسيكي'),
         ('elegant', 'تصميم أنيق'),
         ('professional', 'تصميم مهني'),
+        ('creative', 'تصميم إبداعي'),
+        ('minimalist', 'تصميم بسيط'),
+        ('colorful', 'تصميم ملون'),
+        ('corporate', 'تصميم شركات'),
     ]
     
     COLOR_CHOICES = [
@@ -220,6 +224,41 @@ class CertificateTemplateForm(forms.Form):
         ('#ffc107', 'أصفر'),
         ('#6f42c1', 'بنفسجي'),
         ('#fd7e14', 'برتقالي'),
+        ('#17a2b8', 'سماوي'),
+        ('#e83e8c', 'وردي'),
+        ('#6c757d', 'رمادي'),
+        ('#343a40', 'أسود'),
+    ]
+    
+    BACKGROUND_PATTERN_CHOICES = [
+        ('none', 'بدون نمط'),
+        ('dots', 'نقاط'),
+        ('lines', 'خطوط'),
+        ('waves', 'موجات'),
+        ('geometric', 'أشكال هندسية'),
+        ('floral', 'نباتي'),
+        ('abstract', 'تجريدي'),
+    ]
+    
+    BORDER_STYLE_CHOICES = [
+        ('classic', 'كلاسيكي'),
+        ('modern', 'حديث'),
+        ('ornate', 'مزخرف'),
+        ('simple', 'بسيط'),
+        ('double', 'مزدوج'),
+        ('dashed', 'متقطع'),
+        ('rounded', 'مدور'),
+    ]
+    
+    FONT_FAMILY_CHOICES = [
+        ('Arial', 'Arial'),
+        ('Helvetica', 'Helvetica'),
+        ('Times New Roman', 'Times New Roman'),
+        ('Georgia', 'Georgia'),
+        ('Verdana', 'Verdana'),
+        ('Tahoma', 'Tahoma'),
+        ('Calibri', 'Calibri'),
+        ('Trebuchet MS', 'Trebuchet MS'),
     ]
     
     template_style = forms.ChoiceField(
@@ -231,6 +270,30 @@ class CertificateTemplateForm(forms.Form):
     primary_color = forms.ChoiceField(
         choices=COLOR_CHOICES,
         label="اللون الأساسي",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    secondary_color = forms.ChoiceField(
+        choices=COLOR_CHOICES,
+        label="اللون الثانوي",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    background_pattern = forms.ChoiceField(
+        choices=BACKGROUND_PATTERN_CHOICES,
+        label="نمط الخلفية",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    border_style = forms.ChoiceField(
+        choices=BORDER_STYLE_CHOICES,
+        label="نمط الحدود",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    font_family = forms.ChoiceField(
+        choices=FONT_FAMILY_CHOICES,
+        label="نوع الخط",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     
@@ -279,6 +342,15 @@ class CertificateTemplateForm(forms.Form):
         })
     )
     
+    user_signature = forms.ImageField(
+        required=False,
+        label="توقيع المستخدم",
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*'
+        })
+    )
+    
     certificate_text = forms.CharField(
         widget=forms.Textarea(attrs={
             'class': 'form-control',
@@ -300,3 +372,91 @@ class CertificateTemplateForm(forms.Form):
         label="إضافة الدرجة في الشهادة",
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
+    
+    include_completion_date = forms.BooleanField(
+        required=False,
+        label="إضافة تاريخ الإكمال",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    
+    include_course_duration = forms.BooleanField(
+        required=False,
+        label="إضافة مدة الدورة",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    
+    is_public = forms.BooleanField(
+        required=False,
+        label="قالب عام (يمكن للجميع استخدامه)",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
+
+class UserSignatureForm(forms.Form):
+    """Form for user signature upload"""
+    
+    name = forms.CharField(
+        max_length=255,
+        label="اسم التوقيع",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'توقيع رسمي'
+        })
+    )
+    
+    signature_image = forms.ImageField(
+        label="صورة التوقيع",
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*'
+        })
+    )
+    
+    is_default = forms.BooleanField(
+        required=False,
+        label="التوقيع الافتراضي",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
+
+class PresetTemplateSelectionForm(forms.Form):
+    """Form for selecting a preset template"""
+    
+    preset_template = forms.ModelChoiceField(
+        queryset=None,
+        label="اختر قالب جاهز",
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        empty_label=None
+    )
+    
+    institution_name = forms.CharField(
+        max_length=255,
+        label="اسم المؤسسة",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'أكاديمية التعلم الإلكتروني'
+        })
+    )
+    
+    signature_name = forms.CharField(
+        max_length=255,
+        label="اسم الموقع",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'د. أحمد محمد'
+        })
+    )
+    
+    signature_title = forms.CharField(
+        max_length=255,
+        label="منصب الموقع",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'مدير الأكاديمية'
+        })
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import PresetCertificateTemplate
+        self.fields['preset_template'].queryset = PresetCertificateTemplate.objects.filter(is_active=True)

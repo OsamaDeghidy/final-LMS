@@ -3,91 +3,320 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>معاينة الشهادة</title>
+    <title>معاينة الشهادة - {{ template.template_name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: {{ template_css_vars.primary_color|default:'#4361ee' }};
+            --secondary-color: {{ template_css_vars.secondary_color|default:'#3a0ca3' }};
+            --accent-color: #f72585;
+            --text-color: #2b2d42;
+            --light-bg: #f8f9fa;
+            --font-family: '{{ template_css_vars.font_family|default:'Cairo' }}', 'Tajawal', 'Segoe UI', sans-serif;
+        }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f8f9fa;
+            font-family: var(--font-family);
+            background: var(--light-bg);
+            color: var(--text-color);
+            line-height: 1.6;
         }
         
         .certificate-container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 2rem auto;
-            background: white;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border-radius: 10px;
-            overflow: hidden;
+            perspective: 1000px;
         }
         
-        .certificate-preview {
-            padding: 3rem;
-            text-align: center;
+        .certificate-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.15);
+            transform-style: preserve-3d;
+            transition: all 0.5s ease;
             position: relative;
         }
         
-        .certificate-header {
-            margin-bottom: 2rem;
+        .certificate-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        
+        /* Dynamic Certificate Styles */
+        .certificate-preview {
+            padding: 4rem;
+            text-align: center;
+            position: relative;
+            background: white;
+            border-radius: 15px;
+            {% if template.template_style == 'modern' %}
+                background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            {% elif template.template_style == 'classic' %}
+                background: #ffffff;
+                border: 3px solid var(--primary-color);
+            {% elif template.template_style == 'elegant' %}
+                background: linear-gradient(45deg, #faf9f7 0%, #ffffff 100%);
+            {% elif template.template_style == 'professional' %}
+                background: #ffffff;
+                border-left: 8px solid var(--primary-color);
+                border-right: 8px solid var(--primary-color);
+            {% elif template.template_style == 'creative' %}
+                background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            {% elif template.template_style == 'minimalist' %}
+                background: #ffffff;
+                border: 1px solid #e9ecef;
+            {% elif template.template_style == 'colorful' %}
+                background: linear-gradient(45deg, #a8edea 0%, #fed6e3 100%);
+            {% elif template.template_style == 'corporate' %}
+                background: #ffffff;
+                border-top: 5px solid var(--primary-color);
+                border-bottom: 5px solid var(--primary-color);
+            {% endif %}
+        }
+        
+        /* Dynamic Border Styles */
+        .certificate-border {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            border-radius: 15px;
+            {% if template.border_style == 'classic' %}
+                border: 15px solid;
+                border-image: linear-gradient(45deg, var(--primary-color), var(--secondary-color)) 1;
+            {% elif template.border_style == 'modern' %}
+                border: 3px solid var(--primary-color);
+                box-shadow: inset 0 0 0 10px white, inset 0 0 0 13px var(--secondary-color);
+            {% elif template.border_style == 'ornate' %}
+                border: 20px solid;
+                border-image: repeating-linear-gradient(45deg, var(--primary-color), var(--primary-color) 10px, var(--secondary-color) 10px, var(--secondary-color) 20px) 1;
+            {% elif template.border_style == 'simple' %}
+                border: 2px solid var(--primary-color);
+            {% elif template.border_style == 'double' %}
+                border: 5px double var(--primary-color);
+            {% elif template.border_style == 'dashed' %}
+                border: 3px dashed var(--primary-color);
+            {% elif template.border_style == 'rounded' %}
+                border: 8px solid var(--primary-color);
+                border-radius: 25px;
+            {% endif %}
+        }
+        
+        /* Background Patterns */
+        {% if template.background_pattern == 'dots' %}
+        .certificate-preview::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: radial-gradient(circle, var(--primary-color) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.05;
+            z-index: 0;
+        }
+        {% elif template.background_pattern == 'lines' %}
+        .certificate-preview::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: linear-gradient(45deg, var(--primary-color) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.05;
+            z-index: 0;
+        }
+        {% elif template.background_pattern == 'waves' %}
+        .certificate-preview::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234361ee' fill-opacity='0.05'%3E%3Cpath d='M30 30c0-11.046-8.954-20-20-20s-20 8.954-20 20 8.954 20 20 20 20-8.954 20-20zM30 30c0-11.046 8.954-20 20-20s20 8.954 20 20-8.954 20-20 20-20-8.954-20-20z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            z-index: 0;
+        }
+        {% endif %}
+        
+        .watermark {
+            position: absolute;
+            opacity: 0.03;
+            font-size: 15rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            z-index: 0;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            user-select: none;
+            pointer-events: none;
         }
         
         .institution-logo {
-            max-width: 100px;
-            max-height: 100px;
-            margin-bottom: 1rem;
+            max-width: 120px;
+            max-height: 120px;
+            margin-bottom: 1.5rem;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.1));
+            z-index: 1;
+            position: relative;
         }
         
         .certificate-title {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 1rem;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin: 1.5rem 0;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            z-index: 1;
+            {% if template.template_style == 'classic' %}
+                color: var(--primary-color) !important;
+                -webkit-text-fill-color: var(--primary-color) !important;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            {% elif template.template_style == 'minimalist' %}
+                font-weight: 300;
+                font-size: 2.2rem;
+            {% elif template.template_style == 'creative' %}
+                transform: rotate(-2deg);
+                text-shadow: 3px 3px 0px rgba(0,0,0,0.1);
+            {% endif %}
+        }
+        
+        .institution-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 1;
         }
         
         .certificate-text {
-            font-size: 1.2rem;
-            line-height: 1.6;
-            margin: 2rem 0;
-            color: #333;
+            font-size: 1.25rem;
+            line-height: 1.8;
+            margin: 2.5rem 0;
+            color: var(--text-color);
+            position: relative;
+            z-index: 1;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            {% if template.template_style == 'elegant' %}
+                font-style: italic;
+                font-family: 'Amiri', serif;
+                font-size: 1.4rem;
+            {% elif template.template_style == 'minimalist' %}
+                font-weight: 300;
+                font-size: 1.1rem;
+                line-height: 2;
+            {% endif %}
         }
         
         .student-name {
-            font-size: 1.8rem;
-            font-weight: bold;
-            margin: 1rem 0;
-            text-decoration: underline;
-            text-underline-offset: 8px;
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin: 1.5rem 0;
+            color: var(--primary-color);
+            position: relative;
+            display: inline-block;
+            padding: 0 1rem;
+            z-index: 1;
+            {% if template.template_style == 'classic' %}
+                text-decoration: underline;
+                text-decoration-color: var(--primary-color);
+                text-underline-offset: 8px;
+            {% elif template.template_style == 'creative' %}
+                transform: rotate(1deg);
+                background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            {% endif %}
+        }
+        
+        .student-name:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(to right, var(--accent-color), var(--primary-color));
+            z-index: -1;
+            opacity: 0.3;
+            border-radius: 4px;
+            {% if template.template_style == 'minimalist' %}
+                display: none;
+            {% elif template.template_style == 'classic' %}
+                display: none;
+            {% endif %}
         }
         
         .course-name {
-            font-size: 1.4rem;
+            font-size: 1.5rem;
             font-weight: 600;
-            color: #2c3e50;
-            margin: 1rem 0;
+            color: var(--secondary-color);
+            margin: 1.5rem 0;
+            position: relative;
+            z-index: 1;
         }
         
         .certificate-footer {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-end;
             margin-top: 3rem;
             padding-top: 2rem;
-            border-top: 2px solid #2a5a7c;
+            border-top: 2px dashed rgba(67, 97, 238, 0.3);
+            position: relative;
+            z-index: 1;
+            {% if template.template_style == 'minimalist' %}
+                border-top: 1px solid rgba(67, 97, 238, 0.2);
+            {% elif template.template_style == 'classic' %}
+                border-top: 3px double var(--primary-color);
+            {% endif %}
         }
         
         .signature-section {
             text-align: center;
+            flex: 1;
         }
         
         .signature-image {
+            max-width: 180px;
+            max-height: 100px;
+            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
+        }
+        
+        .user-signature-image {
             max-width: 150px;
             max-height: 80px;
             margin-bottom: 0.5rem;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
+        }
+        
+        .signature-line {
+            width: 150px;
+            height: 1px;
+            background: var(--primary-color);
+            margin: 0.5rem auto;
+            opacity: 0.5;
         }
         
         .signature-name {
-            font-weight: bold;
-            color: #2a5a7c;
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.1rem;
         }
         
         .signature-title {
@@ -97,148 +326,286 @@
         
         .certificate-date {
             font-size: 1.1rem;
-            color: #666;
+            color: var(--text-color);
+            background: rgba(67, 97, 238, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         
         .qr-code {
-            width: 80px;
-            height: 80px;
-            background: #f0f0f0;
-            border: 2px dashed #ccc;
+            width: 100px;
+            height: 100px;
+            background: white;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 5px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
         }
         
-        .grade-section {
+        .qr-code i {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            opacity: 0.7;
+        }
+        
+        .grade-badge {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            background: #2a5a7c;
+            top: 30px;
+            left: 30px;
+            background: linear-gradient(135deg, var(--accent-color), #f72585cc);
             color: white;
-            padding: 10px 15px;
-            border-radius: 20px;
+            padding: 0.5rem 1.5rem;
+            border-radius: 30px;
             font-weight: bold;
+            box-shadow: 0 5px 15px rgba(247, 37, 133, 0.3);
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         
-        .certificate-border {
-            border: 10px solid #2a5a7c;
-            border-image: linear-gradient(45deg, #2a5a7c, #2a5a7c80) 1;
+        .decoration {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: rgba(67, 97, 238, 0.05);
+            z-index: 0;
         }
         
-        /* Template Styles */
-        .modern {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .decoration-1 {
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
         }
         
-        .classic {
-            background: #fff;
-        }
-        
-        .elegant {
-            background: linear-gradient(to bottom, #ffecd2, #fcb69f);
-        }
-        
-        .professional {
-            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-            color: white;
+        .decoration-2 {
+            bottom: -30px;
+            left: -30px;
+            width: 120px;
+            height: 120px;
         }
         
         .preview-controls {
             background: white;
-            padding: 1rem;
-            border-top: 1px solid #eee;
+            padding: 1.5rem;
+            border-radius: 0 0 20px 20px;
             text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .btn-print {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-print:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.4);
+        }
+        
+        .btn-close {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            color: var(--text-color);
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-close:hover {
+            background: #f8f9fa;
+        }
+        
+        .template-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--primary-color);
+            backdrop-filter: blur(10px);
+            z-index: 3;
         }
         
         @media print {
-            .preview-controls {
+            .preview-controls,
+            .template-info {
                 display: none;
             }
             .certificate-container {
-                box-shadow: none;
                 margin: 0;
+                box-shadow: none;
+            }
+            .certificate-card {
+                box-shadow: none;
+                transform: none !important;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .certificate-preview {
+                padding: 2rem;
+            }
+            .certificate-title {
+                font-size: 2rem;
+            }
+            .student-name {
+                font-size: 1.8rem;
+            }
+            .certificate-footer {
+                flex-direction: column;
+                gap: 2rem;
+                align-items: center;
+            }
+            .signature-section {
+                order: 1;
+            }
+            .certificate-date {
+                order: 2;
+            }
+            .qr-code {
+                order: 3;
             }
         }
     </style>
 </head>
 <body>
     <div class="certificate-container">
-        <div class="certificate-preview {{ template.template_style }}" 
-             {% if template.template_style == 'classic' %}style="border: 20px solid {{ template.primary_color }};"{% endif %}>
-            
-            {% if template.include_grade and sample_data.grade %}
-            <div class="grade-section" style="background: {{ template.primary_color }};">
-                <i class="fas fa-star me-1"></i>
-                {{ sample_data.grade }}
-            </div>
-            {% endif %}
-            
-            <div class="certificate-header">
-                {% if template.institution_logo %}
-                <img src="{{ template.institution_logo.url }}" alt="شعار المؤسسة" class="institution-logo">
+        <div class="certificate-card">
+            <div class="certificate-preview">
+                <div class="certificate-border"></div>
+                <div class="watermark">{{ template.institution_name|upper }}</div>
+                <div class="decoration decoration-1"></div>
+                <div class="decoration decoration-2"></div>
+                
+                <div class="template-info">
+                    <i class="fas fa-palette me-1"></i>
+                    {{ template.get_template_style_display }}
+                </div>
+                
+                {% if template.include_grade and sample_data.grade %}
+                <div class="grade-badge">
+                    <i class="fas fa-medal"></i>
+                    <span>{{ sample_data.grade }}</span>
+                </div>
                 {% endif %}
                 
-                <h1 class="certificate-title" style="color: {{ template.primary_color }};">
-                    <i class="fas fa-certificate me-2"></i>
-                    شهادة إتمام
-                </h1>
-                
-                <h2 style="color: {{ template.primary_color }}; margin-bottom: 2rem;">
-                    {{ template.institution_name }}
-                </h2>
-            </div>
-            
-            <div class="certificate-body">
-                <div class="certificate-text">
-                    {{ formatted_certificate_text }}
-                </div>
-                
-                <div class="student-name" style="color: {{ template.primary_color }}; text-decoration-color: {{ template.primary_color }};">
-                    {{ sample_data.student_name }}
-                </div>
-                
-                <div class="course-name">
-                    {{ sample_data.course_name }}
-                </div>
-            </div>
-            
-            <div class="certificate-footer" style="border-top: 2px solid {{ template.primary_color }};">
-                <div class="signature-section">
-                    {% if template.signature_image %}
-                    <img src="{{ template.signature_image.url }}" alt="التوقيع" class="signature-image">
+                <div class="certificate-header">
+                    {% if template.institution_logo %}
+                    <img src="{{ template.institution_logo.url }}" alt="شعار المؤسسة" class="institution-logo">
                     {% endif %}
-                    <div class="signature-name" style="color: {{ template.primary_color }};">{{ template.signature_name }}</div>
-                    <div class="signature-title">{{ template.signature_title }}</div>
+                    
+                    <h1 class="certificate-title">
+                        <i class="fas fa-certificate"></i>
+                        شهادة إتمام
+                    </h1>
+                    
+                    <h2 class="institution-name">
+                        {{ template.institution_name }}
+                    </h2>
                 </div>
                 
-                <div class="certificate-date">
-                    <i class="fas fa-calendar me-1"></i>
-                    {{ sample_data.completion_date }}
+                <div class="certificate-body">
+                    <div class="certificate-text">
+                        {{ formatted_certificate_text }}
+                    </div>
+                    
+                    <div class="student-name">
+                        {{ sample_data.student_name }}
+                    </div>
+                    
+                    <div class="course-name">
+                        {{ sample_data.course_name }}
+                    </div>
+                    
+                    {% if template.include_course_duration and sample_data.course_duration %}
+                    <div class="course-duration mt-2" style="color: var(--secondary-color); font-size: 1rem;">
+                        <i class="fas fa-clock me-1"></i>
+                        مدة الدورة: {{ sample_data.course_duration }}
+                    </div>
+                    {% endif %}
                 </div>
                 
-                {% if template.include_qr_code %}
-                <div class="qr-code">
-                    <i class="fas fa-qrcode fa-2x text-muted"></i>
+                <div class="certificate-footer">
+                    <div class="signature-section">
+                        {% if template.user_signature %}
+                        <img src="{{ template.user_signature.url }}" alt="توقيع المستخدم" class="user-signature-image">
+                        <div class="signature-name">{{ template.signature_name }}</div>
+                        <div class="signature-title">{{ template.signature_title }}</div>
+                        {% elif template.signature_image %}
+                        <img src="{{ template.signature_image.url }}" alt="التوقيع" class="signature-image">
+                        <div class="signature-name">{{ template.signature_name }}</div>
+                        <div class="signature-title">{{ template.signature_title }}</div>
+                        {% else %}
+                        <div class="signature-line"></div>
+                        <div class="signature-name">{{ template.signature_name }}</div>
+                        <div class="signature-title">{{ template.signature_title }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if template.include_completion_date %}
+                    <div class="certificate-date">
+                        <i class="fas fa-calendar-alt"></i>
+                        {{ sample_data.completion_date }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if template.include_qr_code %}
+                    <div class="qr-code">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
-        </div>
-        
-        <div class="preview-controls">
-            <button class="btn btn-primary me-2" onclick="window.print()">
-                <i class="fas fa-print me-1"></i>
-                طباعة
-            </button>
-            <button class="btn btn-secondary" onclick="window.close()">
-                <i class="fas fa-times me-1"></i>
-                إغلاق
-            </button>
+            
+            <div class="preview-controls">
+                <button class="btn-print me-2" onclick="window.print()">
+                    <i class="fas fa-print me-2"></i>
+                    طباعة الشهادة
+                </button>
+                <button class="btn-close me-2" onclick="window.history.back()">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    العودة
+                </button>
+                <button class="btn-close" onclick="window.close()">
+                    <i class="fas fa-times me-2"></i>
+                    إغلاق النافذة
+                </button>
+            </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Add some interactive elements
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add hover effect to certificate
+            const certificate = document.querySelector('.certificate-card');
+            certificate.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-10px) rotateX(5deg)';
+            });
+            
+            certificate.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) rotateX(0)';
+            });
+        });
+    </script>
 </body>
-</html> 
+</html>

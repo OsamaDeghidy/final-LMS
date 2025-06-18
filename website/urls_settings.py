@@ -16,4 +16,12 @@ urlpatterns = [
     path('settings/template/<int:template_id>/default/', views_settings.set_default_template, name='set_default_template'),
     path('settings/template/<int:template_id>/delete/', views_settings.delete_template, name='delete_template'),
     path('settings/template/<int:template_id>/preview/', views_settings.preview_certificate, name='preview_certificate'),
+    
+    # User signature management
+    path('settings/save-signature/', views_settings.save_user_signature, name='save_user_signature'),
+    path('settings/signature/<int:signature_id>/delete/', views_settings.delete_signature, name='delete_signature'),
+    
+    # Preset template management
+    path('settings/create-from-preset/', views_settings.create_template_from_preset, name='create_template_from_preset'),
+    path('settings/browse-templates/', views_settings.browse_preset_templates, name='browse_preset_templates'),
 ] 
