@@ -38,25 +38,24 @@ def my_courses(request):
         'course__teacher__profile'
     ).prefetch_related(
         'course__tags',
-        'course__module_set',
-        'course__module_set__video_set'
+        'course__module_set'
     )
     
     # Calculate progress for each enrollment
     for enrollment in enrollments:
-        # Calculate total videos in course
-        total_videos = sum(module.video_set.count() for module in enrollment.course.module_set.all())
+        # Calculate total modules with videos in course
+        total_modules = enrollment.course.module_set.filter(video__isnull=False).count()
         
-        if total_videos > 0:
-            # Get watched videos for this course
-            watched_videos = VideoProgress.objects.filter(
-                student=request.user,
-                video__module__course=enrollment.course,
-                watched=True
+        if total_modules > 0:
+            # Get completed modules for this course using ModuleProgress
+            completed_modules = ModuleProgress.objects.filter(
+                user=request.user,
+                module__course=enrollment.course,
+                video_watched=True
             ).count()
             
             # Calculate progress percentage
-            progress = (watched_videos / total_videos) * 100
+            progress = (completed_modules / total_modules) * 100
         else:
             progress = 0
             
@@ -112,7 +111,6 @@ def teacher_courses(request):
     courses = Course.objects.filter(teacher=teacher).prefetch_related(
         'tags',
         'module_set',
-        'module_set__video_set',
         'enrollments'
     )
     
@@ -121,8 +119,8 @@ def teacher_courses(request):
         # Count total modules
         course.total_modules = course.module_set.count()
         
-        # Count total videos
-        course.total_videos = Video.objects.filter(module__course=course).count()
+        # Count total modules with videos
+        course.total_videos = course.module_set.filter(video__isnull=False).count()
         
         # Count total students enrolled
         course.total_students = course.enrollments.count()
