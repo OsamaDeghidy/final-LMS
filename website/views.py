@@ -649,6 +649,17 @@ def enroll_course(request, course_id):
         request.session['enroll_after_login'] = course_id
         return redirect('login')
     
+    # Check if user is a student (only students can enroll)
+    try:
+        from user.models import Profile
+        profile = Profile.objects.get(user=request.user)
+        if profile.status != 'Student':
+            messages.error(request, 'الاشتراك في الدورات متاح للطلاب فقط. المعلمون والإداريون لا يمكنهم الاشتراك في الدورات.')
+            return redirect('course_detail', course_id=course_id)
+    except Profile.DoesNotExist:
+        messages.error(request, 'لم يتم العثور على ملف تعريف المستخدم.')
+        return redirect('course_detail', course_id=course_id)
+    
     # Check if user is already enrolled
     existing_enrollment = Enrollment.objects.filter(course=course, student=request.user).first()
     if existing_enrollment:

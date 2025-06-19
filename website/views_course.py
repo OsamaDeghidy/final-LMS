@@ -22,6 +22,7 @@ from .models import (
 )
 from user.models import Profile, Student, Organization, Teacher
 from .utils_course import searchCourses, update_enrollment_progress, mark_content_completed, get_completed_content_ids, get_user_course_progress, get_user_enrolled_courses, ensure_course_has_module
+from .decorators import student_required
 
 def find_next_content_url(course, current_type, current_id, user):
     """Find the next content item after the current one"""
@@ -212,10 +213,92 @@ def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     modules = Module.objects.filter(course=course).order_by('number')
     
+    # Handle review submission (POST request)
+    if request.method == 'POST' and request.user.is_authenticated:
+        try:
+            from user.models import Profile
+            profile = Profile.objects.get(user=request.user)
+            if profile.status == 'Student':
+                is_enrolled = Enrollment.objects.filter(course=course, student=request.user).exists()
+                if is_enrolled:
+                    rating_value = request.POST.get('review_rating')
+                    review_comment = request.POST.get('review_comment', '')
+                    
+                    if rating_value:
+                        try:
+                            rating_value = int(rating_value)
+                            if 1 <= rating_value <= 5:
+                                from .models import Review
+                                review, created = Review.objects.update_or_create(
+                                    course=course,
+                                    user=request.user,
+                                    defaults={
+                                        'rating': rating_value,
+                                        'comment': review_comment
+                                    }
+                                )
+                                if created:
+                                    messages.success(request, 'تم إضافة تقييمك بنجاح!')
+                                else:
+                                    messages.success(request, 'تم تحديث تقييمك بنجاح!')
+                            else:
+                                messages.error(request, 'التقييم يجب أن يكون بين 1 و 5 نجوم')
+                        except ValueError:
+                            messages.error(request, 'تقييم غير صالح')
+                    else:
+                        messages.error(request, 'يجب اختيار تقييم')
+                else:
+                    messages.error(request, 'يجب أن تكون مسجلاً في الدورة لإضافة تقييم')
+            else:
+                messages.error(request, 'التقييم متاح للطلاب فقط')
+        except Profile.DoesNotExist:
+            messages.error(request, 'لم يتم العثور على ملف تعريف المستخدم')
+        
+        return redirect('course_detail', course_id=course_id)
+    
     # Check if user is enrolled
     is_enrolled = False
     if request.user.is_authenticated:
         is_enrolled = Enrollment.objects.filter(course=course, student=request.user).exists()
+    
+    # Check user type for permissions
+    is_student = False
+    is_teacher = False
+    is_admin = False
+    user_profile = None
+    
+    if request.user.is_authenticated:
+        try:
+            from user.models import Profile
+            user_profile = Profile.objects.get(user=request.user)
+            is_student = user_profile.status == 'Student'
+            is_teacher = user_profile.status == 'Teacher'
+            is_admin = user_profile.status == 'Admin'
+        except Profile.DoesNotExist:
+            pass
+    
+    # Check if course is in cart (only for students)
+    in_cart = False
+    if is_student:
+        try:
+            from .models import Cart, CartItem
+            cart = Cart.objects.get(user=request.user)
+            in_cart = CartItem.objects.filter(cart=cart, course=course).exists()
+        except Cart.DoesNotExist:
+            pass
+    
+    # Get user review (only for students)
+    user_review = None
+    if is_student and is_enrolled:
+        try:
+            from .models import Review
+            user_review = Review.objects.get(course=course, user=request.user)
+        except Review.DoesNotExist:
+            pass
+    
+    # Get all reviews for the course
+    from .models import Review
+    reviews = Review.objects.filter(course=course).select_related('user').order_by('-created_at')
     
     # Get final exams for the course
     final_exams = course.exams.filter(is_final=True, is_active=True).order_by('created_at')
@@ -230,6 +313,13 @@ def course_detail(request, course_id):
         'course': course,
         'modules': modules,
         'is_enrolled': is_enrolled,
+        'is_student': is_student,
+        'is_teacher': is_teacher,
+        'is_admin': is_admin,
+        'user_profile': user_profile,
+        'in_cart': in_cart,
+        'user_review': user_review,
+        'reviews': reviews,
         'final_exams': final_exams,
         'course_assignments': course_assignments,
         'course_quizzes': course_quizzes,
@@ -2075,7 +2165,7 @@ def delete_quiz(request, quiz_id):
     messages.success(request, _('Quiz deleted successfully.'))
     return redirect('quiz_list', video_id=video_id)
 
-@login_required
+@student_required
 def enroll_course(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
@@ -2167,7 +2257,8 @@ def delete_module_pdf(request, module_id, pdf_type):
     return redirect('update_module', course_id=course.id, module_id=module.id)
 
 # Cart functionality
-@login_required
+
+@student_required
 def add_to_cart(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
@@ -2187,7 +2278,7 @@ def add_to_cart(request, course_id):
     
     return redirect('view_cart')
 
-@login_required
+@student_required
 def view_cart(request):
     try:
         cart = Cart.objects.get(user=request.user)
@@ -2204,7 +2295,7 @@ def view_cart(request):
     
     return render(request, 'website/cart.html', context)
 
-@login_required
+@student_required
 def remove_from_cart(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
@@ -2218,7 +2309,7 @@ def remove_from_cart(request, course_id):
     
     return redirect('view_cart')
 
-@login_required
+@student_required
 def checkout(request):
     try:
         cart = Cart.objects.get(user=request.user)
@@ -2271,7 +2362,7 @@ def add_comment(request, course_id):
     return redirect('courseviewpage', course_id=course_id)
 
 # Ratings
-@login_required
+@student_required
 @require_POST
 def add_rating(request, course_id):
     course = get_object_or_404(Course, id=course_id)

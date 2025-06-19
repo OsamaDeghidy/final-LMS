@@ -494,8 +494,8 @@
                             </div>
                         </div>
                         
-                        <!-- Add Review Form -->
-                        {% if user.is_authenticated and is_enrolled %}
+                        <!-- Add Review Form (للطلاب فقط) -->
+                        {% if user.is_authenticated and is_student and is_enrolled %}
                             <div class="add-review-section">
                                 <h3>أضف تقييمك</h3>
                                 <form method="POST" action="{% url 'course_detail' course_id=course.id %}" class="review-form">
@@ -516,10 +516,18 @@
                                     <button type="submit" class="btn btn-primary">{{ user_review|yesno:"تحديث التقييم,إضافة تقييم" }}</button>
                                 </form>
                             </div>
-                        {% elif user.is_authenticated and not is_enrolled %}
+                        {% elif user.is_authenticated and is_student and not is_enrolled %}
                             <div class="alert alert-info">يجب أن تكون مسجلاً في الدورة لإضافة تقييم</div>
+                        {% elif user.is_authenticated and is_teacher %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-chalkboard-teacher"></i> التقييم متاح للطلاب المسجلين في الدورة فقط
+                            </div>
+                        {% elif user.is_authenticated and is_admin %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-user-shield"></i> التقييم متاح للطلاب المسجلين في الدورة فقط
+                            </div>
                         {% elif not user.is_authenticated %}
-                            <div class="alert alert-info">يجب تسجيل الدخول لإضافة تقييم</div>
+                            <div class="alert alert-info">يجب تسجيل الدخول كطالب لإضافة تقييم</div>
                         {% endif %}
                         
                         <!-- Reviews List -->
@@ -691,17 +699,34 @@
                     {% if user.is_authenticated and is_enrolled %}
                         <a href="{% url 'courseviewpage' course_id=course.id %}" class="btn btn-success sidebar-btn">عرض الدورة</a>
                     {% elif user.is_authenticated %}
-                        {% if in_cart %}
-                            <a href="{% url 'add_to_cart' course_id=course.id %}?next=view_course" class="btn btn-success sidebar-btn">عرض الدورة</a>
-                            <a href="{% url 'view_cart' %}" class="btn btn-info sidebar-btn mt-2">عرض السلة</a>
-                        {% else %}
-                            <form method="post" action="{% url 'add_to_cart' course_id=course.id %}" class="mb-2">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-primary sidebar-btn add-to-cart-btn">إضافة إلى السلة</button>
-                            </form>
-                            <a href="{% url 'enroll_course' course_id=course.id %}" class="btn btn-outline-primary sidebar-btn">اشترك الآن</a>
-                            <div class="mt-2 text-center">
-                                <small class="text-muted">يمكنك الاشتراك مباشرة أو إضافة الدورة للسلة</small>
+                        {% if is_student %}
+                            <!-- أزرار متاحة للطلاب فقط -->
+                            {% if in_cart %}
+                                <a href="{% url 'add_to_cart' course_id=course.id %}?next=view_course" class="btn btn-success sidebar-btn">عرض الدورة</a>
+                                <a href="{% url 'view_cart' %}" class="btn btn-info sidebar-btn mt-2">عرض السلة</a>
+                            {% else %}
+                                <form method="post" action="{% url 'add_to_cart' course_id=course.id %}" class="mb-2">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-primary sidebar-btn add-to-cart-btn">إضافة إلى السلة</button>
+                                </form>
+                                <a href="{% url 'enroll_course' course_id=course.id %}" class="btn btn-outline-primary sidebar-btn">اشترك الآن</a>
+                                <div class="mt-2 text-center">
+                                    <small class="text-muted">يمكنك الاشتراك مباشرة أو إضافة الدورة للسلة</small>
+                                </div>
+                            {% endif %}
+                        {% elif is_teacher %}
+                            <!-- رسالة للمعلمين -->
+                            <div class="alert alert-info text-center">
+                                <i class="fas fa-chalkboard-teacher"></i><br>
+                                <strong>أنت مدرب</strong><br>
+                                <small>الاشتراك والشراء متاح للطلاب فقط</small>
+                            </div>
+                        {% elif is_admin %}
+                            <!-- رسالة للإداريين -->
+                            <div class="alert alert-info text-center">
+                                <i class="fas fa-user-shield"></i><br>
+                                <strong>أنت مدير النظام</strong><br>
+                                <small>الاشتراك والشراء متاح للطلاب فقط</small>
                             </div>
                         {% endif %}
                     {% else %}
