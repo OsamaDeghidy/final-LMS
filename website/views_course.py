@@ -1682,24 +1682,80 @@ def complete_course(request, course_id):
 @login_required
 @require_POST
 def recalculate_progress(request, course_id):
+    """Recalculate course progress for the enrolled user"""
     try:
         course = get_object_or_404(Course, id=course_id)
         enrollment = get_object_or_404(Enrollment, course=course, student=request.user)
         
-        progress = update_enrollment_progress(enrollment)
+        # Recalculate the progress
+        new_progress = update_enrollment_progress(enrollment)
+        
+        logger.info(f"Progress recalculated for user {request.user.username} in course {course.name}: {new_progress}%")
         
         return JsonResponse({
             'status': 'success',
-            'message': 'تم إعادة حساب التقدم بنجاح',
-            'progress': progress
+            'progress': new_progress,
+            'message': f'تم إعادة حساب التقدم: {new_progress:.1f}%'
         })
         
     except Exception as e:
-        logger.error(f"Error recalculating progress: {e}")
+        logger.error(f"Error recalculating progress: {str(e)}")
         return JsonResponse({
             'status': 'error',
-            'message': f'\u062d\u062f\u062b \u062e\u0637\u0623: {str(e)}'
-        }, status=500)
+            'message': 'حدث خطأ في إعادة حساب التقدم'
+        })
+
+@login_required
+def check_final_exam_completion(request, course_id):
+    """Check if user passed any final exam for the course"""
+    try:
+        course = get_object_or_404(Course, id=course_id)
+        
+        # البحث عن جميع الامتحانات النهائية للكورس
+        final_exams = Exam.objects.filter(
+            course=course,
+            is_final=True,
+            is_active=True
+        )
+        
+        # التحقق من محاولات المستخدم في الامتحانات النهائية
+        passed_final_exams = []
+        for exam in final_exams:
+            successful_attempt = UserExamAttempt.objects.filter(
+                user=request.user,
+                exam=exam,
+                passed=True
+            ).first()
+            
+            if successful_attempt:
+                passed_final_exams.append({
+                    'exam_id': exam.id,
+                    'exam_title': exam.title,
+                    'score': successful_attempt.score,
+                    'attempt_number': successful_attempt.attempt_number,
+                    'completion_date': successful_attempt.end_time
+                })
+        
+        # إذا نجح في أي امتحان نهائي، الكورس مكتمل
+        course_completed = len(passed_final_exams) > 0
+        
+        logger.info(f"Final exam check for user {request.user.username} in course {course.name}: {'PASSED' if course_completed else 'NOT PASSED'}")
+        
+        return JsonResponse({
+            'status': 'success',
+            'course_completed': course_completed,
+            'passed_final_exams': passed_final_exams,
+            'total_final_exams': final_exams.count(),
+            'progress': 100.0 if course_completed else None,
+            'message': 'تم التحقق من حالة الامتحان النهائي'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error checking final exam completion: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'message': 'حدث خطأ في التحقق من الامتحان النهائي'
+        })
 
 # Quiz management
 @login_required

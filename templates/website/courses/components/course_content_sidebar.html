@@ -10,7 +10,7 @@
             <p class="mb-0">{{ course.small_description }}</p>
         </div>
         
-        <!-- شريط التقدم -->
+        <!-- شريط التقدم المحسن -->
         <div class="sidebar-progress-section">
             <div class="progress-title-sidebar">
                 <i class="fas fa-chart-line me-2"></i>
@@ -30,6 +30,7 @@
             <div class="course-progress-sidebar">
                 <div class="progress-fill-sidebar" data-progress="{{ progress|default:0 }}"></div>
             </div>
+            
             
             <!-- مؤشر المكان الحالي -->
             {% if current_content %}
@@ -85,15 +86,24 @@
         <div class="module-list">
             {% for module in modules %}
             <div class="module-item">
-                <button class="module-header" onclick="toggleModule('module-{{ module.id }}')">
+                <button class="module-header enhanced-module-header" onclick="toggleModule('module-{{ module.id }}')">
                     <div class="module-title-section">
                         <i class="fas fa-chevron-down toggle-icon" id="icon-module-{{ module.id }}"></i>
                         <h5 class="module-title">{{ forloop.counter }}. {{ module.name }}</h5>
                     </div>
-                    <div class="module-meta">
+                    <div class="module-meta-enhanced">
                         {% with content_count=module.get_ordered_content|length %}
-                            {{ content_count }} عنصر
+                        <div class="module-content-count">
+                            <i class="fas fa-list me-1"></i>{{ content_count }} عنصر
+                        </div>
                         {% endwith %}
+                        <!-- مؤشر تقدم الموديول -->
+                        <div class="module-progress-indicator">
+                            <div class="module-progress-bar">
+                                <div class="module-progress-fill" data-module-id="{{ module.id }}"></div>
+                            </div>
+                            <span class="module-progress-text">0%</span>
+                        </div>
                     </div>
                 </button>
                 
@@ -412,6 +422,101 @@
     background: rgba(40, 167, 69, 0.1) !important;
     border-left: 4px solid #28a745 !important;
 }
+
+/* Enhanced Progress Breakdown Styles */
+.enhanced-progress-breakdown {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.progress-formula,
+.module-breakdown {
+    margin-bottom: 0.5rem;
+}
+
+.enhanced-progress-breakdown small {
+    color: rgba(255, 255, 255, 0.9);
+    display: block;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* Enhanced Module Header Styles */
+.enhanced-module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: none;
+    text-align: right;
+}
+
+.module-meta-enhanced {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.module-content-count {
+    font-size: 0.75rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Module Progress Indicators */
+.module-progress-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 1rem;
+}
+
+.module-progress-bar {
+    width: 50px;
+    height: 5px;
+    background-color: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.module-progress-fill {
+    height: 100%;
+    background-color: #3b82f6;
+    transition: width 0.8s ease-in-out, background-color 0.3s ease;
+    border-radius: 3px;
+    width: 0%;
+}
+
+.module-progress-fill[data-completed="true"] {
+    background-color: #10b981;
+}
+
+.module-progress-text {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #64748b;
+    min-width: 25px;
+    text-align: center;
+}
+
+/* Element Status Icons */
+.element-completed {
+    color: #10b981 !important;
+}
+
+.element-pending {
+    color: #f59e0b !important;
+}
+
+.element-missing {
+    color: #ef4444 !important;
+}
 </style>
 
   <script>
@@ -427,8 +532,8 @@
           console.warn('Could not load Django data:', e);
       }
       
-      // Initialize Progress Bar Animation
-      const progressBars = document.querySelectorAll('.progress-fill-sidebar');
+          // Initialize Enhanced Progress System
+    const progressBars = document.querySelectorAll('.progress-fill-sidebar');
     
     progressBars.forEach(function(bar) {
         const progress = parseFloat(bar.getAttribute('data-progress')) || 0;
@@ -436,6 +541,12 @@
             bar.style.width = progress + '%';
         }, 500);
     });
+    
+         // Initialize module progress tracking
+     initializeModuleProgressTracking();
+     
+     // Calculate and display correct percentages for sidebar
+     calculateSidebarPercentages();
     
     // Mark already completed content items on page load
     markCompletedContentOnLoad();
@@ -1076,5 +1187,155 @@
          
          console.log('✅ Completed content marking finished');
      }
+     
+     // Calculate sidebar percentages and counts
+     function calculateSidebarPercentages() {
+         const modules = document.querySelectorAll('.module-item');
+         const moduleCount = modules.length || 1;
+         
+         const modulePercentage = (100 / moduleCount).toFixed(1);
+         const elementPercentage = (100 / moduleCount / 5).toFixed(1);
+         const totalElements = moduleCount * 5;
+         
+         // Update percentages
+         const moduleSpan = document.querySelector('.sidebar-module-percentage');
+         const elementSpan = document.querySelector('.sidebar-element-percentage');
+         
+         if (moduleSpan) {
+             moduleSpan.textContent = modulePercentage;
+         }
+         
+         if (elementSpan) {
+             elementSpan.textContent = elementPercentage;
+         }
+         
+         // Update counts
+         const moduleCountSpan = document.querySelector('.sidebar-module-count');
+         const totalElementsSpan = document.querySelector('.sidebar-total-elements');
+         
+         if (moduleCountSpan) {
+             moduleCountSpan.textContent = moduleCount;
+         }
+         
+         if (totalElementsSpan) {
+             totalElementsSpan.textContent = totalElements;
+         }
+         
+         console.log(`📊 Sidebar values calculated: Modules=${moduleCount}, Total Elements=${totalElements}, Module%=${modulePercentage}%, Element%=${elementPercentage}%`);
+     }
+     
+     // Enhanced Module Progress Tracking Functions
+     function initializeModuleProgressTracking() {
+         console.log('🎯 Initializing enhanced module progress tracking...');
+         
+         // Update all module progress indicators
+         updateAllModuleProgress();
+         
+         // Setup mutation observer for content changes
+         setupContentChangeObserver();
+     }
+
+     function updateAllModuleProgress() {
+         const modules = document.querySelectorAll('.module-item');
+         const totalModules = modules.length;
+         
+         if (totalModules === 0) return;
+         
+         const progressPerModule = 100 / totalModules;
+         
+         modules.forEach((module) => {
+             const moduleProgress = calculateModuleProgress(module, progressPerModule);
+             updateModuleProgressDisplay(module, moduleProgress, progressPerModule);
+         });
+         
+         // Trigger overall progress recalculation
+         if (window.updateOverallProgress) {
+             window.updateOverallProgress();
+         }
+     }
+
+     function calculateModuleProgress(moduleElement, maxProgress) {
+         const moduleContent = moduleElement.querySelector('.module-content');
+         if (!moduleContent) return 0;
+         
+         let progress = 0;
+         const elementsPerModule = 5; // فيديو، PDF، ملاحظات، واجب، اختبار
+         const progressPerElement = maxProgress / elementsPerModule;
+         
+         // البحث عن العناصر الخمسة
+         const elements = {
+             video: moduleContent.querySelector('.content-item[data-content-type="video"], .content-item[data-content-type="module_video"]'),
+             pdf: moduleContent.querySelector('.content-item[data-content-type="pdf"], .content-item[data-content-type="module_pdf"]'),
+             note: moduleContent.querySelector('.content-item[data-content-type="note"], .content-item[data-content-type="module_note"]'),
+             assignment: moduleContent.querySelector('.content-item[data-content-type="assignment"]'),
+             quiz: moduleContent.querySelector('.content-item[data-content-type="quiz"]')
+         };
+         
+         // حساب التقدم لكل عنصر
+         Object.keys(elements).forEach(elementType => {
+             const element = elements[elementType];
+             if (element && element.classList.contains('completed')) {
+                 progress += progressPerElement;
+             }
+         });
+         
+         return Math.min(progress, maxProgress);
+     }
+
+     function updateModuleProgressDisplay(moduleElement, currentProgress, maxProgress) {
+         const progressIndicator = moduleElement.querySelector('.module-progress-indicator');
+         if (!progressIndicator) return;
+         
+         const progressFill = progressIndicator.querySelector('.module-progress-fill');
+         const progressText = progressIndicator.querySelector('.module-progress-text');
+         
+         const percentage = (currentProgress / maxProgress) * 100;
+         
+         if (progressFill) {
+             progressFill.style.width = percentage + '%';
+             progressFill.style.backgroundColor = percentage >= 100 ? '#10b981' : '#3b82f6';
+             progressFill.setAttribute('data-completed', percentage >= 100 ? 'true' : 'false');
+         }
+         
+         if (progressText) {
+             progressText.textContent = Math.round(percentage) + '%';
+             progressText.style.color = percentage >= 100 ? '#10b981' : '#64748b';
+         }
+     }
+
+     function setupContentChangeObserver() {
+         const observer = new MutationObserver(function(mutations) {
+             let shouldUpdate = false;
+             
+             mutations.forEach(function(mutation) {
+                 if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                     const target = mutation.target;
+                     if (target.classList.contains('content-item')) {
+                         shouldUpdate = true;
+                     }
+                 }
+             });
+             
+             if (shouldUpdate) {
+                 console.log('🔄 Content completion state changed, updating module progress...');
+                 setTimeout(updateAllModuleProgress, 300);
+             }
+         });
+         
+         // مراقبة جميع عناصر المحتوى
+         document.querySelectorAll('.content-item').forEach(function(item) {
+             observer.observe(item, { attributes: true, attributeFilter: ['class'] });
+         });
+     }
+
+     // Override updateCompletionStats to include module progress
+     const originalUpdateCompletionStats = updateCompletionStats;
+     updateCompletionStats = function() {
+         // Call original function
+         originalUpdateCompletionStats();
+         
+         // Update module progress after completion stats change
+         setTimeout(updateAllModuleProgress, 300);
+     };
 });
 </script> 

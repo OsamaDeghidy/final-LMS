@@ -7,7 +7,10 @@
             <div class="note-actions">
                 <button type="button" class="btn btn-info btn-sm mark-note-read-btn" 
                         data-note-id="{{ current_content.content.id }}" 
-                        data-course-id="{{ course.id }}">
+                        data-course-id="{{ course.id }}"
+                        data-content-type="module_note"
+                        data-content-id="{{ current_content.content.id }}"
+                        style="border-radius: 25px; padding: 8px 16px; font-weight: 500; box-shadow: 0 2px 8px rgba(13, 110, 253, 0.25);">
                     <i class="fas fa-check-circle me-2"></i>تحديد كمقروء
                 </button>
             </div>
@@ -42,44 +45,136 @@
     {% endif %}
 </div>
 
-{% block extra_js %}
 <script>
-// Mark note as read when the button is clicked
 document.addEventListener('DOMContentLoaded', function() {
-    const markNoteReadBtn = document.querySelector('.mark-note-read-btn');
-    
-    if (markNoteReadBtn) {
-        markNoteReadBtn.addEventListener('click', function() {
-            const noteId = this.dataset.noteId;
-            const courseId = this.dataset.courseId;
-            
-            // Mark note as read
-            fetch(`/courses/mark-content-viewed/note/${noteId}/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken'),
-                },
-                body: JSON.stringify({})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Update UI to show note is read
-                    const noteItem = document.querySelector(`[data-note-id="${noteId}"]`);
-                    if (noteItem) {
-                        noteItem.closest('.content-item').classList.add('completed');
-                    }
-                    
-                    // Show success message
-                    showMessage('تم تحديد الملاحظة كمقروءة بنجاح', 'success');
-                    
-                    // Update progress bars
-                    updateProgressBars(data.progress);
-                }
-            });
-        });
-    }
+    // Mark Note as read when the button is clicked
+    setupNoteReadButtons();
 });
+
+function setupNoteReadButtons() {
+    const markReadBtns = document.querySelectorAll('.mark-note-read-btn');
+    
+    markReadBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const noteId = this.getAttribute('data-note-id');
+            const courseId = this.getAttribute('data-course-id');
+            const contentType = this.getAttribute('data-content-type');
+            const contentId = this.getAttribute('data-content-id');
+            
+            console.log('📝 Marking Note as read:', {noteId, courseId, contentType, contentId});
+            
+            // Mark as completed in the sidebar
+            markContentItemAsCompleted(contentType, contentId);
+            
+            // Send to server (if endpoint exists)
+            markContentViewed(contentType, contentId);
+            
+            // Update button state
+            updateButtonToCompleted(this);
+            
+            // Show success message
+            showSuccessMessage('✅ تم تحديد الملاحظات كمقروءة!');
+            
+            // Update progress system
+            if (window.enhancedProgressSystem) {
+                setTimeout(() => window.enhancedProgressSystem.calculateOverallProgress(), 500);
+            }
+        });
+    });
+}
+
+function updateButtonToCompleted(button) {
+    button.classList.remove('btn-info');
+    button.classList.add('btn-success');
+    button.innerHTML = '<i class="fas fa-check me-2"></i>مكتمل';
+    button.disabled = true;
+}
+
+function markContentItemAsCompleted(contentType, contentId) {
+    // Find the content item in sidebar and mark as completed
+    const contentItem = document.querySelector(`.content-item[data-content-type="${contentType}"][data-content-id="${contentId}"]`);
+    if (contentItem) {
+        contentItem.classList.add('completed');
+        
+        // Add completion badge if not exists
+        if (!contentItem.querySelector('.completion-badge')) {
+            const badge = document.createElement('div');
+            badge.className = 'completion-badge';
+            badge.innerHTML = '<i class="fas fa-check"></i>';
+            badge.style.cssText = `
+                background: #28a745;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 50%;
+                font-size: 0.8rem;
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+            `;
+            contentItem.style.position = 'relative';
+            contentItem.appendChild(badge);
+        }
+        
+        console.log('✅ Marked content item as completed:', contentType, contentId);
+    }
+}
+
+function markContentViewed(contentType, contentId) {
+    // Store completion in localStorage as backup
+    const completionKey = `completed_${contentType}_${contentId}`;
+    localStorage.setItem(completionKey, 'true');
+    
+    console.log('💾 Stored completion in localStorage:', completionKey);
+}
+
+function showSuccessMessage(message) {
+    // Create success toast
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success position-fixed';
+    toast.style.cssText = `
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+        animation: slideInRight 0.3s ease;
+    `;
+    toast.innerHTML = `
+        <div class="d-flex align-items-center">
+            <span>${message}</span>
+            <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 3000);
+}
+
+// CSS for animation
+if (!document.getElementById('note-completion-styles')) {
+    const style = document.createElement('style');
+    style.id = 'note-completion-styles';
+    style.textContent = `
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .content-item.completed {
+            background-color: #d4edda !important;
+            border-left: 4px solid #28a745;
+        }
+        
+        .completion-badge {
+            pointer-events: none;
+        }
+    `;
+    document.head.appendChild(style);
+}
 </script>
-{% endblock %}

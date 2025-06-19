@@ -16,6 +16,392 @@
     <script src="{% static 'js/attendance_tracking.js' %}"></script>
     <script src="{% static 'js/pdf-handler.js' %}"></script>
     <script src="{% static 'js/course-enhanced.js' %}"></script>
+    <script src="{% static 'js/enhanced-progress-system.js' %}"></script>
+
+    <!-- Enhanced Progress Calculation Script -->
+    <script>
+        // حساب التقدم الجديد بناءً على الموديولات وعناصرها الخمسة
+        function calculateModuleBasedProgress() {
+            const modules = document.querySelectorAll('.module-item');
+            if (modules.length === 0) return 0;
+            
+            const progressPerModule = 100 / modules.length;  // نسبة كل موديول
+            const elementsPerModule = 5;  // 5 عناصر لكل موديول (فيديو، PDF، ملاحظات، واجب، اختبار)
+            const progressPerElement = progressPerModule / elementsPerModule;  // 10% لكل عنصر في حالة وجود موديولين
+            
+            let totalProgress = 0;
+            
+            modules.forEach((module, moduleIndex) => {
+                const moduleProgress = calculateSingleModuleProgress(module, progressPerElement);
+                totalProgress += moduleProgress;
+                
+                // عرض تقدم الموديول في الواجهة
+                updateModuleProgressDisplay(module, moduleProgress, progressPerModule);
+            });
+            
+            return Math.min(totalProgress, 100);
+        }
+        
+        function calculateSingleModuleProgress(moduleElement, progressPerElement) {
+            const moduleContent = moduleElement.querySelector('.module-content');
+            if (!moduleContent) return 0;
+            
+            let moduleProgress = 0;
+            
+            // البحث عن العناصر الخمسة في الموديول
+            const elements = {
+                video: moduleContent.querySelector('.content-item[data-content-type="video"], .content-item[data-content-type="module_video"]'),
+                pdf: moduleContent.querySelector('.content-item[data-content-type="pdf"], .content-item[data-content-type="module_pdf"]'),
+                note: moduleContent.querySelector('.content-item[data-content-type="note"], .content-item[data-content-type="module_note"]'),
+                assignment: moduleContent.querySelector('.content-item[data-content-type="assignment"]'),
+                quiz: moduleContent.querySelector('.content-item[data-content-type="quiz"]')
+            };
+            
+            // حساب التقدم لكل عنصر
+            Object.keys(elements).forEach(elementType => {
+                const element = elements[elementType];
+                if (element) {
+                    if (element.classList.contains('completed')) {
+                        moduleProgress += progressPerElement;
+                    }
+                }
+            });
+            
+            return moduleProgress;
+        }
+        
+        function updateModuleProgressDisplay(moduleElement, currentProgress, maxProgress) {
+            const moduleHeader = moduleElement.querySelector('.module-header');
+            if (!moduleHeader) return;
+            
+            // إضافة أو تحديث شريط التقدم للموديول
+            let progressIndicator = moduleHeader.querySelector('.module-progress-indicator');
+            if (!progressIndicator) {
+                progressIndicator = document.createElement('div');
+                progressIndicator.className = 'module-progress-indicator';
+                progressIndicator.innerHTML = `
+                    <div class="module-progress-bar">
+                        <div class="module-progress-fill"></div>
+                    </div>
+                    <span class="module-progress-text">0%</span>
+                `;
+                moduleHeader.appendChild(progressIndicator);
+            }
+            
+            const progressFill = progressIndicator.querySelector('.module-progress-fill');
+            const progressText = progressIndicator.querySelector('.module-progress-text');
+            
+            const percentage = (currentProgress / maxProgress) * 100;
+            
+            if (progressFill) {
+                progressFill.style.width = percentage + '%';
+                progressFill.style.backgroundColor = percentage >= 100 ? '#10b981' : '#3b82f6';
+            }
+            
+            if (progressText) {
+                progressText.textContent = Math.round(percentage) + '%';
+            }
+        }
+        
+        function updateOverallProgress() {
+            const newProgress = calculateModuleBasedProgress();
+            
+            // تحديث شريط التقدم الرئيسي
+            const progressBar = document.querySelector('.progress-fill-sidebar');
+            const progressText = document.querySelector('.progress-title-sidebar');
+            
+            if (progressBar) {
+                progressBar.style.width = newProgress + '%';
+                progressBar.setAttribute('data-progress', newProgress);
+            }
+            
+            if (progressText) {
+                progressText.innerHTML = progressText.innerHTML.replace(/تقدمك: \d+\.?\d*%/, `تقدمك: ${newProgress.toFixed(1)}%`);
+            }
+            
+            // تحديث إحصائيات الإكمال
+            updateCompletionStats();
+            
+            // إرسال التقدم الجديد إلى الخادم
+            sendProgressToServer(newProgress);
+            
+            return newProgress;
+        }
+        
+        function updateCompletionStats() {
+            const totalElements = document.querySelectorAll('.content-item').length;
+            const completedElements = document.querySelectorAll('.content-item.completed').length;
+            const totalModules = document.querySelectorAll('.module-item').length;
+            
+            const completedStat = document.querySelector('.completion-stats .stat-card:nth-child(1) .stat-number');
+            const totalStat = document.querySelector('.completion-stats .stat-card:nth-child(2) .stat-number');
+            const modulesStat = document.querySelector('.completion-stats .stat-card:nth-child(3) .stat-number');
+            
+            if (completedStat) completedStat.textContent = completedElements;
+            if (totalStat) totalStat.textContent = totalElements;
+            if (modulesStat) modulesStat.textContent = totalModules;
+        }
+        
+        function sendProgressToServer(progress) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const courseId = document.querySelector('meta[name="course-id"]').getAttribute('content');
+            
+            fetch(`/course/${courseId}/update-progress/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    progress: progress
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    console.log('✅ تم تحديث التقدم بنجاح:', progress.toFixed(1) + '%');
+                } else {
+                    console.error('❌ خطأ في تحديث التقدم:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('❌ خطأ في الاتصال:', error);
+            });
+        }
+        
+        // حساب نسب التقدم الصحيحة
+        function calculateAndDisplayPercentages() {
+            const modules = document.querySelectorAll('.module-item');
+            const moduleCount = modules.length || 1;
+            
+            const modulePercentage = (100 / moduleCount).toFixed(1);
+            const elementPercentage = (100 / moduleCount / 5).toFixed(1);
+            
+            const moduleSpan = document.getElementById('module-percentage');
+            const elementSpan = document.getElementById('element-percentage');
+            
+            if (moduleSpan) {
+                moduleSpan.textContent = modulePercentage;
+            }
+            
+            if (elementSpan) {
+                elementSpan.textContent = elementPercentage;
+            }
+            
+            console.log(`📊 Calculated percentages: Module=${modulePercentage}%, Element=${elementPercentage}%`);
+        }
+
+        // تهيئة النظام عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            // حساب النسب الصحيحة
+            calculateAndDisplayPercentages();
+            
+            // إنتظار تحميل النظام المحسن
+            setTimeout(() => {
+                if (window.enhancedProgressSystem) {
+                    console.log('✅ Using Enhanced Progress System');
+                } else {
+                    console.log('⚠️ Enhanced Progress System not loaded, using fallback');
+                    updateOverallProgress();
+                }
+            }, 2000);
+            
+            // مراقبة تغييرات حالة الإكمال (نظام احتياطي)
+            const observer = new MutationObserver(function(mutations) {
+                let shouldUpdate = false;
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        const target = mutation.target;
+                        if (target.classList.contains('content-item')) {
+                            shouldUpdate = true;
+                        }
+                    }
+                });
+                
+                if (shouldUpdate) {
+                    if (window.enhancedProgressSystem) {
+                        setTimeout(() => window.enhancedProgressSystem.calculateOverallProgress(), 500);
+                    } else {
+                        setTimeout(updateOverallProgress, 500);
+                    }
+                }
+            });
+            
+            // مراقبة جميع عناصر المحتوى
+            document.querySelectorAll('.content-item').forEach(function(item) {
+                observer.observe(item, { attributes: true, attributeFilter: ['class'] });
+            });
+            
+            // تحديث دوري كل 30 ثانية
+            setInterval(() => {
+                if (window.enhancedProgressSystem) {
+                    window.enhancedProgressSystem.calculateOverallProgress();
+                } else {
+                    updateOverallProgress();
+                }
+            }, 30000);
+        });
+    </script>
+    
+    <!-- Enhanced Progress Styles -->
+    <style>
+        .module-progress-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: 1rem;
+        }
+        
+        .module-progress-bar {
+            width: 60px;
+            height: 6px;
+            background-color: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .module-progress-fill {
+            height: 100%;
+            background-color: #3b82f6;
+            transition: width 0.8s ease-in-out;
+            border-radius: 3px;
+        }
+        
+        .module-progress-text {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #64748b;
+            min-width: 30px;
+        }
+        
+        .module-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .enhanced-progress-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        
+        .progress-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .progress-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.75rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .progress-item i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        .element-completed {
+            color: #10b981 !important;
+        }
+        
+        .element-pending {
+            color: #f59e0b !important;
+        }
+        
+        /* استايل للعناصر المكتملة */
+        .content-item.completed {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
+            border-left: 4px solid #28a745 !important;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2) !important;
+        }
+        
+        .content-item.completed .content-icon {
+            background: #28a745 !important;
+            color: white !important;
+        }
+        
+        .content-item.completed .content-name {
+            font-weight: 600;
+            color: #1e7e34 !important;
+        }
+        
+        .completion-badge {
+            position: absolute !important;
+            right: 15px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            background: #28a745 !important;
+            color: white !important;
+            padding: 6px 10px !important;
+            border-radius: 50% !important;
+            font-size: 0.9rem !important;
+            box-shadow: 0 2px 6px rgba(40, 167, 69, 0.4) !important;
+            z-index: 10 !important;
+            pointer-events: none !important;
+        }
+        
+        /* أزرار الإكمال */
+        .mark-pdf-read-btn, .mark-note-read-btn {
+            transition: all 0.3s ease;
+            border-radius: 25px;
+            padding: 8px 16px;
+            font-weight: 500;
+        }
+        
+        .mark-pdf-read-btn:hover, .mark-note-read-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .mark-pdf-read-btn.btn-success, .mark-note-read-btn.btn-success {
+            background: #28a745 !important;
+            border-color: #28a745 !important;
+            cursor: not-allowed;
+        }
+        
+        /* تأثيرات الإشعارات */
+        @keyframes slideInRight {
+            from { 
+                transform: translateX(100%); 
+                opacity: 0; 
+            }
+            to { 
+                transform: translateX(0); 
+                opacity: 1; 
+            }
+        }
+        
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0.3);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .completion-badge {
+            animation: bounceIn 0.6s ease-out;
+        }
+    </style>
 
 {% endblock %}
 
@@ -128,7 +514,7 @@
                         </div>
                     </div>
                 {% else %}
-                    <!-- Course Overview -->
+                    <!-- Course Overview with Enhanced Progress -->
                     <div class="course-overview">
                         <div class="content-header">
                             <h1 class="content-title">
@@ -136,6 +522,67 @@
                                 مرحباً بك في دورة {{ course.name }}
                             </h1>
                             <p class="course-description">{{ course.description }}</p>
+                        </div>
+                        
+                        <!-- Enhanced Progress Information -->
+                        <div class="enhanced-progress-info">
+                            <h5><i class="fas fa-chart-line me-2"></i>نظام التقدم المحسن</h5>
+                            
+                            <!-- إرشادات الاستخدام -->
+                            <div class="usage-guide mb-3 p-3 bg-white rounded border-start border-primary border-4">
+                                <h6 class="text-primary mb-2">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    كيفية إكمال المحتوى
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block mb-1">
+                                            <i class="fas fa-video text-primary me-1"></i>
+                                            <strong>الفيديوهات:</strong> يتم تسجيل الإكمال تلقائياً عند المشاهدة
+                                        </small>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block mb-1">
+                                            <i class="fas fa-file-pdf text-danger me-1"></i>
+                                            <strong>ملفات PDF:</strong> انقر على زر "تحديد كمقروء" بعد القراءة
+                                        </small>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block mb-1">
+                                            <i class="fas fa-sticky-note text-warning me-1"></i>
+                                            <strong>الملاحظات:</strong> انقر على زر "تحديد كمقروء" بعد القراءة
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <p class="mb-2">يتم حساب تقدمك بناءً على إكمال العناصر الخمسة لكل موديول:</p>
+                            <div class="progress-breakdown">
+                                <div class="progress-item">
+                                    <i class="fas fa-video"></i>
+                                    <span>فيديو الموديول</span>
+                                </div>
+                                <div class="progress-item">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <span>ملف PDF</span>
+                                </div>
+                                <div class="progress-item">
+                                    <i class="fas fa-sticky-note"></i>
+                                    <span>الملاحظات</span>
+                                </div>
+                                <div class="progress-item">
+                                    <i class="fas fa-tasks"></i>
+                                    <span>الواجب</span>
+                                </div>
+                                <div class="progress-item">
+                                    <i class="fas fa-question-circle"></i>
+                                    <span>الاختبار</span>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small><i class="fas fa-info-circle me-1"></i>
+                                كل موديول يساوي <span id="module-percentage">{{ modules|length|default:1 }}</span>% من إجمالي الدورة، وكل عنصر يساوي <span id="element-percentage">{{ modules|length|default:1 }}</span>%</small>
+                            </div>
                         </div>
                         
                         <!-- Course Stats -->
@@ -217,14 +664,14 @@
                 {% endif %}
                 
                 <!-- Course Completion -->
-                {% if progress >= 80 %}
+                {% if progress_percentage >= 80 %}
                 <div class="completion-section">
-                    {% if progress >= 100 or enrollment.status == 'completed' %}
+                    {% if progress_percentage >= 100 or enrollment.status == 'completed' %}
                         <button class="nav-btn nav-completed" disabled>
                             <i class="fas fa-check-circle"></i>
                             مكتملة بنجاح
                         </button>
-                    {% elif progress >= 90 %}
+                    {% elif progress_percentage >= 90 %}
                         <button class="nav-btn nav-complete" data-course-id="{{ course.id }}">
                             <i class="fas fa-trophy"></i>
                             إنهاء الدورة
@@ -232,7 +679,7 @@
                     {% endif %}
                     
                     <!-- Final Exam Button -->
-                    {% if progress >= 85 and course.course_quizzes.exists %}
+                    {% if progress_percentage >= 85 and course.course_quizzes.exists %}
                         {% for final_quiz in course.course_quizzes.all %}
                             {% if final_quiz.quiz_type == 'final' or 'نهائي' in final_quiz.title %}
                             <a href="{% url 'courseviewpage' course.id %}?content_type=quiz&content_id={{ final_quiz.id }}" 
@@ -279,9 +726,111 @@
                     </div>
                 </div>
             </div>
+            
+            <button class="btn btn-sm btn-outline-light ms-2 recalculate-progress-btn" 
+                     data-course-id="{{ course.id }}" 
+                     onclick="recalculateProgress({{ course.id }})"
+                     title="إعادة حساب التقدم">
+                 <i class="fas fa-sync-alt"></i>
+             </button>
+             
+             {% if enrollment and is_enrolled %}
+             <button class="btn btn-sm btn-success ms-2" 
+                     onclick="testProgressSystem()"
+                     title="اختبار نظام التقدم">
+                 <i class="fas fa-play"></i>
+             </button>
+             
+             <button class="btn btn-sm btn-warning ms-2" 
+                     onclick="testFinalExamCheck()"
+                     title="اختبار الامتحان النهائي">
+                 <i class="fas fa-graduation-cap"></i>
+             </button>
+             {% endif %}
         </div>
     </div>
 </div>
 
+<script>
+// دوال الاختبار للنظام الجديد
+async function testProgressSystem() {
+    console.log('🧪 Testing Enhanced Progress System...');
+    
+    if (window.enhancedProgressSystem) {
+        // اختبار حساب التقدم
+        const progress = await window.enhancedProgressSystem.calculateOverallProgress();
+        const report = window.enhancedProgressSystem.getProgressReport();
+        
+        console.log('📊 Progress System Test Results:');
+        console.log('- Current Progress:', progress.toFixed(1) + '%');
+        console.log('- Detailed Report:', report);
+        
+        alert(`🎯 نتائج اختبار النظام:\nالتقدم الحالي: ${progress.toFixed(1)}%\nالموديولات: ${report.totalModules}\nالعناصر المكتملة: ${report.completedElements}/${report.totalElements}`);
+    } else {
+        console.warn('⚠️ Enhanced Progress System not ready yet');
+        alert('⚠️ النظام المحسن غير جاهز بعد. انتظر قليلاً وحاول مرة أخرى.');
+    }
+}
+
+async function testFinalExamCheck() {
+    console.log('🎓 Testing Final Exam Check...');
+    
+    if (window.enhancedProgressSystem) {
+        try {
+            const result = await window.enhancedProgressSystem.checkFinalExamFromDatabase();
+            
+            if (result) {
+                console.log('✅ Final exam passed - Course should be completed');
+                alert('🎉 تهانينا! لقد اجتزت الامتحان النهائي بنجاح!\nسيتم تحديث التقدم إلى 100%');
+            } else {
+                console.log('❌ Final exam not passed or not found');
+                alert('📝 لم يتم العثور على امتحان نهائي مكتمل بنجاح.\nأكمل الامتحان النهائي لإنهاء الدورة.');
+            }
+        } catch (error) {
+            console.error('❌ Error testing final exam check:', error);
+            alert('❌ حدث خطأ أثناء فحص الامتحان النهائي: ' + error.message);
+        }
+    } else {
+        console.warn('⚠️ Enhanced Progress System not ready yet');
+        alert('⚠️ النظام المحسن غير جاهز بعد. انتظر قليلاً وحاول مرة أخرى.');
+    }
+}
+
+// دالة لإعادة حساب التقدم
+async function recalculateProgress(courseId) {
+    console.log('🔄 Recalculating progress for course:', courseId);
+    
+    try {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        const response = await fetch(`/api/course/${courseId}/recalculate-progress/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            console.log('✅ Progress recalculated:', data.progress + '%');
+            alert(`✅ تم إعادة حساب التقدم بنجاح!\nالتقدم الجديد: ${data.progress.toFixed(1)}%`);
+            
+            // إعادة تحميل الصفحة لإظهار التحديثات
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            console.error('❌ Server error:', data.message);
+            alert('❌ خطأ في إعادة حساب التقدم: ' + data.message);
+        }
+    } catch (error) {
+        console.error('❌ Network error:', error);
+        alert('❌ خطأ في الاتصال: ' + error.message);
+    }
+}
+</script>
 
 {% endblock %}

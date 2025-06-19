@@ -40,6 +40,7 @@ urlpatterns = [
     path('api/assignment/<int:assignment_id>/mark-completed/', views_course.mark_assignment_completed, name='mark_assignment_completed'),
     path('api/course/<int:course_id>/complete/', views_course.complete_course, name='complete_course'),
     path('api/course/<int:course_id>/recalculate-progress/', views_course.recalculate_progress, name='recalculate_progress'),
+    path('api/course/<int:course_id>/check-final-exam/', views_course.check_final_exam_completion, name='check_final_exam_completion'),
     
     # Course file management
     path('delete-pdf/<int:course_id>/<str:pdf_type>/', views_course.delete_pdf, name='delete_pdf'),
