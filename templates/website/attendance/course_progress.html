@@ -1,0 +1,409 @@
+{% extends 'main/dashboard_base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .progress {
+        height: 1.2rem;
+        background-color: #e9ecef;
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    .progress-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #ffffff;
+        transition: width 0.6s ease;
+    }
+    .student-card {
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+        background: white;
+    }
+    .student-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-3px);
+    }
+    .student-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+    }
+    .module-progress-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 10px;
+        margin: 5px 0;
+        border-left: 4px solid #28a745;
+    }
+    .module-progress-item.incomplete {
+        border-left-color: #ffc107;
+    }
+    .module-progress-item.not-started {
+        border-left-color: #dc3545;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #007bff;
+    }
+    .filter-tabs {
+        margin-bottom: 20px;
+    }
+    .content-type-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: 10px;
+        margin: 2px;
+    }
+    .modal-body {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block title %}تقدم الطلاب - {{ course.name }}{% endblock %}
+
+{% block dashboard_content %}
+<div class="container py-4 col-md-8">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'attendance_dashboard' %}">لوحة تحكم التقدم</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ course.name }}</li>
+                </ol>
+            </nav>
+            <h1 class="text-center mb-3">
+                <i class="fas fa-chart-line text-primary"></i>
+                تقدم الطلاب في: {{ course.name }}
+            </h1>
+        </div>
+    </div>
+
+    <!-- Course Statistics -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ total_students }}</div>
+            <div class="text-muted">إجمالي الطلاب</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_modules }}</div>
+            <div class="text-muted">الوحدات</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ avg_progress|floatformat:1 }}%</div>
+            <div class="text-muted">متوسط التقدم</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ completed_students }}</div>
+            <div class="text-muted">طلاب مكتملين</div>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+        <ul class="nav nav-pills" id="progressTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="all-tab" data-bs-toggle="pill" data-bs-target="#all" type="button" role="tab">
+                    <i class="fas fa-users"></i> جميع الطلاب ({{ total_students }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="completed-tab" data-bs-toggle="pill" data-bs-target="#completed" type="button" role="tab">
+                    <i class="fas fa-trophy text-success"></i> مكتملين ({{ completed_students }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="progress-tab" data-bs-toggle="pill" data-bs-target="#progress" type="button" role="tab">
+                    <i class="fas fa-hourglass-half text-warning"></i> قيد التقدم ({{ progress_students }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="not-started-tab" data-bs-toggle="pill" data-bs-target="#not-started" type="button" role="tab">
+                    <i class="fas fa-play text-danger"></i> لم يبدأوا ({{ not_started_students }})
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Student Lists -->
+    <div class="tab-content" id="progressTabsContent">
+        <!-- All Students -->
+        <div class="tab-pane fade show active" id="all" role="tabpanel">
+            {% for student_data in student_progress %}
+            <div class="student-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center">
+                            <div class="student-avatar">
+                                {{ student_data.student.first_name.0|default:student_data.student.username.0|upper }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="mb-1">
+                                {{ student_data.student.get_full_name|default:student_data.student.username }}
+                            </h5>
+                            <p class="text-muted mb-2">
+                                <i class="fas fa-envelope"></i> {{ student_data.student.email }}
+                            </p>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary content-type-badge">
+                                    <i class="fas fa-video"></i> {{ student_data.completed_videos }}/{{ student_data.total_videos }}
+                                </span>
+                                <span class="badge bg-info content-type-badge">
+                                    <i class="fas fa-file-pdf"></i> {{ student_data.completed_pdfs }}/{{ student_data.total_pdfs }}
+                                </span>
+                                <span class="badge bg-success content-type-badge">
+                                    <i class="fas fa-question-circle"></i> {{ student_data.completed_quizzes }}/{{ student_data.total_quizzes }}
+                                </span>
+                                <span class="badge bg-warning content-type-badge">
+                                    <i class="fas fa-tasks"></i> {{ student_data.completed_assignments }}/{{ student_data.total_assignments }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="progress mb-2">
+                                <div class="progress-bar {% if student_data.progress_percentage >= 100 %}bg-success{% elif student_data.progress_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {{ student_data.progress_percentage }}%" 
+                                     aria-valuenow="{{ student_data.progress_percentage }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    {{ student_data.progress_percentage|floatformat:1 }}%
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                <i class="fas fa-clock"></i>
+                                آخر نشاط: {{ student_data.last_activity|default:"لا يوجد" }}
+                            </small>
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="showStudentDetails({{ student_data.student.id }}, '{{ student_data.student.get_full_name|default:student_data.student.username }}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-5x text-muted mb-3"></i>
+                <h4 class="text-muted">لا يوجد طلاب مسجلين في هذه الدورة</h4>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Completed Students -->
+        <div class="tab-pane fade" id="completed" role="tabpanel">
+            {% for student_data in student_progress %}
+            {% if student_data.progress_percentage >= 100 %}
+            <div class="student-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center">
+                            <div class="student-avatar" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                                {{ student_data.student.first_name.0|default:student_data.student.username.0|upper }}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="mb-1">
+                                <i class="fas fa-trophy text-warning"></i>
+                                {{ student_data.student.get_full_name|default:student_data.student.username }}
+                            </h5>
+                            <p class="text-muted mb-2">أكمل الدورة بنجاح</p>
+                            <small class="text-success">
+                                <i class="fas fa-check-circle"></i>
+                                تاريخ الإكمال: {{ student_data.completion_date|default:"غير محدد" }}
+                            </small>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <div class="progress mb-2">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 100%">
+                                    100%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% empty %}
+            <div class="text-center py-5">
+                <i class="fas fa-trophy fa-5x text-muted mb-3"></i>
+                <h4 class="text-muted">لا يوجد طلاب أكملوا الدورة بعد</h4>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Progress Students -->
+        <div class="tab-pane fade" id="progress" role="tabpanel">
+            {% for student_data in student_progress %}
+            {% if student_data.progress_percentage > 0 and student_data.progress_percentage < 100 %}
+            <div class="student-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center">
+                            <div class="student-avatar" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                                {{ student_data.student.first_name.0|default:student_data.student.username.0|upper }}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="mb-1">
+                                {{ student_data.student.get_full_name|default:student_data.student.username }}
+                            </h5>
+                            <p class="text-muted mb-2">قيد التقدم في الدورة</p>
+                            <small class="text-muted">
+                                <i class="fas fa-clock"></i>
+                                آخر نشاط: {{ student_data.last_activity|default:"لا يوجد" }}
+                            </small>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <div class="progress mb-2">
+                                <div class="progress-bar bg-warning" 
+                                     role="progressbar" 
+                                     style="width: {{ student_data.progress_percentage }}%">
+                                    {{ student_data.progress_percentage|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% empty %}
+            <div class="text-center py-5">
+                <i class="fas fa-hourglass-half fa-5x text-muted mb-3"></i>
+                <h4 class="text-muted">لا يوجد طلاب قيد التقدم حالياً</h4>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Not Started Students -->
+        <div class="tab-pane fade" id="not-started" role="tabpanel">
+            {% for student_data in student_progress %}
+            {% if student_data.progress_percentage == 0 %}
+            <div class="student-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center">
+                            <div class="student-avatar" style="background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);">
+                                {{ student_data.student.first_name.0|default:student_data.student.username.0|upper }}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="mb-1">
+                                {{ student_data.student.get_full_name|default:student_data.student.username }}
+                            </h5>
+                            <p class="text-muted mb-2">لم يبدأ في الدورة بعد</p>
+                            <small class="text-danger">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                تاريخ التسجيل: {{ student_data.enrollment_date }}
+                            </small>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <div class="progress mb-2">
+                                <div class="progress-bar bg-danger" role="progressbar" style="width: 0%">
+                                    0%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% empty %}
+            <div class="text-center py-5">
+                <i class="fas fa-play fa-5x text-muted mb-3"></i>
+                <h4 class="text-muted">جميع الطلاب بدأوا في الدورة</h4>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Student Details Modal -->
+<div class="modal fade" id="studentDetailsModal" tabindex="-1" aria-labelledby="studentDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="studentDetailsModalLabel">
+                    <i class="fas fa-user"></i>
+                    تفاصيل تقدم الطالب
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="studentDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">جارٍ التحميل...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showStudentDetails(studentId, studentName) {
+    $('#studentDetailsModalLabel').html('<i class="fas fa-user"></i> تفاصيل تقدم: ' + studentName);
+    $('#studentDetailsModal').modal('show');
+    
+    // Load student details via AJAX
+    $.get('{% url "student_progress_details" course.id 0 %}'.replace('0', studentId))
+        .done(function(data) {
+            $('#studentDetailsContent').html(data);
+        })
+        .fail(function() {
+            $('#studentDetailsContent').html(
+                '<div class="alert alert-danger">' +
+                '<i class="fas fa-exclamation-triangle"></i> ' +
+                'حدث خطأ في تحميل البيانات' +
+                '</div>'
+            );
+        });
+}
+
+$(document).ready(function() {
+    // Animate progress bars
+    setTimeout(function() {
+        $('.progress-bar').each(function() {
+            const $this = $(this);
+            const width = $this.css('width');
+            $this.css('width', '0%');
+            setTimeout(() => {
+                $this.css('width', width);
+            }, 100);
+        });
+    }, 300);
+});
+</script>
+{% endblock dashboard_content %} 
