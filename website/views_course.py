@@ -18,7 +18,7 @@ from .models import (
     Review, Cart, CartItem, Assignment, AssignmentSubmission, UserExamAttempt, 
     ContentProgress, Article, UserProgress, ModuleProgress, CourseProgress,
     Comment, SubComment, CommentLike, SubCommentLike, Exam, ExamQuestion, ExamAnswer,
-    QuizAttempt, QuizUserAnswer, CourseReview, ReviewReply
+    QuizAttempt, QuizUserAnswer, CourseReview, ReviewReply, Certificate, CertificateTemplate
 )
 from user.models import Profile, Student, Organization, Teacher
 from .utils_course import searchCourses, update_enrollment_progress, mark_content_completed, get_completed_content_ids, get_user_course_progress, get_user_enrolled_courses, ensure_course_has_module
@@ -1757,6 +1757,47 @@ def check_final_exam_completion(request, course_id):
             'message': 'حدث خطأ في التحقق من الامتحان النهائي'
         })
 
+@login_required
+@require_POST
+def recalculate_all_progress(request):
+    """Recalculate progress for all user's enrolled courses"""
+    try:
+        enrollments = Enrollment.objects.filter(student=request.user)
+        updated_courses = []
+        total_progress = 0
+        
+        for enrollment in enrollments:
+            # استخدام دالة update_enrollment_progress المحدثة
+            new_progress = update_enrollment_progress(enrollment)
+            
+            updated_courses.append({
+                'course_id': enrollment.course.id,
+                'course_name': enrollment.course.name,
+                'progress': new_progress
+            })
+            
+            total_progress += new_progress
+        
+        # حساب متوسط التقدم
+        average_progress = total_progress / len(enrollments) if enrollments else 0
+        
+        logger.info(f"Recalculated progress for {len(enrollments)} courses for user {request.user.username}")
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'تم إعادة حساب التقدم لـ {len(enrollments)} دورة',
+            'updated_courses': updated_courses,
+            'average_progress': average_progress,
+            'total_courses': len(enrollments)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error recalculating all progress: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'message': 'حدث خطأ في إعادة حساب التقدم'
+        })
+
 # Quiz management
 @login_required
 def quiz_list(request, video_id):
@@ -2278,94 +2319,282 @@ def add_rating(request, course_id):
 # Certificate generation
 @login_required
 def generate_certificate(request, course_id):
+    """إنتاج شهادة إكمال الدورة للطالب"""
     course = get_object_or_404(Course, id=course_id)
     
     try:
         enrollment = Enrollment.objects.get(course=course, student=request.user)
         
-        # Check if course is completed
-        if enrollment.progress < 100:
-            messages.error(request, _('You must complete the course to receive a certificate.'))
+        # التحقق من إكمال الدورة أو النجاح في الامتحان النهائي
+        course_completed = False
+        completion_reason = ""
+        
+        # شرط 1: نسبة التقدم 100%
+        if enrollment.progress >= 100:
+            course_completed = True
+            completion_reason = "إكمال جميع عناصر الدورة"
+        
+        # شرط 2: النجاح في امتحان نهائي (حتى لو التقدم < 100%)
+        elif enrollment.progress >= 80:  # حد أدنى 80%
+            from .models import Exam, UserExamAttempt
+            final_exams = Exam.objects.filter(
+                course=course,
+                is_final=True,
+                is_active=True
+            )
+            
+            for exam in final_exams:
+                passed_attempt = UserExamAttempt.objects.filter(
+                    user=request.user,
+                    exam=exam,
+                    passed=True
+                ).first()
+                
+                if passed_attempt:
+                    course_completed = True
+                    completion_reason = f"النجاح في الامتحان النهائي ({passed_attempt.score:.1f}%)"
+                    break
+        
+        if not course_completed:
+            messages.error(request, 'يجب إكمال الدورة أو النجاح في الامتحان النهائي للحصول على الشهادة.')
             return redirect('courseviewpage', course_id=course_id)
         
-        # Check if certificate already exists
+        # الحصول على القالب المناسب
+        template = None
+        if hasattr(course, 'teacher') and course.teacher:
+            # البحث عن قالب المعلم
+            template = CertificateTemplate.objects.filter(
+                created_by=course.teacher.profile.user,
+                is_active=True
+            ).first()
+        
+        # إذا لم يوجد قالب للمعلم، استخدم القالب الافتراضي
+        if not template:
+            template = CertificateTemplate.get_default_template()
+        
+        # إنشاء أو تحديث الشهادة
         certificate, created = Certificate.objects.get_or_create(
             user=request.user,
             course=course,
             defaults={
-                'date_issued': timezone.now(),
-                'certificate_id': f'CERT-{course.id}-{request.user.id}-{int(time.time())}'
+                'template': template,
+                'completion_date': timezone.now(),
+                'final_grade': enrollment.progress,
+                'completion_percentage': enrollment.progress,
+                'course_duration_hours': getattr(course, 'duration_hours', None),
+                'issued_by': course.teacher.profile.user if hasattr(course, 'teacher') and course.teacher else None,
+                'institution_name': template.institution_name if template else "أكاديمية التعلم الإلكتروني"
             }
         )
         
-        # Render certificate template
+        # تحديث البيانات إذا كانت الشهادة موجودة مسبقاً
+        if not created:
+            certificate.final_grade = enrollment.progress
+            certificate.completion_percentage = enrollment.progress
+            certificate.template = template
+            certificate.save()
+        
+        # إنتاج رمز QR إذا كان مطلوباً
+        if certificate.template and certificate.template.include_qr_code:
+            certificate.generate_qr_code()
+            certificate.save()
+        
+        logger.info(f"Certificate generated for user {request.user.username} in course {course.name}: {completion_reason}")
+        
+        # عرض الشهادة
         context = {
             'certificate': certificate,
             'course': course,
             'user': request.user,
-            'date': certificate.date_issued.strftime('%B %d, %Y')
+            'template': certificate.get_template_or_default(),
+            'completion_reason': completion_reason,
+            'formatted_certificate_text': certificate.get_template_or_default().format_certificate_text(
+                certificate.student_name,
+                certificate.course_title,
+                certificate.completion_date.strftime('%Y-%m-%d'),
+                certificate.get_grade_display() if certificate.template and certificate.template.include_grade else None,
+                certificate.get_duration_display() if certificate.template and certificate.template.include_course_duration else None
+            ) if certificate.get_template_or_default() else None
         }
         
         return render(request, 'website/certificate.html', context)
     
     except Enrollment.DoesNotExist:
-        messages.error(request, _('You are not enrolled in this course.'))
+        messages.error(request, 'أنت غير مسجل في هذه الدورة.')
+        return redirect('courseviewpage', course_id=course_id)
+    except Exception as e:
+        logger.error(f"Error generating certificate: {str(e)}")
+        messages.error(request, 'حدث خطأ أثناء إنتاج الشهادة. الرجاء المحاولة مرة أخرى.')
         return redirect('courseviewpage', course_id=course_id)
 
 @login_required
 def download_certificate(request, certificate_id):
+    """تحميل الشهادة كملف PDF"""
     certificate = get_object_or_404(Certificate, id=certificate_id, user=request.user)
-    course = certificate.course
     
-    # Generate PDF certificate
+    # التحقق من صلاحية الشهادة
+    if not certificate.is_valid():
+        messages.error(request, 'هذه الشهادة غير صالحة أو تم إلغاؤها.')
+        return redirect('courseviewpage', course_id=certificate.course.id)
+    
     try:
-        # Create a file-like buffer to receive PDF data
-        buffer = BytesIO()
+        # إذا كان ملف PDF موجود مسبقاً، قم بإرساله
+        if certificate.pdf_file and default_storage.exists(certificate.pdf_file.name):
+            response = HttpResponse(certificate.pdf_file.read(), content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="certificate_{certificate.certificate_id}.pdf"'
+            return response
         
-        # Create the PDF object, using the buffer as its "file"
-        p = canvas.Canvas(buffer, pagesize=letter)
-        width, height = letter
+        # إنتاج ملف PDF جديد باستخدام القالب
+        template = certificate.get_template_or_default()
         
-        # Draw certificate content
-        p.setFont("Helvetica-Bold", 24)
-        p.drawCentredString(width/2, height-100, "Certificate of Completion")
+        # إنشاء HTML للشهادة
+        from django.template.loader import render_to_string
+        from django.conf import settings
+        import pdfkit
         
-        p.setFont("Helvetica", 16)
-        p.drawCentredString(width/2, height-150, f"This is to certify that")
+        # تحضير البيانات للقالب
+        context = {
+            'certificate': certificate,
+            'template': template,
+            'template_css_vars': template.get_template_css() if template else {},
+            'formatted_certificate_text': template.format_certificate_text(
+                certificate.student_name,
+                certificate.course_title,
+                certificate.completion_date.strftime('%Y-%m-%d'),
+                certificate.get_grade_display() if template and template.include_grade else None,
+                certificate.get_duration_display() if template and template.include_course_duration else None
+            ) if template else f"شهادة إتمام دورة {certificate.course_title}",
+            'for_pdf': True,  # فلاج للإشارة أن هذا للـ PDF
+        }
         
-        p.setFont("Helvetica-Bold", 18)
-        p.drawCentredString(width/2, height-190, f"{request.user.get_full_name() or request.user.username}")
+        # إنتاج HTML
+        html_content = render_to_string('website/certificate_pdf.html', context)
         
-        p.setFont("Helvetica", 16)
-        p.drawCentredString(width/2, height-230, "has successfully completed the course")
+        # إعدادات PDF
+        options = {
+            'page-size': 'A4',
+            'orientation': 'Landscape',
+            'margin-top': '0.5in',
+            'margin-right': '0.5in',
+            'margin-bottom': '0.5in',
+            'margin-left': '0.5in',
+            'encoding': "UTF-8",
+            'no-outline': None,
+            'enable-local-file-access': None,
+            'print-media-type': None,
+            'disable-smart-shrinking': None,
+        }
         
-        p.setFont("Helvetica-Bold", 18)
-        p.drawCentredString(width/2, height-270, f"{course.title}")
+        try:
+            # إنتاج PDF باستخدام wkhtmltopdf
+            pdf_content = pdfkit.from_string(html_content, False, options=options)
+            
+            # حفظ PDF في الملف
+            from django.core.files.base import ContentFile
+            pdf_filename = f"certificate_{certificate.certificate_id}.pdf"
+            certificate.pdf_file.save(pdf_filename, ContentFile(pdf_content), save=True)
+            
+        except Exception as pdf_error:
+            logger.warning(f"wkhtmltopdf not available, using fallback: {pdf_error}")
+            
+            # Fallback: إنتاج PDF بسيط باستخدام ReportLab
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.pagesizes import A4, landscape
+            from reportlab.lib.units import inch
+            from reportlab.lib.colors import HexColor
+            from reportlab.pdfbase import pdfmetrics
+            from reportlab.pdfbase.ttfonts import TTFont
+            
+            buffer = BytesIO()
+            
+            # إعداد الصفحة
+            doc = SimpleDocTemplate(buffer, pagesize=landscape(A4),
+                                  rightMargin=72, leftMargin=72,
+                                  topMargin=72, bottomMargin=18)
+            
+            # الأنماط
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=28,
+                spaceAfter=30,
+                alignment=1,  # مركز
+                textColor=HexColor(template.primary_color if template else '#2a5a7c')
+            )
+            
+            subtitle_style = ParagraphStyle(
+                'CustomSubtitle',
+                parent=styles['Normal'],
+                fontSize=18,
+                spaceAfter=20,
+                alignment=1,
+                textColor=HexColor(template.secondary_color if template else '#28a745')
+            )
+            
+            text_style = ParagraphStyle(
+                'CustomText',
+                parent=styles['Normal'],
+                fontSize=14,
+                spaceAfter=12,
+                alignment=1
+            )
+            
+            # محتوى الشهادة
+            story = []
+            
+            # العنوان
+            story.append(Paragraph("شهادة إتمام الدورة", title_style))
+            story.append(Spacer(1, 20))
+            
+            # اسم المؤسسة
+            story.append(Paragraph(certificate.institution_name, subtitle_style))
+            story.append(Spacer(1, 30))
+            
+            # النص الرئيسي
+            if template:
+                formatted_text = template.format_certificate_text(
+                    certificate.student_name,
+                    certificate.course_title,
+                    certificate.completion_date.strftime('%Y-%m-%d'),
+                    certificate.get_grade_display() if template.include_grade else None,
+                    certificate.get_duration_display() if template.include_course_duration else None
+                )
+            else:
+                formatted_text = f"نشهد بأن {certificate.student_name} قد أكمل بنجاح دورة {certificate.course_title}"
+            
+            story.append(Paragraph(formatted_text, text_style))
+            story.append(Spacer(1, 40))
+            
+            # التوقيع والتاريخ
+            story.append(Paragraph(f"التاريخ: {certificate.completion_date.strftime('%Y-%m-%d')}", text_style))
+            story.append(Paragraph(f"رقم الشهادة: {certificate.certificate_id}", text_style))
+            story.append(Paragraph(f"رمز التحقق: {certificate.verification_code}", text_style))
+            
+            # إنتاج PDF
+            doc.build(story)
+            buffer.seek(0)
+            pdf_content = buffer.getvalue()
+            
+            # حفظ PDF
+            from django.core.files.base import ContentFile
+            pdf_filename = f"certificate_{certificate.certificate_id}.pdf"
+            certificate.pdf_file.save(pdf_filename, ContentFile(pdf_content), save=True)
         
-        p.setFont("Helvetica", 14)
-        p.drawCentredString(width/2, height-320, f"Date: {certificate.date_issued.strftime('%B %d, %Y')}")
-        p.drawCentredString(width/2, height-350, f"Certificate ID: {certificate.certificate_id}")
+        # إرسال الملف
+        response = HttpResponse(certificate.pdf_file.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="certificate_{certificate.certificate_id}.pdf"'
         
-        # Draw border
-        p.setStrokeColorRGB(0.7, 0.7, 0.9)
-        p.setLineWidth(5)
-        p.rect(50, 50, width-100, height-100)
-        
-        # Close the PDF object cleanly
-        p.showPage()
-        p.save()
-        
-        # Get the value of the BytesIO buffer and write it to the response
-        buffer.seek(0)
-        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="certificate_{course.slug}.pdf"'
-        
+        logger.info(f"Certificate PDF downloaded: {certificate.certificate_id}")
         return response
     
     except Exception as e:
-        logger.error(f"Error generating certificate PDF: {e}")
-        messages.error(request, _('Error generating certificate. Please try again later.'))
-        return redirect('courseviewpage', course_id=course.id)
+        logger.error(f"Error generating certificate PDF: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        messages.error(request, 'حدث خطأ أثناء إنتاج ملف PDF للشهادة. الرجاء المحاولة مرة أخرى.')
+        return redirect('courseviewpage', course_id=certificate.course.id)
 
 # Course statistics and analytics
 @login_required
@@ -2853,3 +3082,25 @@ def user_reviews(request):
     }
     
     return render(request, 'website/reviews/user_reviews.html', context)
+
+def verify_certificate(request, verification_code):
+    """التحقق من صحة الشهادة باستخدام رمز التحقق"""
+    try:
+        certificate = get_object_or_404(Certificate, verification_code=verification_code)
+        
+        context = {
+            'certificate': certificate,
+            'course': certificate.course,
+            'template': certificate.get_template_or_default(),
+            'is_valid': certificate.is_valid(),
+            'verification_successful': True,
+        }
+        
+        return render(request, 'website/certificate_verification.html', context)
+        
+    except Certificate.DoesNotExist:
+        context = {
+            'verification_successful': False,
+            'error_message': 'رمز التحقق غير صحيح أو الشهادة غير موجودة.'
+        }
+        return render(request, 'website/certificate_verification.html', context)

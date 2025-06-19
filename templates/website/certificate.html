@@ -1,0 +1,643 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}شهادة إتمام الدورة - {{ course.name }}{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary-color: {{ template.primary_color|default:'#4361ee' }};
+        --secondary-color: {{ template.secondary_color|default:'#3a0ca3' }};
+        --accent-color: #f72585;
+        --text-color: #2b2d42;
+        --light-bg: #f8f9fa;
+        --font-family: '{{ template.font_family|default:'Cairo' }}', 'Tajawal', 'Segoe UI', sans-serif;
+    }
+    
+    body {
+        font-family: var(--font-family);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: var(--text-color);
+        line-height: 1.6;
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+    
+    .certificate-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        perspective: 1000px;
+        padding: 0 15px;
+    }
+    
+    .certificate-card {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        transform-style: preserve-3d;
+        transition: all 0.5s ease;
+        position: relative;
+        animation: certificateEntry 1s ease-out;
+    }
+    
+    @keyframes certificateEntry {
+        from {
+            opacity: 0;
+            transform: translateY(50px) rotateX(15deg);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) rotateX(0);
+        }
+    }
+    
+    /* Dynamic Certificate Styles */
+    .certificate-content {
+        padding: 4rem;
+        text-align: center;
+        position: relative;
+        background: white;
+        {% if template.template_style == 'modern' %}
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        {% elif template.template_style == 'classic' %}
+            background: #ffffff;
+            border: 5px solid var(--primary-color);
+        {% elif template.template_style == 'elegant' %}
+            background: linear-gradient(45deg, #faf9f7 0%, #ffffff 100%);
+        {% elif template.template_style == 'professional' %}
+            background: #ffffff;
+            border-left: 10px solid var(--primary-color);
+            border-right: 10px solid var(--primary-color);
+        {% elif template.template_style == 'creative' %}
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+        {% elif template.template_style == 'minimalist' %}
+            background: #ffffff;
+            border: 2px solid #e9ecef;
+        {% elif template.template_style == 'colorful' %}
+            background: linear-gradient(45deg, #a8edea 0%, #fed6e3 100%);
+        {% elif template.template_style == 'corporate' %}
+            background: #ffffff;
+            border-top: 8px solid var(--primary-color);
+            border-bottom: 8px solid var(--primary-color);
+        {% endif %}
+    }
+    
+    /* Dynamic Border Styles */
+    .certificate-border {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: -1;
+        {% if template.border_style == 'classic' %}
+            border: 15px solid;
+            border-image: linear-gradient(45deg, var(--primary-color), var(--secondary-color)) 1;
+        {% elif template.border_style == 'modern' %}
+            border: 4px solid var(--primary-color);
+            box-shadow: inset 0 0 0 15px white, inset 0 0 0 19px var(--secondary-color);
+        {% elif template.border_style == 'ornate' %}
+            border: 25px solid;
+            border-image: repeating-linear-gradient(45deg, var(--primary-color), var(--primary-color) 10px, var(--secondary-color) 10px, var(--secondary-color) 20px) 1;
+        {% elif template.border_style == 'simple' %}
+            border: 3px solid var(--primary-color);
+        {% elif template.border_style == 'double' %}
+            border: 8px double var(--primary-color);
+        {% elif template.border_style == 'dashed' %}
+            border: 4px dashed var(--primary-color);
+        {% elif template.border_style == 'rounded' %}
+            border: 10px solid var(--primary-color);
+            border-radius: 30px;
+        {% endif %}
+    }
+    
+    /* Background Patterns */
+    {% if template.background_pattern == 'dots' %}
+    .certificate-content::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: radial-gradient(circle, var(--primary-color) 2px, transparent 2px);
+        background-size: 25px 25px;
+        opacity: 0.05;
+        z-index: 0;
+    }
+    {% elif template.background_pattern == 'lines' %}
+    .certificate-content::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: linear-gradient(45deg, var(--primary-color) 1px, transparent 1px);
+        background-size: 20px 20px;
+        opacity: 0.05;
+        z-index: 0;
+    }
+    {% elif template.background_pattern == 'waves' %}
+    .certificate-content::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='{{ template.primary_color|urlencode }}' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        z-index: 0;
+    }
+    {% endif %}
+    
+    .institution-logo {
+        max-width: 100px;
+        max-height: 100px;
+        margin-bottom: 2rem;
+        {% if template.template_style == 'creative' %}
+            filter: drop-shadow(3px 3px 6px rgba(0,0,0,0.2));
+        {% endif %}
+    }
+    
+    .certificate-title {
+        font-size: 3.5rem;
+        font-weight: 900;
+        margin: 2rem 0;
+        background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        position: relative;
+        z-index: 1;
+        {% if template.template_style == 'classic' %}
+            color: var(--primary-color) !important;
+            -webkit-text-fill-color: var(--primary-color) !important;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.1);
+        {% elif template.template_style == 'minimalist' %}
+            font-weight: 300;
+            font-size: 2.8rem;
+        {% elif template.template_style == 'creative' %}
+            transform: rotate(-1deg);
+            text-shadow: 4px 4px 0px rgba(0,0,0,0.1);
+        {% elif template.template_style == 'elegant' %}
+            font-family: 'Amiri', serif;
+            font-size: 4rem;
+        {% endif %}
+    }
+    
+    .institution-name {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+        margin-bottom: 3rem;
+        position: relative;
+        z-index: 1;
+        {% if template.template_style == 'elegant' %}
+            font-family: 'Amiri', serif;
+            font-size: 2rem;
+        {% endif %}
+    }
+    
+    .certificate-text {
+        font-size: 1.4rem;
+        line-height: 1.8;
+        margin: 3rem 0;
+        color: var(--text-color);
+        position: relative;
+        z-index: 1;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+        {% if template.template_style == 'elegant' %}
+            font-style: italic;
+            font-family: 'Amiri', serif;
+            font-size: 1.6rem;
+        {% elif template.template_style == 'minimalist' %}
+            font-weight: 300;
+            font-size: 1.2rem;
+            line-height: 2;
+        {% elif template.template_style == 'creative' %}
+            padding: 2rem;
+            background: rgba(255,255,255,0.8);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        {% endif %}
+    }
+    
+    .student-name {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--primary-color);
+        margin: 2rem 0;
+        position: relative;
+        z-index: 1;
+        {% if template.template_style == 'creative' %}
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        {% elif template.template_style == 'elegant' %}
+            font-family: 'Amiri', serif;
+            font-size: 3rem;
+        {% endif %}
+    }
+    
+    .course-name {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+        margin: 2rem 0;
+        position: relative;
+        z-index: 1;
+        {% if template.template_style == 'elegant' %}
+            font-family: 'Amiri', serif;
+            font-style: italic;
+        {% endif %}
+    }
+    
+    .certificate-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-top: 4rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .signature-section {
+        text-align: center;
+        flex: 1;
+    }
+    
+    .signature-image, .user-signature-image {
+        max-width: 150px;
+        max-height: 80px;
+        margin-bottom: 1rem;
+    }
+    
+    .signature-line {
+        width: 200px;
+        height: 2px;
+        background: var(--primary-color);
+        margin: 0 auto 1rem;
+    }
+    
+    .signature-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .signature-title {
+        font-size: 1rem;
+        color: var(--secondary-color);
+        font-style: italic;
+    }
+    
+    .certificate-date {
+        text-align: right;
+        flex: 1;
+    }
+    
+    .date-label {
+        font-size: 0.9rem;
+        color: var(--secondary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .date-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+    
+    .qr-code {
+        text-align: left;
+        flex: 1;
+    }
+    
+    .qr-image {
+        max-width: 80px;
+        max-height: 80px;
+    }
+    
+    .certificate-id {
+        position: absolute;
+        bottom: 1rem;
+        left: 2rem;
+        font-size: 0.8rem;
+        color: var(--secondary-color);
+        opacity: 0.7;
+    }
+    
+    .verification-code {
+        position: absolute;
+        bottom: 1rem;
+        right: 2rem;
+        font-size: 0.8rem;
+        color: var(--secondary-color);
+        opacity: 0.7;
+    }
+    
+    /* Action Buttons */
+    .certificate-actions {
+        text-align: center;
+        margin: 3rem 0;
+    }
+    
+    .btn-certificate {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        margin: 0.5rem;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .btn-certificate:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        text-decoration: none;
+        color: white;
+    }
+    
+    .btn-secondary {
+        background: linear-gradient(135deg, #6c757d, #495057);
+    }
+    
+    /* Success Animation */
+    .success-animation {
+        position: absolute;
+        top: -2rem;
+        right: -2rem;
+        z-index: 10;
+    }
+    
+    .checkmark {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: var(--secondary-color);
+        position: relative;
+        animation: checkmarkBounce 0.6s ease-in-out;
+    }
+    
+    .checkmark::after {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    
+    @keyframes checkmarkBounce {
+        0%, 20%, 60%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-10px);
+        }
+        80% {
+            transform: translateY(-5px);
+        }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .certificate-content {
+            padding: 2rem;
+        }
+        
+        .certificate-title {
+            font-size: 2.5rem;
+        }
+        
+        .institution-name {
+            font-size: 1.4rem;
+        }
+        
+        .certificate-text {
+            font-size: 1.1rem;
+        }
+        
+        .student-name {
+            font-size: 2rem;
+        }
+        
+        .course-name {
+            font-size: 1.5rem;
+        }
+        
+        .certificate-footer {
+            flex-direction: column;
+            text-align: center;
+            gap: 2rem;
+        }
+    }
+    
+    /* Print Styles */
+    @media print {
+        body {
+            background: white !important;
+            padding: 0 !important;
+        }
+        
+        .certificate-actions {
+            display: none !important;
+        }
+        
+        .certificate-container {
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        .certificate-card {
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            page-break-inside: avoid;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="certificate-container">
+    <div class="certificate-card">
+        <!-- Success Animation -->
+        <div class="success-animation">
+            <div class="checkmark"></div>
+        </div>
+        
+        <div class="certificate-border"></div>
+        
+        <div class="certificate-content">
+            <!-- Institution Logo -->
+            {% if template.institution_logo %}
+            <img src="{{ template.institution_logo.url }}" alt="شعار المؤسسة" class="institution-logo">
+            {% endif %}
+            
+            <!-- Certificate Title -->
+            <h1 class="certificate-title">شهادة إتمام الدورة</h1>
+            
+            <!-- Institution Name -->
+            <h2 class="institution-name">{{ certificate.institution_name }}</h2>
+            
+            <!-- Certificate Text -->
+            <div class="certificate-text">
+                {% if formatted_certificate_text %}
+                    {{ formatted_certificate_text|safe }}
+                {% else %}
+                    نشهد بأن
+                    <div class="student-name">{{ certificate.student_name }}</div>
+                    قد أكمل بنجاح دورة
+                    <div class="course-name">{{ certificate.course_title }}</div>
+                    بتاريخ {{ certificate.completion_date|date:"Y/m/d" }}
+                    {% if certificate.template.include_grade and certificate.final_grade %}
+                        بدرجة {{ certificate.get_grade_display }}
+                    {% endif %}
+                    {% if certificate.template.include_course_duration and certificate.course_duration_hours %}
+                        خلال {{ certificate.get_duration_display }}
+                    {% endif %}
+                {% endif %}
+            </div>
+            
+            <!-- Certificate Footer -->
+            <div class="certificate-footer">
+                <!-- Signature Section -->
+                <div class="signature-section">
+                    {% if template.user_signature %}
+                        <img src="{{ template.user_signature.url }}" alt="توقيع المستخدم" class="user-signature-image">
+                    {% elif template.signature_image %}
+                        <img src="{{ template.signature_image.url }}" alt="التوقيع" class="signature-image">
+                    {% else %}
+                        <div class="signature-line"></div>
+                    {% endif %}
+                    <div class="signature-name">{{ template.signature_name|default:"مدير الأكاديمية" }}</div>
+                    <div class="signature-title">{{ template.signature_title|default:"المدير التنفيذي" }}</div>
+                </div>
+                
+                <!-- Date Section -->
+                {% if template.include_completion_date %}
+                <div class="certificate-date">
+                    <div class="date-label">تاريخ الإصدار</div>
+                    <div class="date-value">{{ certificate.date_issued|date:"Y/m/d" }}</div>
+                </div>
+                {% endif %}
+                
+                <!-- QR Code Section -->
+                {% if template.include_qr_code %}
+                <div class="qr-code">
+                    {% if certificate.qr_code_image %}
+                        <img src="{{ certificate.qr_code_image.url }}" alt="رمز QR للتحقق" class="qr-image">
+                    {% else %}
+                        <div style="width: 80px; height: 80px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #999;">
+                            <i class="fas fa-qrcode"></i>
+                        </div>
+                    {% endif %}
+                    <div style="font-size: 0.7rem; margin-top: 0.5rem; color: var(--secondary-color);">
+                        للتحقق من الشهادة
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Certificate ID and Verification Code -->
+            <div class="certificate-id">
+                رقم الشهادة: {{ certificate.certificate_id }}
+            </div>
+            <div class="verification-code">
+                رمز التحقق: {{ certificate.verification_code }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="certificate-actions">
+        <a href="{{ certificate.get_download_url }}" class="btn-certificate">
+            <i class="fas fa-download me-2"></i>
+            تحميل الشهادة (PDF)
+        </a>
+        
+        <a href="{% url 'courseviewpage' course.id %}" class="btn-certificate btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>
+            العودة للدورة
+        </a>
+        
+        <button onclick="window.print()" class="btn-certificate">
+            <i class="fas fa-print me-2"></i>
+            طباعة الشهادة
+        </button>
+        
+        {% if completion_reason %}
+        <div class="alert alert-success mt-3">
+            <i class="fas fa-trophy me-2"></i>
+            تهانينا! تم إصدار الشهادة: {{ completion_reason }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add animation to certificate entrance
+    const certificate = document.querySelector('.certificate-card');
+    
+    // Add confetti effect
+    function createConfetti() {
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.style.position = 'fixed';
+            confetti.style.width = '10px';
+            confetti.style.height = '10px';
+            confetti.style.backgroundColor = i % 2 === 0 ? 'var(--primary-color)' : 'var(--secondary-color)';
+            confetti.style.left = Math.random() * 100 + 'vw';
+            confetti.style.top = '-10px';
+            confetti.style.zIndex = '1000';
+            confetti.style.borderRadius = '50%';
+            confetti.style.pointerEvents = 'none';
+            
+            document.body.appendChild(confetti);
+            
+            const fallAnimation = confetti.animate([
+                { transform: 'translateY(-10px) rotate(0deg)', opacity: 1 },
+                { transform: `translateY(100vh) rotate(${Math.random() * 360}deg)`, opacity: 0 }
+            ], {
+                duration: Math.random() * 3000 + 2000,
+                easing: 'ease-out'
+            });
+            
+            fallAnimation.onfinish = () => {
+                confetti.remove();
+            };
+        }
+    }
+    
+    // Trigger confetti after certificate loads
+    setTimeout(createConfetti, 500);
+    
+    // Add hover effect to certificate
+    certificate.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-5px) rotateX(2deg)';
+    });
+    
+    certificate.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0) rotateX(0)';
+    });
+    
+    // Console log for success
+    console.log('🎉 Certificate generated successfully!');
+    console.log('Certificate ID:', '{{ certificate.certificate_id }}');
+    console.log('Verification Code:', '{{ certificate.verification_code }}');
+});
+</script>
+{% endblock %} 

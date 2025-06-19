@@ -255,30 +255,62 @@ def dashboard(request):
                     'course__module_set'
                 )
                 
-                # Calculate progress for each enrollment
+                # Calculate progress for each enrollment using the enhanced system
                 for enrollment in enrollments:
-                    # Calculate total videos in course
-                    total_videos = sum(1 for module in enrollment.course.module_set.all() if module.video)
-                    
-                    if total_videos > 0:
-                        # Get watched videos for this course
-                        watched_videos = ModuleProgress.objects.filter(
-                            user=request.user,
-                            module__course=enrollment.course,
-                            video_watched=True
-                        ).count()
+                    try:
+                        # Use the enhanced update_enrollment_progress function
+                        from .utils_course import update_enrollment_progress
+                        updated_progress = update_enrollment_progress(enrollment)
                         
-                        # Calculate progress percentage
-                        progress = (watched_videos / total_videos) * 100 if total_videos > 0 else 0
-                    else:
-                        progress = 0
+                        # If still 0, try to calculate manually
+                        if updated_progress == 0:
+                            # Count total content in the course (comprehensive)
+                            course = enrollment.course
+                            total_content = 0
+                            
+                            # Count module-based content
+                            for module in course.module_set.all():
+                                if module.video:
+                                    total_content += 1
+                                if module.pdf:
+                                    total_content += 1
+                                if module.note:
+                                    total_content += 1
+                                # Count active quizzes and assignments for this module
+                                total_content += module.module_quizzes.filter(is_active=True).count()
+                                total_content += module.module_assignments.filter(is_active=True).count()
+                            
+                            # Add course-level content
+                            total_content += course.course_quizzes.filter(is_active=True).count()
+                            total_content += course.assignments.filter(is_active=True).count()
+                            
+                            # Count completed content using ContentProgress
+                            from .models import ContentProgress
+                            completed_content = ContentProgress.objects.filter(
+                                user=request.user,
+                                course=course,
+                                completed=True
+                            ).count()
+                            
+                            # Calculate progress
+                            if total_content > 0:
+                                progress = (completed_content / total_content) * 100
+                            else:
+                                progress = 0
+                            
+                            # Update enrollment
+                            enrollment.progress = progress
+                            enrollment.save(update_fields=['progress'])
+                        else:
+                            progress = updated_progress
                         
-                    # Update enrollment progress
-                    enrollment.progress = progress
-                    enrollment.save(update_fields=['progress'])
-                    
-                    # Set completed flag
-                    enrollment.completed = progress == 100
+                        # Set completed flag
+                        enrollment.completed = progress >= 95  # Consider 95% as completed
+                        
+                    except Exception as e:
+                        print(f"Error calculating progress for enrollment {enrollment.id}: {e}")
+                        enrollment.progress = 0
+                        enrollment.completed = False
             
             # Query all courses to display in the dashboard (for teachers/admins)
             courses = Course.objects.all()
@@ -295,12 +327,49 @@ def dashboard(request):
             upcoming_meetings = (created_meetings | participating_meetings).distinct().order_by('start_time')[:3]
             upcoming_meetings_count = (created_meetings | participating_meetings).distinct().count()
             
+            # Calculate statistics for students
+            completed_courses = 0
+            active_courses = 0
+            courses_registered = len(enrollments)
+            
+            for enrollment in enrollments:
+                if enrollment.completed or enrollment.progress >= 95:
+                    completed_courses += 1
+                elif enrollment.progress > 0:
+                    active_courses += 1
+            
+            # Initialize teacher/admin statistics  
+            total_students = 0
+            total_courses = 0
+            total_earnings = 0
+            
+            # If user is teacher or admin, calculate their stats
+            if profile.status in ['Teacher', 'Admin']:
+                if profile.status == 'Teacher':
+                    # Get teacher-specific courses
+                    teacher_courses = Course.objects.filter(teacher__profile__user=request.user)
+                    total_courses = teacher_courses.count()
+                    total_students = sum(course.enrollments.count() for course in teacher_courses)
+                    # Calculate earnings if needed
+                    total_earnings = 0  # Implement earnings calculation
+                else:  # Admin
+                    total_courses = Course.objects.count()
+                    total_students = Enrollment.objects.count()
+            
             context = {
                 "profile": profile,
                 "courses": courses,
                 "enrollments": enrollments,
                 "upcoming_meetings": upcoming_meetings,
-                "upcoming_meetings_count": upcoming_meetings_count
+                "upcoming_meetings_count": upcoming_meetings_count,
+                # Student statistics
+                "completed_courses": completed_courses,
+                "active_courses": active_courses,
+                "courses_registered": courses_registered,
+                # Teacher/Admin statistics
+                "total_students": total_students,
+                "total_courses": total_courses,
+                "total_earnings": total_earnings,
             }
             return render(request, 'website/dashboard.html', context)
         except Profile.DoesNotExist:

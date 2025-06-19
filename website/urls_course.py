@@ -41,6 +41,7 @@ urlpatterns = [
     path('api/course/<int:course_id>/complete/', views_course.complete_course, name='complete_course'),
     path('api/course/<int:course_id>/recalculate-progress/', views_course.recalculate_progress, name='recalculate_progress'),
     path('api/course/<int:course_id>/check-final-exam/', views_course.check_final_exam_completion, name='check_final_exam_completion'),
+    path('api/recalculate-all-progress/', views_course.recalculate_all_progress, name='recalculate_all_progress'),
     
     # Course file management
     path('delete-pdf/<int:course_id>/<str:pdf_type>/', views_course.delete_pdf, name='delete_pdf'),
@@ -57,6 +58,7 @@ urlpatterns = [
     path('course/<int:course_id>/recalculate_progress/', views_course.recalculate_progress, name='recalculate_progress'),
     path('course/<int:course_id>/generate_certificate/', views_course.generate_certificate, name='generate_certificate'),
     path('certificate/<int:certificate_id>/download/', views_course.download_certificate, name='download_certificate'),
+    path('certificate/verify/<str:verification_code>/', views_course.verify_certificate, name='verify_certificate'),
     
     # Analytics and statistics
     path('course/<int:course_id>/statistics/', views_course.course_statistics, name='course_statistics'),

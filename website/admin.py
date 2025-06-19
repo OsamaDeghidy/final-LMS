@@ -10,7 +10,7 @@ from .models import (
     QuizUserAnswer, Meeting, Participant, Notification, BookCategory, Review,
     Book, Article, Cart, CartItem, ContentProgress
 )
-from .models import CertificateTemplate, PresetCertificateTemplate, UserSignature  # Import separately to avoid duplication
+from .models import CertificateTemplate, PresetCertificateTemplate, UserSignature, Certificate  # Import separately to avoid duplication
 
 # Register your models here
 admin.site.register(Category)
@@ -171,14 +171,66 @@ class PresetCertificateTemplateAdmin(admin.ModelAdmin):
 
 admin.site.register(PresetCertificateTemplate, PresetCertificateTemplateAdmin)
 
+# Certificate Admin
+class CertificateAdmin(admin.ModelAdmin):
+    list_display = ('certificate_id', 'student_name', 'course_title', 'completion_percentage', 'status', 'verification_status', 'date_issued')
+    list_filter = ('status', 'verification_status', 'date_issued', 'completion_date')
+    search_fields = ('certificate_id', 'student_name', 'course_title', 'verification_code', 'user__username')
+    date_hierarchy = 'date_issued'
+    ordering = ('-date_issued',)
+    readonly_fields = ('certificate_id', 'verification_code', 'date_issued', 'created_at', 'updated_at')
+    fieldsets = (
+        ('معلومات الشهادة', {
+            'fields': ('certificate_id', 'verification_code', 'status', 'verification_status')
+        }),
+        ('الطالب والدورة', {
+            'fields': ('user', 'course', 'student_name', 'course_title', 'institution_name')
+        }),
+        ('التقييم والأداء', {
+            'fields': ('final_grade', 'completion_percentage', 'course_duration_hours')
+        }),
+        ('القالب والتوقيع', {
+            'fields': ('template', 'issued_by')
+        }),
+        ('الملفات', {
+            'fields': ('pdf_file', 'qr_code_image')
+        }),
+        ('التوقيع الرقمي', {
+            'fields': ('digital_signature', 'signature_verified'),
+            'classes': ('collapse',)
+        }),
+        ('التواريخ', {
+            'fields': ('completion_date', 'date_issued', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'course', 'template', 'issued_by')
+
+admin.site.register(Certificate, CertificateAdmin)
+
 # User Signature Admin
 class UserSignatureAdmin(admin.ModelAdmin):
-    list_display = ('name', 'user', 'is_default', 'created_at')
-    list_filter = ('is_default', 'created_at')
-    search_fields = ('name', 'user__username', 'user__email')
-    date_hierarchy = 'created_at'
+    list_display = ('signature_name', 'user', 'signature_title', 'is_default', 'is_active', 'created_at')
+    list_filter = ('is_default', 'is_active', 'created_at')
+    search_fields = ('signature_name', 'user__username', 'signature_title')
     ordering = ('-created_at',)
     readonly_fields = ('created_at',)
+    fieldsets = (
+        ('معلومات التوقيع', {
+            'fields': ('user', 'signature_name', 'signature_title')
+        }),
+        ('صورة التوقيع', {
+            'fields': ('signature_image',)
+        }),
+        ('الإعدادات', {
+            'fields': ('is_default', 'is_active')
+        }),
+        ('معلومات النظام', {
+            'fields': ('created_at',)
+        })
+    )
 
 admin.site.register(UserSignature, UserSignatureAdmin)
 
