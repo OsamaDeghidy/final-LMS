@@ -414,6 +414,7 @@ class CourseReview(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         # Update course average rating
+        from django.db.models import Avg
         course = self.course
         avg_rating = CourseReview.objects.filter(course=course).aggregate(Avg('rating'))['rating__avg']
         course.rating = round(avg_rating, 1) if avg_rating else 0

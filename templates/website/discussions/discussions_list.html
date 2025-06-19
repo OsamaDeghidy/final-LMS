@@ -3,6 +3,9 @@
 
 {% block title %}المناقشات{% endblock %}
 
+<!-- Add CSRF token for JavaScript -->
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
 {% block dashboard_content %}
 <div class="col-md-9">
   <div class="card border-0 shadow-sm">
@@ -96,9 +99,9 @@
               
               <div class="d-flex justify-content-between align-items-center">
                 <div class="d-flex gap-3">
-                  <button class="btn btn-sm btn-outline-primary">
-                    <i class="far fa-heart me-1"></i>
-                    {{ comment.likes.count }}
+                  <button class="btn btn-sm btn-outline-primary like-comment-btn{% if comment.id in user_liked_comments %} liked{% endif %}" data-comment-id="{{ comment.id }}">
+                    <i class="fa{% if comment.id in user_liked_comments %}s{% else %}r{% endif %} fa-heart me-1"></i>
+                    <span class="likes-count">{{ comment.likes.count }}</span>
                   </button>
                   {% if comment.replies.count %}
                   <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#replies-{{ comment.id }}">
@@ -106,11 +109,45 @@
                     عرض الردود ({{ comment.replies.count }})
                   </button>
                   {% endif %}
+                  {% if profile.status == 'Teacher' or profile.status == 'Admin' %}
+                  <button class="btn btn-sm btn-outline-success reply-btn" data-comment-id="{{ comment.id }}" data-bs-toggle="collapse" data-bs-target="#reply-form-{{ comment.id }}">
+                    <i class="fas fa-reply me-1"></i>
+                    رد
+                  </button>
+                  {% endif %}
                 </div>
                 <a href="{% url 'courseviewpage' comment.course.id %}" class="btn btn-sm btn-primary">
                   <i class="fas fa-eye me-1"></i> عرض الدورة
                 </a>
               </div>
+              
+              <!-- Reply Form for Teachers -->
+              {% if profile.status == 'Teacher' or profile.status == 'Admin' %}
+              <div class="collapse mt-3" id="reply-form-{{ comment.id }}">
+                <div class="border-top pt-3">
+                  <form class="reply-form" data-comment-id="{{ comment.id }}">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2">
+                      <div class="avatar-circle-sm me-2">
+                        {{ user.first_name|default:user.username|slice:":1"|upper }}
+                      </div>
+                      <div class="flex-grow-1">
+                        <textarea class="form-control reply-content" rows="2" placeholder="اكتب ردك هنا..." required></textarea>
+                        <div class="mt-2 d-flex gap-2 justify-content-end">
+                          <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="collapse" data-bs-target="#reply-form-{{ comment.id }}">
+                            إلغاء
+                          </button>
+                          <button type="submit" class="btn btn-sm btn-success">
+                            <i class="fas fa-paper-plane me-1"></i>
+                            إرسال الرد
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              {% endif %}
               
               {% if comment.replies.count %}
               <div class="collapse mt-3" id="replies-{{ comment.id }}">
@@ -261,5 +298,211 @@
   line-height: 1.6;
   color: #495057;
 }
+
+.reply-form {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reply-btn:hover {
+  background-color: #28a745;
+  color: white;
+}
+
+.like-comment-btn.liked {
+  background-color: #dc3545;
+  color: white;
+}
+
+.like-comment-btn.liked i {
+  color: white;
+}
+
+.new-reply {
+  animation: slideIn 0.5s ease-out;
+  background-color: #e8f5e8;
+  border-left: 3px solid #28a745;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle reply form submission
+    document.querySelectorAll('.reply-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const commentId = this.dataset.commentId;
+            const replyContent = this.querySelector('.reply-content').value.trim();
+            
+            if (!replyContent) {
+                alert('يرجى كتابة محتوى الرد');
+                return;
+            }
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الإرسال...';
+            submitBtn.disabled = true;
+            
+                         // Prepare form data
+             const formData = new FormData();
+             formData.append('reply_content', replyContent);
+             formData.append('csrfmiddlewaretoken', this.querySelector('[name=csrfmiddlewaretoken]').value);
+             
+             // Send AJAX request
+             fetch('{% url "add_comment_reply" 0 %}'.replace('0', commentId), {
+                 method: 'POST',
+                 body: formData
+             })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Clear form
+                    this.querySelector('.reply-content').value = '';
+                    
+                    // Hide reply form
+                    const collapseElement = document.getElementById('reply-form-' + commentId);
+                    const collapse = new bootstrap.Collapse(collapseElement, { toggle: false });
+                    collapse.hide();
+                    
+                    // Show success message
+                    showNotification('تم إضافة الرد بنجاح!', 'success');
+                    
+                    // Add new reply to the replies section
+                    addNewReplyToDOM(commentId, data.reply_html);
+                    
+                    // Update replies count
+                    updateRepliesCount(commentId);
+                } else {
+                    showNotification(data.message || 'حدث خطأ في إضافة الرد', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('حدث خطأ في الاتصال', 'error');
+            })
+            .finally(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+    });
+    
+         // Handle like button
+     document.querySelectorAll('.like-comment-btn').forEach(btn => {
+         btn.addEventListener('click', function() {
+             const commentId = this.dataset.commentId;
+             
+             const formData = new FormData();
+             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+             formData.append('csrfmiddlewaretoken', csrfToken);
+             
+             fetch('{% url "like_comment" 0 %}'.replace('0', commentId), {
+                 method: 'POST',
+                 body: formData
+             })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.querySelector('.likes-count').textContent = data.likes_count;
+                    if (data.liked) {
+                        this.classList.add('liked');
+                        this.querySelector('i').classList.remove('far');
+                        this.querySelector('i').classList.add('fas');
+                    } else {
+                        this.classList.remove('liked');
+                        this.querySelector('i').classList.remove('fas');
+                        this.querySelector('i').classList.add('far');
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+});
+
+function addNewReplyToDOM(commentId, replyHtml) {
+    const repliesSection = document.getElementById('replies-' + commentId);
+    if (repliesSection) {
+        const repliesContainer = repliesSection.querySelector('.border-start');
+        if (repliesContainer) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = replyHtml;
+            const newReply = tempDiv.firstElementChild;
+            newReply.classList.add('new-reply');
+            
+            // Insert at the beginning
+            repliesContainer.insertBefore(newReply, repliesContainer.firstChild);
+            
+            // Show replies section if hidden
+            if (!repliesSection.classList.contains('show')) {
+                const collapse = new bootstrap.Collapse(repliesSection, { toggle: false });
+                collapse.show();
+            }
+        }
+    } else {
+        // Create replies section if it doesn't exist
+        const discussionItem = document.querySelector(`[data-bs-target="#reply-form-${commentId}"]`).closest('.discussion-item');
+        const repliesHtml = `
+            <div class="collapse show mt-3" id="replies-${commentId}">
+                <div class="border-start border-2 ps-3" style="border-left-color: #e9ecef !important;">
+                    ${replyHtml}
+                </div>
+            </div>
+        `;
+        discussionItem.querySelector('.card-body').insertAdjacentHTML('beforeend', repliesHtml);
+        
+        // Add show replies button if it doesn't exist
+        const actionsDiv = discussionItem.querySelector('.d-flex.gap-3');
+        if (!actionsDiv.querySelector('[data-bs-target*="replies"]')) {
+            const showRepliesBtn = `
+                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#replies-${commentId}">
+                    <i class="fas fa-reply me-1"></i>
+                    عرض الردود (1)
+                </button>
+            `;
+            actionsDiv.insertAdjacentHTML('beforeend', showRepliesBtn);
+        }
+    }
+}
+
+function updateRepliesCount(commentId) {
+    const repliesBtn = document.querySelector(`[data-bs-target="#replies-${commentId}"]`);
+    if (repliesBtn) {
+        const currentText = repliesBtn.textContent;
+        const match = currentText.match(/\d+/);
+        const currentCount = match ? parseInt(match[0]) : 0;
+        repliesBtn.innerHTML = `<i class="fas fa-reply me-1"></i> عرض الردود (${currentCount + 1})`;
+    }
+}
+
+function showNotification(message, type) {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+</script>
 {% endblock %} 

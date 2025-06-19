@@ -63,9 +63,21 @@
       </div>
       {% endif %}
       
-      {% if course_reviews.object_list %}
+      <!-- Debug info -->
+      <div class="alert alert-info">
+        <strong>معلومات التقييمات:</strong><br>
+        عدد التقييمات: {{ total_reviews }}<br>
+        نوع المستخدم: {{ profile.status }}<br>
+        {% if course_reviews %}
+          عدد التقييمات في الصفحة: {{ course_reviews|length }}
+        {% else %}
+          لا توجد تقييمات
+        {% endif %}
+      </div>
+      
+      {% if course_reviews %}
         <div class="reviews-list">
-          {% for review in course_reviews.object_list %}
+          {% for review in course_reviews %}
           <div class="review-item card mb-3 border-start border-4" style="border-left-color: #ffc107 !important;">
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-start mb-3">

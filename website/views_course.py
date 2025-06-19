@@ -2903,7 +2903,7 @@ def add_course_comment(request, course_id):
 def add_comment_reply(request, comment_id):
     """Add a reply to a comment"""
     comment = get_object_or_404(Comment, id=comment_id, is_active=True)
-    reply_text = request.POST.get('reply_text', '').strip()
+    reply_text = request.POST.get('reply_text', '').strip() or request.POST.get('reply_content', '').strip()
     
     if not reply_text:
         return JsonResponse({
@@ -2911,11 +2911,24 @@ def add_comment_reply(request, comment_id):
             'message': 'نص الرد مطلوب'
         })
     
-    # Check if user is enrolled in the course
-    if not Enrollment.objects.filter(course=comment.course, student=request.user).exists():
+    # Check permissions: Students must be enrolled, Teachers/Admins can reply to any comment on their courses
+    user_profile = request.user.profile
+    can_reply = False
+    
+    if user_profile.status == 'Student':
+        # Students must be enrolled in the course
+        can_reply = Enrollment.objects.filter(course=comment.course, student=request.user).exists()
+    elif user_profile.status in ['Teacher', 'Admin']:
+        # Teachers/Admins can reply to comments on their courses or any course they teach
+        can_reply = (
+            Course.objects.filter(teacher__profile__user=request.user, id=comment.course.id).exists() or
+            user_profile.status == 'Admin'  # Admins can reply to any comment
+        )
+    
+    if not can_reply:
         return JsonResponse({
             'success': False,
-            'message': 'يجب أن تكون مسجلاً في الدورة لإضافة رد'
+            'message': 'ليس لديك صلاحية للرد على هذا التعليق'
         })
     
     try:
@@ -2929,7 +2942,7 @@ def add_comment_reply(request, comment_id):
             'success': True,
             'message': 'تم إضافة الرد بنجاح',
             'reply_id': reply.id,
-            'reply_html': render_reply_html(reply, request.user)
+            'reply_html': render_discussion_reply_html(reply, request.user)
         })
     except Exception as e:
         logger.error(f"Error adding reply: {e}")
@@ -2945,11 +2958,24 @@ def like_comment(request, comment_id):
     """Like or unlike a comment"""
     comment = get_object_or_404(Comment, id=comment_id, is_active=True)
     
-    # Check if user is enrolled in the course
-    if not Enrollment.objects.filter(course=comment.course, student=request.user).exists():
+    # Check permissions: Students must be enrolled, Teachers/Admins can like comments on their courses
+    user_profile = request.user.profile
+    can_like = False
+    
+    if user_profile.status == 'Student':
+        # Students must be enrolled in the course
+        can_like = Enrollment.objects.filter(course=comment.course, student=request.user).exists()
+    elif user_profile.status in ['Teacher', 'Admin']:
+        # Teachers/Admins can like comments on their courses or any course they teach
+        can_like = (
+            Course.objects.filter(teacher__profile__user=request.user, id=comment.course.id).exists() or
+            user_profile.status == 'Admin'  # Admins can like any comment
+        )
+    
+    if not can_like:
         return JsonResponse({
             'success': False,
-            'message': 'يجب أن تكون مسجلاً في الدورة'
+            'message': 'ليس لديك صلاحية للتفاعل مع هذا التعليق'
         })
     
     try:
@@ -3044,6 +3070,37 @@ def render_reply_html(reply, user):
         'course': reply.comment.course
     })
 
+
+def render_discussion_reply_html(reply, user):
+    """Render HTML for a single reply in discussions page"""
+    from django.utils.html import escape
+    
+    # Get user info safely
+    first_name = reply.user.first_name or reply.user.username
+    first_letter = first_name[0].upper() if first_name else 'U'
+    full_name = reply.user.get_full_name() or reply.user.username
+    
+    # Check if user is teacher/admin
+    is_teacher = hasattr(reply.user, 'profile') and reply.user.profile.status in ['Teacher', 'Admin']
+    teacher_badge = '<span class="badge bg-warning text-dark ms-1"><i class="fas fa-chalkboard-teacher"></i> مدرس</span>' if is_teacher else ''
+    
+    # Escape content to prevent XSS
+    content = escape(reply.content).replace('\n', '<br>')
+    
+    return f'''
+    <div class="reply-item mb-2 p-2 bg-light rounded">
+        <div class="d-flex align-items-center mb-1">
+            <div class="avatar-circle-sm me-2">
+                {first_letter}
+            </div>
+            <strong class="me-2">{escape(full_name)}</strong>
+            {teacher_badge}
+            <span class="text-muted small">الآن</span>
+        </div>
+        <div class="small">{content}</div>
+    </div>
+    '''
+
 @login_required
 def discussions_list(request):
     """View all discussions/comments for the current user"""
@@ -3052,7 +3109,7 @@ def discussions_list(request):
     if profile.status == 'Student':
         # Get comments from courses the student is enrolled in
         enrolled_courses = Enrollment.objects.filter(student=request.user).values_list('course_id', flat=True)
-        comments = Comment.objects.filter(course_id__in=enrolled_courses, is_active=True).select_related('user', 'course').prefetch_related('replies').order_by('-created_at')
+        comments = Comment.objects.filter(course_id__in=enrolled_courses, is_active=True).select_related('user', 'course').prefetch_related('replies', 'likes').order_by('-created_at')
         
         # Get user's own comments
         user_comments = Comment.objects.filter(user=request.user, is_active=True).select_related('course').prefetch_related('replies').order_by('-created_at')
@@ -3060,7 +3117,7 @@ def discussions_list(request):
     elif profile.status in ['Teacher', 'Admin']:
         # Get comments from teacher's courses
         teacher_courses = Course.objects.filter(teacher__profile__user=request.user).values_list('id', flat=True)
-        comments = Comment.objects.filter(course_id__in=teacher_courses, is_active=True).select_related('user', 'course').prefetch_related('replies').order_by('-created_at')
+        comments = Comment.objects.filter(course_id__in=teacher_courses, is_active=True).select_related('user', 'course').prefetch_related('replies', 'likes').order_by('-created_at')
         
         # Get user's own comments
         user_comments = Comment.objects.filter(user=request.user, is_active=True).select_related('course').prefetch_related('replies').order_by('-created_at')
@@ -3074,11 +3131,20 @@ def discussions_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Get user's liked comments for proper UI state
+    user_liked_comments = []
+    if page_obj.object_list:
+        user_liked_comments = CommentLike.objects.filter(
+            user=request.user,
+            comment__in=page_obj.object_list
+        ).values_list('comment_id', flat=True)
+    
     context = {
         'comments': page_obj,
         'user_comments': user_comments[:5],  # Show recent 5 user comments
         'profile': profile,
         'total_comments': comments.count(),
+        'user_liked_comments': list(user_liked_comments),
     }
     
     return render(request, 'website/discussions/discussions_list.html', context)
@@ -3090,18 +3156,29 @@ def reviews_list(request):
     profile = request.user.profile
     
     if profile.status == 'Student':
-        # Get user's reviews
+        # Get user's own reviews
         user_reviews = CourseReview.objects.filter(user=request.user).select_related('course').order_by('-created_at')
+        
         # Get reviews on courses the student is enrolled in (for reading)
         enrolled_courses = Enrollment.objects.filter(student=request.user).values_list('course_id', flat=True)
         course_reviews = CourseReview.objects.filter(course_id__in=enrolled_courses).select_related('user', 'course').order_by('-created_at')
+        
+        # If no reviews found in enrolled courses, show all reviews (for students to see what others say)
+        if course_reviews.count() == 0:
+            course_reviews = CourseReview.objects.all().select_related('user', 'course').order_by('-created_at')
         
     elif profile.status in ['Teacher', 'Admin']:
         # Get reviews on teacher's courses
         teacher_courses = Course.objects.filter(teacher__profile__user=request.user).values_list('id', flat=True)
         course_reviews = CourseReview.objects.filter(course_id__in=teacher_courses).select_related('user', 'course').order_by('-created_at')
+        
         # Get user's own reviews (if teacher also takes courses)
         user_reviews = CourseReview.objects.filter(user=request.user).select_related('course').order_by('-created_at')
+        
+        # If no reviews found on teacher's courses, show all reviews for better UX
+        if course_reviews.count() == 0:
+            course_reviews = CourseReview.objects.all().select_related('user', 'course').order_by('-created_at')
+            
     else:
         user_reviews = CourseReview.objects.none()
         course_reviews = CourseReview.objects.none()
@@ -3125,6 +3202,7 @@ def reviews_list(request):
         'total_reviews': course_reviews.count(),
         'avg_rating': round(avg_rating, 1),
         'user_total_reviews': user_reviews.count(),
+        'all_reviews': course_reviews,  # Add non-paginated reviews for template checks
     }
     
     return render(request, 'website/reviews/reviews_list.html', context)
